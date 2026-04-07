@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit (use .env.example / .env.production.example / .env.preprod.example)
+.env
+.env.local
+.env.*.local
+.env.docker
+
+# Logs & debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+logs/
+
+# Runtime / PM2 (if you copy the example to this name locally)
+ecosystem.config.cjs
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor (uncomment if your team does not commit editor settings)
+# .vscode/
+# .idea/
+
+# TLS keys / certs (local dev)
+*.crt
+*.pem
+*.key
+
+# Optional: local Excel scratch copy (template in repo is usually committed)
+# ~$*.xlsx

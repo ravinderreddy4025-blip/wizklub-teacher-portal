@@ -1,0 +1,37 @@
+{
+  "name": "parent-orientation-tracker",
+  "version": "1.0.0",
+  "description": "Parent orientation session tracker with Express, MongoDB, and Excel export",
+  "main": "backend/server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node backend/server.js",
+    "start:prod": "cross-env NODE_ENV=production node backend/server.js",
+    "build:toast": "esbuild frontend/src/client/toast-bridge.jsx --bundle --outfile=frontend/public/react-toastify-bundle.js --format=iife --loader:.jsx=jsx --jsx=automatic --minify",
+    "test": "node -r ./test/setup-env.js --test \"test/**/*.test.js\"",
+    "smoke": "node scripts/smoke-check.js",
+    "docker:up": "docker compose up --build",
+    "clean": "node clean_excel.js",
+    "clear:sessions": "node scripts/clear-all-sessions.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.5.0",
+    "file-saver": "^2.0.5",
+    "helmet": "^8.0.0",
+    "mongodb": "^6.12.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-toastify": "^11.0.5"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "esbuild": "^0.28.0",
+    "supertest": "^7.2.2"
+  }
+}

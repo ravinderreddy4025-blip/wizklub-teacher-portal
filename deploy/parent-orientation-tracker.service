@@ -1,0 +1,29 @@
+[Unit]
+Description=Parent Orientation Tracker (Node)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/parent-orientation
+EnvironmentFile=-/home/ubuntu/parent-orientation/.env
+# Force production (overrides NODE_ENV if present in .env)
+Environment=NODE_ENV=production
+# dotenv loads .env from WorkingDirectory (backend/src/bootstrap.js).
+# Run: which node — use full path in ExecStart if not /usr/bin/node
+ExecStart=/usr/bin/node backend/server.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=parent-orientation-tracker
+LimitNOFILE=65535
+# Writable project dir (Excel template sync)
+ReadWritePaths=/home/ubuntu/parent-orientation
+
+[Install]
+WantedBy=multi-user.target

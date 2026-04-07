@@ -1,0 +1,6 @@
+Sheet Name: PMO – Plan Sessions
+Row 3 Headers: [null,"Session Date","Session Time","Grade","Zoom Meet Link","Branch Name","Region","Venue / Medium","Conducted By","Co-Host","Parents Invited"]
+Sheet Name: Speaker – Post Activity
+Row 3 Headers: [null,"SESSION REF","SESSION REF","ATTENDANCE","ATTENDANCE","FOLLOW-UP","FOLLOW-UP","OUTCOME","OUTCOME","OUTCOME"]
+Sheet Name: Summary Dashboard
+Row 3 Headers: [null,null,"HOW TO USE: Copy the count/sum formulas below referencing the other two sheets, or use the HTML app's Export to Excel button which auto-fills all values.","HOW TO USE: Copy the count/sum formulas below referencing the other two sheets, or use the HTML app's Export to Excel button which auto-fills all values.","HOW TO USE: Copy the count/sum formulas below referencing the other two sheets, or use the HTML app's Export to Excel button which auto-fills all values.","HOW TO USE: Copy the count/sum formulas below referencing the other two sheets, or use the HTML app's Export to Excel button which auto-fills all values."]
