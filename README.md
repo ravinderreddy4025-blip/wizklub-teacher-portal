@@ -113,6 +113,8 @@ Inspect with [MongoDB Compass](https://www.mongodb.com/products/compass) using t
 
 **Full checklist:** **[`deploy/DEPLOYMENT.md`](deploy/DEPLOYMENT.md)** (env, HTTPS, Mongo backups, systemd/PM2, smoke tests, secrets rotation).
 
+**Push to AWS CodeCommit / Git:** **[`deploy/AWS-GIT.md`](deploy/AWS-GIT.md)**.
+
 1. Upload the project (zip or git). Include **`.env.example`** and **`.env.production.example`**; create **`.env`** on the server only.
 2. `npm ci --omit=dev` (install without devDependencies) or `npm ci` if you use `npm run start:prod` on the host.
 3. Create `.env` from **`.env.production.example`**: set `MONGODB_URI`, `COOKIE_SECRET`, passwords, `TRUST_PROXY=1`, `COOKIE_SECURE=1`. Use **`BIND_HOST=127.0.0.1`** and **`PORT=8080`** when nginx proxies to Node.
