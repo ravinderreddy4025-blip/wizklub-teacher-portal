@@ -1,0 +1,54 @@
+{
+  "name": "technathon-server",
+  "version": "1.0.0",
+  "description": "Production-grade backend for Technathon Submissions",
+  "main": "server.js",
+  "scripts": {
+    "start": "cross-env NODE_ENV=production node server.js",
+    "dev": "node --watch server.js",
+    "test": "jest --runInBand --forceExit --detectOpenHandles",
+    "test:watch": "jest --watch --runInBand",
+    "test:coverage": "jest --coverage --runInBand --forceExit",
+    "hash": "node scripts/generate-hash.js"
+  },
+  "jest": {
+    "setupFiles": [
+      "<rootDir>/tests/jest.setup.js"
+    ],
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "testTimeout": 15000,
+    "verbose": true,
+    "collectCoverageFrom": [
+      "**/*.js",
+      "!node_modules/**",
+      "!tests/**",
+      "!scripts/**"
+    ]
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1032.0",
+    "@aws-sdk/client-sesv2": "^3.1033.0",
+    "@aws-sdk/lib-storage": "^3.1032.0",
+    "@aws-sdk/s3-request-presigner": "^3.1033.0",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.5",
+    "cors": "^2.8.5",
+    "cross-env": "^10.1.0",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.4",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.1.0"
+  }
+}

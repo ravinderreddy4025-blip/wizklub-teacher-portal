@@ -1,0 +1,25 @@
+node_modules
+npm-debug.log*
+.git
+.github
+**/.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets (never bake into image)
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.preprod.example
+!.env.docker.example
+
+# Not needed at runtime
+test
+deploy
+coverage
+.nyc_output
+*.md
+
+# PM2 / local
+ecosystem.config.cjs

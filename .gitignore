@@ -1,39 +1,50 @@
-# Dependencies
+# ── Dependencies ──────────────────────────────────────────
 node_modules/
+**/node_modules/
 
-# Secrets — never commit (use .env.example / .env.production.example / .env.preprod.example)
+# ── Build output ──────────────────────────────────────────
+dist/
+dist-ssr/
+build/
+
+# ── Environment — NEVER commit secrets ───────────────────
 .env
 .env.local
-.env.*.local
-.env.docker
+.env.production
+.env.staging
+**/.env
+**/.env.local
+**/.env.production
+**/.env.staging
+*.local
 
-# Logs & debug
+# ── Logs ─────────────────────────────────────────────────
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-*.log
-logs/
+pnpm-debug.log*
 
-# Runtime / PM2 (if you copy the example to this name locally)
-ecosystem.config.cjs
-
-# Test / coverage
+# ── Test coverage ─────────────────────────────────────────
 coverage/
 .nyc_output/
 
-# OS
+# ── Uploads (local dev only) ──────────────────────────────
+uploads/
+
+# ── OS / Editor ──────────────────────────────────────────
 .DS_Store
 Thumbs.db
-desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Editor (uncomment if your team does not commit editor settings)
-# .vscode/
-# .idea/
-
-# TLS keys / certs (local dev)
-*.crt
-*.pem
-*.key
-
-# Optional: local Excel scratch copy (template in repo is usually committed)
-# ~$*.xlsx
+# ── Docker ───────────────────────────────────────────────
+**/.docker/*.pid
+**/.docker/*.sock

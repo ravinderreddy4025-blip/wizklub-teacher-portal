@@ -1,0 +1,81 @@
+services:
+  # ── API Server ─────────────────────────────────────────
+  api:
+    build:
+      context: ../../backend/technathon
+      dockerfile: Dockerfile
+    container_name: technathon-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - path: ../../backend/technathon/.env
+        required: true
+        format: raw
+    volumes:
+      - ../../backend/technathon/assets:/app/assets:ro
+    environment:
+      NODE_ENV:            production
+      PORT:                5000
+      PUBLIC_WEB_ORIGIN:     ${PUBLIC_WEB_ORIGIN:-http://localhost:5174}
+      ALLOWED_ORIGIN:        ${ALLOWED_ORIGIN:-http://localhost:5174}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - technathon-net
+
+  # ── Web (Vite/React static via nginx) ──────────────────
+  web:
+    build:
+      context: ../../frontend/technathon
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
+    container_name: technathon-web
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - technathon-net
+
+  # ── MongoDB ────────────────────────────────────────────
+  mongo:
+    image: mongo:7.0-jammy
+    container_name: technathon-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"   # Remove in production if DB should be private
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - technathon-net
+
+volumes:
+  mongo-data:
+    driver: local
+
+networks:
+  technathon-net:
+    driver: bridge
