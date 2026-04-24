@@ -83,12 +83,49 @@
       return `${pad2Client(Math.floor(end / 60))}:${pad2Client(end % 60)}`;
     }
 
+    /**
+     * Never rely on `location.pathname` alone for API paths: `http://host/pmo#/…` has pathname `/pmo`, and
+     * relative `api/login` becomes `/api/login` (wrong). Prefer the folder of this script (`app.js`): e.g.
+     * `/pmo/app.js` → API base `/pmo/api/` so login hits `/pmo/api/login` on the same origin:port as the UI.
+     */
+    const PO_API_PREFIX = (function () {
+      const scripts = document.getElementsByTagName('script');
+      for (let i = scripts.length - 1; i >= 0; i--) {
+        const src = scripts[i].src;
+        if (!src || !/\/app\.js/i.test(src)) continue;
+        try {
+          const path = new URL(src).pathname;
+          const dir = path.includes('/') ? path.replace(/[^/]+$/, '') : '/';
+          return `${dir}api/`.replace(/\/{2,}/g, '/');
+        } catch (_) {
+          break;
+        }
+      }
+      const p = window.location.pathname || '/';
+      const underPmo = p === '/pmo' || p.startsWith('/pmo/');
+      return underPmo ? '/pmo/api/' : 'api/';
+    })();
+
+    function poResolveUrl(url) {
+      const u = String(url || '');
+      if (/^(https?:)?\/\//i.test(u) || u.startsWith('/pmo/') || u.startsWith('/api/')) return u;
+      if (u.startsWith('api/')) {
+        const tail = u.slice(4);
+        return PO_API_PREFIX.endsWith('/') ? PO_API_PREFIX + tail : `${PO_API_PREFIX}/${tail}`;
+      }
+      if (u === 'Parent_Orientation_Tracker.xlsx') {
+        const base = PO_API_PREFIX.replace(/\/?api\/$/, '/');
+        return `${base}Parent_Orientation_Tracker.xlsx`.replace(/\/{2,}/g, '/');
+      }
+      return u;
+    }
+
     /** Sends which role this tab uses so PMO and Speaker can both be logged in (separate cookies). */
     function poApiFetch(url, init = {}) {
       const role = sessionStorage.getItem('po_logged_in');
       const headers = new Headers(init.headers || {});
       if (role === 'pmo' || role === 'speaker') headers.set(PO_ROLE_HEADER, role);
-      return fetch(url, { credentials: 'include', ...init, headers });
+      return fetch(poResolveUrl(url), { credentials: 'include', ...init, headers });
     }
 
     let sessions = [];
@@ -767,6 +804,7 @@
       }
 
       syncRouteFromHash({ render: false });
+      initPlanFormRegionAndBranch();
       loadData();
     }
 
@@ -774,9 +812,8 @@
       const user = document.getElementById('login-user').value.trim();
       const pass = document.getElementById('login-pass').value;
       try {
-        const r = await fetch('api/login', {
+        const r = await poApiFetch('api/login', {
           method: 'POST',
-          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user, pass })
         });
@@ -907,6 +944,7 @@
     }
 
     function initStaticPageControls() {
+      initPlanFormRegionAndBranch();
       document.getElementById('btn-export-excel')?.addEventListener('click', () => exportExcel());
       document.getElementById('btn-logout')?.addEventListener('click', () => logoutUser());
       document.getElementById('tab-pmo')?.addEventListener('click', () => {
@@ -1241,6 +1279,9 @@
       }
       if (section === 'plan' && editId) {
         queueMicrotask(() => maybeOpenPlanEditFromHash());
+      }
+      if (section === 'plan') {
+        initPlanFormRegionAndBranch();
       }
     }
 
@@ -1592,33 +1633,86 @@
       ],
       "West Bengal": [
         "Sri Chaitanya-Bada Bazar",
-        "Sri Chaitanya- Dunlop",
+        "Sri Chaitanya-Dunlop",
         "Sri Chaitanya-Howrah",
         "Sri Chaitanya-New Town 1",
         "Sri Chaitanya-New Town 2",
         "Sri Chaitanya-Serampore",
         "Sri Chaitanya-Chinsurah",
-      ]
-
+        
+      ],
     };
 
+    function fillRegionSelectFromMap() {
+      const sel = document.getElementById('p-region');
+      if (!sel) {
+        console.error('[PO] #p-region not found; region list was not built.');
+        return;
+      }
+      const current = String(sel.value || '').trim();
+      const keys = Object.keys(regionBranches);
+      let html = '<option value="">Select Region</option>';
+      keys.forEach((k) => {
+        html += `<option value="${escapeAttr(k)}">${escapeHtml(k)}</option>`;
+      });
+      if (current && !keys.includes(current)) {
+        html += `<option value="${escapeAttr(current)}">${escapeHtml(current)}</option>`;
+      }
+      sel.innerHTML = html;
+      if (current) sel.value = current;
+    }
+
+    function ensureRegionOptionInSelect(val) {
+      if (val == null || val === '') return;
+      const sel = document.getElementById('p-region');
+      if (!sel) return;
+      if (Array.from(sel.options).some((o) => o.value === val)) return;
+      const o = document.createElement('option');
+      o.value = val;
+      o.textContent = val;
+      sel.appendChild(o);
+    }
+
     function updateBranches(forceBranch) {
-      const reg = document.getElementById('p-region').value;
+      const pReg = document.getElementById('p-region');
+      if (!pReg) {
+        console.error('[PO] #p-region not found in updateBranches.');
+        return;
+      }
+      const reg = String(pReg.value || '').trim();
       const container = document.getElementById('branch-container');
-      const branches = regionBranches[reg] || [];
+      if (!container) {
+        console.error('[PO] #branch-container not found; cannot render branch field.');
+        return;
+      }
+      const raw = regionBranches[reg];
+      const list = (Array.isArray(raw) ? raw : [])
+        .map((b) => String(b == null ? '' : b).replace(/\s+/g, ' ').trim())
+        .filter(Boolean);
+      if (Array.isArray(raw) && list.length < raw.length) {
+        console.warn('[PO] Skipped empty branch row(s) for region:', reg);
+      }
+      const nUnique = new Set(list).size;
+      if (list.length !== nUnique) {
+        console.warn(
+          '[PO] Duplicate branch name in regionBranches for "' + reg + ' — same string twice collapses the count in the UI in some browsers. list:',
+          list
+        );
+      }
 
       const currentVal =
         typeof forceBranch === 'string'
           ? forceBranch
           : (document.getElementById('p-branch') ? document.getElementById('p-branch').value : '');
 
-      if (branches.length > 0) {
+      if (list.length > 0) {
         let optionsHTML = '<option value="">Select Branch</option>';
         let found = false;
-        branches.forEach(b => {
+        for (let i = 0; i < list.length; i += 1) {
+          const b = list[i];
           optionsHTML += `<option value="${escapeAttr(b)}">${escapeHtml(b)}</option>`;
           if (b === currentVal) found = true;
-        });
+        }
         if (currentVal && !found) {
           optionsHTML += `<option value="${escapeAttr(currentVal)}">${escapeHtml(currentVal)}</option>`;
         }
@@ -1630,6 +1724,13 @@
 
       const el = document.getElementById('p-branch');
       if (el) el.value = currentVal;
+    }
+
+    function initPlanFormRegionAndBranch() {
+      fillRegionSelectFromMap();
+      const br = document.getElementById('p-branch');
+      const keep = br && 'value' in br ? br.value : '';
+      updateBranches(typeof keep === 'string' ? keep : '');
     }
 
     function setPlanField(id, value) {
@@ -1699,6 +1800,7 @@
         if (b) b.classList.add('active');
       });
       setPlanField('p-location', s.location || '');
+      ensureRegionOptionInSelect(s.region);
       setPlanField('p-region', s.region || '');
       updateBranches(s.branch || '');
       pickVenue(s.venue || '');
@@ -2552,6 +2654,8 @@
         hostname === '127.0.0.1' ||
         hostname === '[::1]' ||
         hostname.endsWith('.localhost');
+      // HTTP on localhost/127.0.0.1: do not register — SW cached old app.js and `regionBranches` in the UI would not update.
+      if (protocol === 'http:' && local) return;
       if (protocol !== 'https:' && !local) return;
       window.addEventListener('load', () => {
         const swUrl = new URL('sw.js', window.location.href).href;

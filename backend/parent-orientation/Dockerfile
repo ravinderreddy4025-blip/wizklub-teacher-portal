@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1
+# Parent Orientation (PMO) API — production image.
+# MongoDB: set MONGODB_URI at runtime (wizklub-gateway compose defaults to mongodb://po-mongo:27017/).
+# Do not bake host-specific URIs here.
 
 FROM node:20-bookworm-slim
 

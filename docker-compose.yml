@@ -1,11 +1,22 @@
-# Single host: Parent Orientation at http://localhost:9080/pmo/
-#               Technathon at http://localhost:9080/technathon/
+# Unified entry: Parent Orientation → http://localhost:9080/pmo/  (Technathon → …/technathon/)
 #
-# From this directory:
+# Windows: browsers often resolve "localhost" to IPv6 (::1). If http://localhost:9080 fails but
+# http://127.0.0.1:9080 works, the gateway publishes both IPv4 and IPv6 below; recreate gateway after edits.
+#
+# From repository root (this folder):
 #   docker compose up --build -d
 #
-# Requires backend/technathon/.env (see env-example/technathon) as the single source
+# PMO static UI: `po-frontend` bind-mounts `./frontend/parent-orientation/public` so `app.js` / `index.html`
+# changes on the host apply without rebuilding the image (refresh the browser; bump `?v=` in index if cached).
+#
+# Requires backend/technathon/.env (see env-example/technathon-server.env.example) as the single source
 # of truth for Technathon API settings (including MONGO_URI).
+#
+# PMO (`po-backend`) defaults to NODE_ENV=production. Override for local-only lax mode:
+#   create a repo-root `.env` (used by Compose for interpolation only) with:
+#     PMO_NODE_ENV=development
+#   `backend/parent-orientation/.env` must still satisfy production rules when PMO_NODE_ENV=production
+#   (strong COOKIE_SECRET, PMO_PASS/SPEAKER_PASS, MONGODB_URI, etc.).
 
 name: wizklub-gateway
 
@@ -26,14 +37,14 @@ services:
 
   technathon-api:
     build:
-      context: ../../backend/technathon
+      context: ./backend/technathon
       dockerfile: Dockerfile
     restart: unless-stopped
     # Mount .env so Compose does not interpolate `$` in bcrypt hashes (env_file breaks ADMIN_PASSWORD_HASH).
     volumes:
-      - ../../backend/technathon/.env:/app/.env:ro
+      - ./backend/technathon/.env:/app/.env:ro
       # Logo files are not always baked into older images; mount so WIZKLUB_LOGO_PATH works without rebuild.
-      - ../../backend/technathon/assets:/app/assets:ro
+      - ./backend/technathon/assets:/app/assets:ro
     environment:
       NODE_ENV: production
       PORT: "5000"
@@ -55,7 +66,7 @@ services:
 
   technathon-web:
     build:
-      context: ../../frontend/technathon
+      context: ./frontend/technathon
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ""
@@ -83,14 +94,18 @@ services:
 
   po-backend:
     build:
-      context: ../../backend/parent-orientation
+      context: ./backend/parent-orientation
       dockerfile: Dockerfile
     restart: unless-stopped
     volumes:
-      - ../../backend/parent-orientation/.env:/app/.env:ro
+      - ./backend/parent-orientation/.env:/app/.env:ro
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${PMO_NODE_ENV:-production}
       BIND_HOST: "0.0.0.0"
+      # nginx sets X-Forwarded-* — same as Technathon API for correct rate limits / logs
+      TRUST_PROXY: "true"
+      # MongoDB on compose network: service `po-mongo`, port 27017. Override with PMO_MONGODB_URI when invoking compose.
+      MONGODB_URI: ${PMO_MONGODB_URI:-mongodb://po-mongo:27017/}
     depends_on:
       po-mongo:
         condition: service_healthy
@@ -101,9 +116,12 @@ services:
 
   po-frontend:
     build:
-      context: ../../frontend/parent-orientation
+      context: ./frontend/parent-orientation
       dockerfile: Dockerfile
     restart: unless-stopped
+    volumes:
+      - ./frontend/parent-orientation/public:/usr/share/nginx/html:ro
+      - ./frontend/parent-orientation/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       po-backend:
         condition: service_started
@@ -114,9 +132,11 @@ services:
     image: nginx:1.27-alpine
     restart: unless-stopped
     ports:
-      - "9080:80"
+      # Explicit v4 + v6 so http://localhost:9080 works when OS prefers ::1 for "localhost"
+      - "0.0.0.0:9080:80/tcp"
+      - "[::]:9080:80/tcp"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx-gateway.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       technathon-web:
         condition: service_started

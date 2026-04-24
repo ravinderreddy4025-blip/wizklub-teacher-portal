@@ -1,4 +1,6 @@
 # syntax=docker/dockerfile:1
+# PMO static shell (nginx). Proxies /pmo/api/ to po-backend:8080 per nginx.conf.
+# For live public/ and nginx.conf edits without rebuild, use compose bind mounts (see root docker-compose.yml).
 
 FROM nginx:1.27-alpine
 

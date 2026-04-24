@@ -1,5 +1,5 @@
 /* Parent Orientation Tracker — installable PWA shell + offline-friendly static assets */
-const CACHE_VERSION = 'po-pwa-v9';
+const CACHE_VERSION = 'po-pwa-v11';
 
 function getScopePath() {
   try {
