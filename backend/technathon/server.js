@@ -209,10 +209,13 @@ if (isTest) {
   submissionsRouter.init(null, mockSubmissions, false, null, mockRoster);
   syncAdminRosterConfig();
 } else {
+  const mongoDbName = String(process.env.MONGO_DB_NAME || '').trim();
+  const mongoConnectOptions = mongoDbName ? { dbName: mongoDbName } : undefined;
   mongoBootstrapPromise = mongoose
-    .connect(process.env.MONGO_URI)
+    .connect(process.env.MONGO_URI, mongoConnectOptions)
     .then(() => {
-      console.log('✅ Connected to MongoDB');
+      if (mongoDbName) console.log(`✅ Connected to MongoDB (db: ${mongoDbName})`);
+      else console.log('✅ Connected to MongoDB');
       useMongo = true;
       submissionsRouter.init(Submission, mockSubmissions, useMongo, RosterStudent, mockRoster);
       syncAdminRosterConfig();
