@@ -1,13 +1,13 @@
     const STORE_KEY = 'po_sessions_v8';
     const PO_ROLE_HEADER = 'X-PO-Role';
 
-    // Local-only guard: if PMO opens on http://localhost/pmo without port, force :9080.
+    // Local-only guard: if PMO opens on http://localhost/pmo without port, force :8080.
     (function ensureLocalGatewayPort() {
       const { protocol, hostname, port, pathname, search, hash } = window.location;
       const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
       const underPmo = pathname === '/pmo' || pathname.startsWith('/pmo/');
       if (protocol === 'http:' && isLocal && !port && underPmo) {
-        window.location.replace(`${protocol}//${hostname}:9080${pathname}${search}${hash}`);
+        window.location.replace(`${protocol}//${hostname}:8080${pathname}${search}${hash}`);
       }
     })();
 

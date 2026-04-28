@@ -27,8 +27,8 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env}
       STUDENT_FORM_SECRET: ${STUDENT_FORM_SECRET:?Set STUDENT_FORM_SECRET in .env}
-      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-http://localhost:9080}
-      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-http://localhost:9080/technathon}
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-http://localhost:8080}
+      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-http://localhost:8080/technathon}
       AWS_REGION: ${AWS_REGION:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
@@ -84,8 +84,8 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "0.0.0.0:9080:80/tcp"
-      - "[::]:9080:80/tcp"
+      - "0.0.0.0:8080:80/tcp"
+      - "[::]:8080:80/tcp"
     networks:
       - wizklub
 
