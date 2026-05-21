@@ -9,7 +9,7 @@ trap cleanup INT TERM
 # Technathon API (port 5000)
 (
   cd /app/backend/technathon
-  export NODE_ENV=production
+  export NODE_ENV="${NODE_ENV:-production}"
   export PORT=5000
   export TRUST_PROXY="${TECH_TRUST_PROXY:-true}"
   # Shared Mongo URI + explicit DB name in env.

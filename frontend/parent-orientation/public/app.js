@@ -1,4 +1,4 @@
-    const STORE_KEY = 'po_sessions_v8';
+﻿    const STORE_KEY = 'po_sessions_v8';
     const PO_ROLE_HEADER = 'X-PO-Role';
 
     // Local-only guard: if PMO opens on http://localhost/pmo without port, force :8080.
@@ -134,7 +134,9 @@
     function poApiFetch(url, init = {}) {
       const role = sessionStorage.getItem('po_logged_in');
       const headers = new Headers(init.headers || {});
-      if (role === 'pmo' || role === 'speaker') headers.set(PO_ROLE_HEADER, role);
+      if (role === 'pmo' || role === 'speaker' || role === 'sales_admin') {
+        headers.set(PO_ROLE_HEADER, role);
+      }
       return fetch(poResolveUrl(url), { credentials: 'include', ...init, headers });
     }
 
@@ -157,6 +159,21 @@
     function escapeAttr(s) {
       return escapeHtml(s).replace(/'/g, '&#39;');
     }
+
+    /** Unicode literals for UI (avoids mojibake when app.js is mis-saved as Latin-1). */
+    const PO_TEXT = {
+      emDash: '\u2014',
+      enDash: '\u2013',
+      middot: '\u00B7',
+      ellipsis: '\u2026',
+      arrowDown: '\u25BC',
+      arrowRight: '\u2192',
+      iconCal: '\u{1F4C5}',
+      iconPerson: '\u{1F464}',
+      iconPin: '\u{1F4CD}',
+      iconId: '\u{1F194}',
+    };
+
     function safeZoomHref(url) {
       const u = String(url || '').trim();
       return /^https?:\/\//i.test(u) ? u : '';
@@ -233,8 +250,52 @@
       }
       return true;
     }
-    function locationLinkHtml(loc) {
+    function buildJoinUrl(sessionId) {
+      if (!sessionId) return '';
+      return `${window.location.origin}/pmo/join/${encodeURIComponent(sessionId)}`;
+    }
+
+    function openRawMeetingLink(href) {
+      const h = safeZoomHref(href);
+      if (h) window.open(h, '_blank', 'noopener,noreferrer');
+    }
+
+    async function copyTextToClipboard(text) {
+      if (!text) return false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (_) { /* fall through */ }
+      }
+      return false;
+    }
+
+    async function copyJoinLinkForSession(sessionId) {
+      if (!sessionId) {
+        toast('Save the session first to get a share link for students.', 'warning');
+        return;
+      }
+      const url = buildJoinUrl(sessionId);
+      const ok = await copyTextToClipboard(url);
+      if (ok) toast('Student share link copied.', 'info');
+      else toast('Could not copy automatically — copy the join URL from the session details.', 'warning');
+    }
+
+    function formatStudentIdsCell(s) {
+      const ids = s && Array.isArray(s.student_ids) ? s.student_ids : [];
+      return ids.length ? escapeHtml(ids.join(', ')) : '—';
+    }
+
+    function locationLinkHtml(loc, opts) {
+      const o = opts && typeof opts === 'object' ? opts : {};
       const href = safeZoomHref(loc);
+      const sid = o.sessionId;
+      const online = o.venue === 'Online';
+      if (href && online && sid) {
+        return `<a href="${escapeAttr(href)}" class="po-meeting-link" data-po-meeting-sid="${escapeAttr(sid)}" data-po-meeting-href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer" style="color:#c2410c;text-decoration:none;font-weight:600;">Open meeting</a>
+          <button type="button" class="btn btn-o btn-sm po-copy-meeting-link" data-po-meeting-sid="${escapeAttr(sid)}" style="margin-left:8px;vertical-align:middle">Copy share link</button>`;
+      }
       if (href) {
         return `<a href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer" style="color:#c2410c;text-decoration:none;font-weight:600;">Open link</a>`;
       }
@@ -422,6 +483,7 @@
         }
         if (r.ok && Array.isArray(payload)) {
           sessions = normalizeSessionsArray(payload);
+          pmoFulfillmentCache = null;
           try {
             localStorage.setItem(STORE_KEY, JSON.stringify(sessions));
           } catch (_) { /* quota */ }
@@ -453,6 +515,7 @@
         const data = await r.json();
         if (Array.isArray(data)) {
           sessions = normalizeSessionsArray(data);
+          pmoFulfillmentCache = null;
           try {
             localStorage.setItem(STORE_KEY, JSON.stringify(sessions));
           } catch (_) { /* quota */ }
@@ -546,6 +609,11 @@
         const ok = await pullSessionsFromServer();
         if (!ok) toast('Could not refresh sessions from the server.', 'error');
         await pmoUploadExcelFile();
+        return ok;
+      }
+      if (role === 'sales_admin') {
+        const ok = await pullSessionsFromServer();
+        if (!ok) toast('Could not refresh sessions from the server.', 'error');
         return ok;
       }
       let persistOk = false;
@@ -679,12 +747,12 @@
       const st = String(s.scheduled_start_time || '').trim();
       const en = String(s.scheduled_end_time || '').trim();
       let timePart = '';
-      if (st && en) timePart = `${st}–${en}`;
+      if (st && en) timePart = `${st}\u2013${en}`;
       else timePart = st || en;
       const bits = [];
-      if (dateStr && dateStr !== '—') bits.push(dateStr);
+      if (dateStr && dateStr !== '\u2014') bits.push(dateStr);
       if (timePart) bits.push(timePart);
-      return bits.length ? bits.join(' · ') : '—';
+      return bits.length ? bits.join(' \u00B7 ') : '\u2014';
     }
 
     /** Notifications via React Toastify (see /react-toastify-bundle.js). */
@@ -701,8 +769,35 @@
       else api.info(msg, opts);
     }
 
-    /** Hash: #/login | #/pmo/analytics[/YYYY-MM] | #/pmo/plan | #/pmo/plan/edit/:id | #/pmo/meetings | #/speaker */
+    /** Hash: #/ | #/login/{pmo|speaker|sales-admin} | #/pmo/... | #/speaker | #/sales-admin/{overview|targets}[/YYYY-MM] */
     const PO_PMO_SECTIONS = new Set(['analytics', 'plan', 'meetings']);
+    const PO_SALES_SECTIONS = new Set(['overview', 'targets']);
+    const PO_LOGIN_PORTALS = {
+      pmo: {
+        hash: '#/login/pmo',
+        role: 'pmo',
+        title: 'PMO sign in',
+        sub: 'Planning, analytics, and session management.',
+      },
+      speaker: {
+        hash: '#/login/speaker',
+        role: 'speaker',
+        title: 'Speaker sign in',
+        sub: 'Post-activity updates for orientation sessions.',
+      },
+      'sales-admin': {
+        hash: '#/login/sales-admin',
+        role: 'sales_admin',
+        title: 'Sales Admin sign in',
+        sub: 'School targets and fulfillment tracking.',
+      },
+    };
+    let salesFulfillmentCache = null;
+    let salesTablePage = 0;
+    const SALES_TABLE_PAGE_SIZE = 10;
+    /** Last-saved completion targets per school (region|branch → number); used to enable Save targets. */
+    let salesTargetsSavedSnapshot = null;
+    let pmoFulfillmentCache = null;
 
     function poStripHash() {
       return (location.hash || '').replace(/^#/, '');
@@ -712,15 +807,36 @@
     function parseAppRoute() {
       const parts = poStripHash().split('/').filter(Boolean);
       if (parts.length === 0) return { name: 'root', params: {} };
-      if (parts[0] === 'login') return { name: 'login', params: {} };
-      if (parts[0] === 'speaker') return { name: 'speaker', params: {} };
+      if (parts[0] === 'login') {
+        const portal = parts[1] && PO_LOGIN_PORTALS[parts[1]] ? parts[1] : null;
+        return { name: 'login', params: { portal } };
+      }
+      if (parts[0] === 'speaker') {
+        const month = parts[1] && /^\d{4}-\d{2}$/.test(parts[1]) ? parts[1] : null;
+        return { name: 'speaker', params: { month } };
+      }
+      if (parts[0] === 'sales-admin') {
+        const p1 = parts[1];
+        const p2 = parts[2];
+        if (PO_SALES_SECTIONS.has(p1)) {
+          const month = p2 && /^\d{4}-\d{2}$/.test(p2) ? p2 : null;
+          return { name: 'sales-admin', params: { section: p1, month } };
+        }
+        if (p1 && /^\d{4}-\d{2}$/.test(p1)) {
+          return { name: 'sales-admin', params: { section: 'overview', month: p1 } };
+        }
+        return { name: 'sales-admin', params: { section: 'overview', month: null } };
+      }
       if (parts[0] === 'pmo') {
         if (parts.length >= 4 && parts[1] === 'plan' && parts[2] === 'edit' && parts[3]) {
           const editId = decodeURIComponent(parts.slice(3).join('/'));
           return { name: 'pmo', params: { section: 'plan', month: null, editId } };
         }
         const sec = PO_PMO_SECTIONS.has(parts[1]) ? parts[1] : 'analytics';
-        const month = sec === 'analytics' && parts[2] && /^\d{4}-\d{2}$/.test(parts[2]) ? parts[2] : null;
+        const month =
+          (sec === 'analytics' || sec === 'meetings') && parts[2] && /^\d{4}-\d{2}$/.test(parts[2])
+            ? parts[2]
+            : null;
         return { name: 'pmo', params: { section: sec, month, editId: null } };
       }
       return { name: 'unknown', params: {} };
@@ -743,14 +859,14 @@
       const route = parseAppRoute();
 
       if (!role) {
-        if (route.name !== 'login') {
-          if (poReplaceHash('#/login')) syncRouteFromHash(opts);
-        }
+        syncPublicRoute(route);
         return;
       }
 
       if (route.name === 'login' || route.name === 'root' || route.name === 'unknown') {
-        const def = role === 'pmo' ? '#/pmo/analytics' : '#/speaker';
+        let def = '#/speaker';
+        if (role === 'pmo') def = '#/pmo/analytics';
+        else if (role === 'sales_admin') def = '#/sales-admin/overview';
         if (poReplaceHash(def)) syncRouteFromHash(opts);
         return;
       }
@@ -772,17 +888,103 @@
           return;
         }
         switchRole('speaker');
+        applySpeakerRoute();
         if (render) renderAll();
+        return;
+      }
+
+      if (role === 'sales_admin') {
+        if (route.name !== 'sales-admin') {
+          if (poReplaceHash('#/sales-admin/overview')) syncRouteFromHash(opts);
+          return;
+        }
+        switchRole('sales_admin');
+        applySalesRoute();
+        if (render) {
+          if (salesFulfillmentCache) renderSalesAdmin();
+          else ensureSalesAdminData();
+        }
       }
     }
 
-    function showLogin() {
+    function hideAllShells() {
+      const landing = document.getElementById('landing-screen');
       const ls = document.getElementById('login-screen');
-      ls.style.display = 'flex';
-      ls.style.pointerEvents = 'auto';
-      document.querySelector('.app').style.display = 'none';
+      const app = document.querySelector('.app');
+      if (landing) {
+        landing.style.display = 'none';
+        landing.style.pointerEvents = 'none';
+      }
+      if (ls) {
+        ls.style.display = 'none';
+        ls.style.pointerEvents = 'none';
+      }
+      if (app) app.style.display = 'none';
+    }
+
+    function showLanding() {
+      hideAllShells();
+      const landing = document.getElementById('landing-screen');
+      if (landing) {
+        landing.style.display = 'flex';
+        landing.style.pointerEvents = 'auto';
+      }
       const route = parseAppRoute();
-      if (route.name !== 'login') poReplaceHash('#/login');
+      if (route.name !== 'root') poReplaceHash('#/');
+    }
+
+    function showLoginPortal(portalKey) {
+      const portal = portalKey && PO_LOGIN_PORTALS[portalKey] ? PO_LOGIN_PORTALS[portalKey] : null;
+      if (!portal) {
+        showLanding();
+        return;
+      }
+      hideAllShells();
+      const ls = document.getElementById('login-screen');
+      if (ls) {
+        ls.style.display = 'flex';
+        ls.style.pointerEvents = 'auto';
+      }
+      const titleEl = document.getElementById('login-portal-title');
+      const subEl = document.getElementById('login-portal-sub');
+      if (titleEl) titleEl.textContent = portal.title;
+      if (subEl) subEl.textContent = portal.sub;
+      ls?.setAttribute('data-po-login-portal', portalKey);
+      const route = parseAppRoute();
+      const want = portal.hash;
+      if (route.name !== 'login' || route.params.portal !== portalKey) poReplaceHash(want);
+    }
+
+    function syncPublicRoute(route) {
+      if (route.name === 'login' && route.params.portal) {
+        showLoginPortal(route.params.portal);
+        return;
+      }
+      if (route.name === 'login') {
+        if (poReplaceHash('#/')) syncRouteFromHash();
+        return;
+      }
+      if (route.name === 'root') {
+        showLanding();
+        return;
+      }
+      if (poReplaceHash('#/')) syncRouteFromHash();
+    }
+
+    function showLogin() {
+      showLanding();
+    }
+
+    function portalRoleFromKey(portalKey) {
+      const p = portalKey && PO_LOGIN_PORTALS[portalKey];
+      return p ? p.role : null;
+    }
+
+    function getActiveLoginPortalKey() {
+      const route = parseAppRoute();
+      if (route.name === 'login' && route.params.portal) return route.params.portal;
+      const ls = document.getElementById('login-screen');
+      return ls?.getAttribute('data-po-login-portal') || null;
     }
 
     async function logoutUser() {
@@ -797,30 +999,38 @@
       sessionStorage.removeItem('po_logged_in');
       document.getElementById('login-user').value = '';
       document.getElementById('login-pass').value = '';
-      showLogin();
+      poReplaceHash('#/');
+      showLanding();
       toast('Logged out successfully', 'success');
     }
 
     function showApp() {
-      const ls = document.getElementById('login-screen');
-      ls.style.display = 'none';
-      ls.style.pointerEvents = 'none';
+      hideAllShells();
       document.querySelector('.app').style.display = 'block';
 
       const role = sessionStorage.getItem('po_logged_in');
       const tabs = document.getElementById('role-tabs');
-      if (role === 'pmo' || role === 'speaker') {
+      if (role === 'pmo' || role === 'speaker' || role === 'sales_admin') {
         if (tabs) tabs.style.display = 'none';
+      }
+      document.querySelector('.app')?.classList.toggle('app--sales-admin', role === 'sales_admin');
+      const exportBtn = document.getElementById('btn-export-excel');
+      if (exportBtn) exportBtn.style.display = role === 'sales_admin' ? 'none' : '';
+      const sub = document.querySelector('.app-sub');
+      if (sub && role !== 'sales_admin') {
+        sub.textContent = 'Pre-Sales Activity Management';
       }
 
       syncRouteFromHash({ render: false });
-      initPlanFormRegionAndBranch();
+      if (role !== 'sales_admin') initPlanFormRegionAndBranch();
       loadData();
     }
 
     async function loginUser() {
       const user = document.getElementById('login-user').value.trim();
       const pass = document.getElementById('login-pass').value;
+      const portalKey = getActiveLoginPortalKey();
+      const expectedRole = portalRoleFromKey(portalKey);
       try {
         const r = await poApiFetch('api/login', {
           method: 'POST',
@@ -829,6 +1039,22 @@
         });
         const j = await r.json().catch(() => ({}));
         if (r.ok && j.role) {
+          if (expectedRole && j.role !== expectedRole) {
+            const portalLabel =
+              portalKey === 'sales-admin' ? 'Sales Admin' : portalKey === 'pmo' ? 'PMO' : 'Speaker';
+            try {
+              await poApiFetch('api/logout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: j.role }),
+              });
+            } catch (_) { /* ignore */ }
+            toast(
+              `Those credentials are not for ${portalLabel}. Use the correct portal on the home page.`,
+              'error'
+            );
+            return;
+          }
           sessionStorage.setItem('po_logged_in', j.role);
           const v = await poApiFetch('api/me');
           const me = await v.json().catch(() => ({}));
@@ -839,7 +1065,13 @@
           }
           document.getElementById('login-pass').value = '';
           showApp();
-          toast(j.role === 'pmo' ? 'Welcome PMO' : 'Welcome Speaker', 'success');
+          const welcome =
+            j.role === 'pmo'
+              ? 'Welcome PMO'
+              : j.role === 'sales_admin'
+                ? 'Welcome Sales Admin'
+                : 'Welcome Speaker';
+          toast(welcome, 'success');
           return;
         }
       } catch (_) { /* network */ }
@@ -950,10 +1182,56 @@
           e.preventDefault();
           setPmoHash('analytics');
         }
+        const skcard = e.target.closest('[data-spk-month]');
+        if (skcard) {
+          e.preventDefault();
+          poReplaceHash(`#/speaker/${skcard.dataset.spkMonth}`);
+          syncRouteFromHash();
+          return;
+        }
+        const spkBack = e.target.closest('[data-spk-back]');
+        if (spkBack) {
+          e.preventDefault();
+          poReplaceHash('#/speaker');
+          syncRouteFromHash();
+        }
+        const meetOpen = e.target.closest('.po-meeting-link');
+        if (meetOpen) {
+          e.preventDefault();
+          const href = meetOpen.dataset.poMeetingHref || meetOpen.href || '';
+          openRawMeetingLink(href);
+          return;
+        }
+        const meetCopy = e.target.closest('.po-copy-meeting-link');
+        if (meetCopy) {
+          e.preventDefault();
+          copyJoinLinkForSession(meetCopy.dataset.poMeetingSid || '');
+          return;
+        }
+      });
+    }
+
+    function initOnlineMeetingLinkHandlers() {
+      const openA = document.getElementById('p-location-open');
+      const copyBtn = document.getElementById('p-location-copy');
+
+      openA?.addEventListener('click', (e) => {
+        const href = safeZoomHref(document.getElementById('p-location')?.value || '');
+        if (!href || getSelectedPlanVenue() !== 'Online') return;
+        e.preventDefault();
+        openRawMeetingLink(href);
+      });
+
+      copyBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (getSelectedPlanVenue() !== 'Online') return;
+        await copyJoinLinkForSession(editingId || '');
       });
     }
 
     function initStaticPageControls() {
+      initPmoTimelineFloatTip();
+      initPmoRegionMap();
       initPlanFormRegionAndBranch();
       document.getElementById('btn-export-excel')?.addEventListener('click', () => exportExcel());
       document.getElementById('btn-logout')?.addEventListener('click', () => logoutUser());
@@ -967,6 +1245,11 @@
       });
       document.getElementById('p-region')?.addEventListener('change', updateBranches);
       document.getElementById('f-status')?.addEventListener('change', renderPMO);
+      document.getElementById('f-meetings-month')?.addEventListener('change', () => {
+        const m = document.getElementById('f-meetings-month')?.value || '';
+        setPmoHash('meetings', m || null);
+        renderPMO();
+      });
       document.getElementById('f-search')?.addEventListener('input', renderPMO);
       document.getElementById('spk-sort-by')?.addEventListener('change', onSpeakerSortChange);
       document.getElementById('spk-sort-dir')?.addEventListener('change', onSpeakerSortChange);
@@ -988,15 +1271,101 @@
       document.getElementById('p-date')?.addEventListener('click', refreshPlanDateMinAttr);
       refreshPlanDateMinAttr();
       syncPlanLocationValidity();
+      initOnlineMeetingLinkHandlers();
       document.getElementById('pmo-nav')?.addEventListener('click', (e) => {
         const b = e.target.closest('[data-pmo-nav]');
         if (!b) return;
         const sec = b.dataset.pmoNav;
         if (sec === 'analytics') setPmoHash('analytics');
         else if (sec === 'plan') setPmoHash('plan');
-        else if (sec === 'meetings') setPmoHash('meetings');
+        else if (sec === 'meetings') {
+          const m = document.getElementById('f-meetings-month')?.value || '';
+          setPmoHash('meetings', m || null);
+        }
       });
       window.addEventListener('hashchange', () => syncRouteFromHash());
+      const salesMonth = document.getElementById('sales-month');
+      if (salesMonth && !salesMonth.value) {
+        salesMonth.value = currentCalendarMonthKey();
+      }
+      document.getElementById('sales-nav')?.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-sales-nav]');
+        if (!b) return;
+        setSalesHash(b.dataset.salesNav, getSalesSelectedMonth());
+      });
+      salesMonth?.addEventListener('change', () => {
+        salesTablePage = 0;
+        const m = getSalesSelectedMonth();
+        setSalesHash(parseSalesRoute().section, m);
+        loadSalesFulfillment().then(() => renderSalesAdmin());
+      });
+      document.getElementById('sales-region-filter')?.addEventListener('change', () => {
+        salesTablePage = 0;
+        const { section } = parseSalesRoute();
+        if (section === 'targets') renderSalesTargets();
+        else renderSalesOverview();
+      });
+      document.getElementById('sales-type-filter')?.addEventListener('change', () => {
+        salesTablePage = 0;
+        const { section } = parseSalesRoute();
+        if (section === 'targets') renderSalesTargets();
+        else renderSalesOverview();
+      });
+      document.getElementById('sales-school-search')?.addEventListener('input', () => {
+        salesTablePage = 0;
+        const { section } = parseSalesRoute();
+        if (section === 'targets') renderSalesTargets();
+        else renderSalesSchoolTable(salesFulfillmentCache, getSalesSelectedMonth());
+      });
+      document.getElementById('btn-sales-logout')?.addEventListener('click', () => {
+        document.getElementById('btn-logout')?.click();
+      });
+      document.getElementById('btn-sales-export-report')?.addEventListener('click', () => exportExcel());
+      document.getElementById('sales-school-table-pager')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-sales-page]');
+        if (!btn || btn.disabled) return;
+        const dir = btn.dataset.salesPage;
+        if (dir === 'prev') salesTablePage = Math.max(0, salesTablePage - 1);
+        else if (dir === 'next') salesTablePage += 1;
+        renderSalesSchoolTable(salesFulfillmentCache, getSalesSelectedMonth());
+      });
+      document.getElementById('sales-school-table-root')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-sales-goto-targets]');
+        if (!btn) return;
+        setSalesHash('targets', getSalesSelectedMonth());
+      });
+      document.getElementById('btn-sales-save-targets')?.addEventListener('click', () => saveSalesTargets());
+      document.getElementById('sales-regions-root')?.addEventListener('input', (e) => {
+        if (e.target.matches('[data-sales-school-target]')) syncSalesSaveTargetsButton();
+      });
+      document.getElementById('sales-regions-root')?.addEventListener('click', (e) => {
+        const schoolBtn = e.target.closest('.sales-school-toggle');
+        if (schoolBtn) {
+          const detailId = schoolBtn.getAttribute('aria-controls');
+          const detail = detailId ? document.getElementById(detailId) : null;
+          if (detail) {
+            const hidden = detail.classList.toggle('is-hidden');
+            schoolBtn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+          }
+          return;
+        }
+        const hd = e.target.closest('.sales-region-hd');
+        if (!hd) return;
+        const body = hd.parentElement?.querySelector('.sales-region-body');
+        if (!body) return;
+        body.classList.toggle('is-collapsed');
+        const open = !body.classList.contains('is-collapsed');
+        hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.getElementById('pmo-targets-by-region')?.addEventListener('click', (e) => {
+        const hd = e.target.closest('.sales-region-hd');
+        if (!hd) return;
+        const body = hd.parentElement?.querySelector('.sales-region-body');
+        if (!body) return;
+        body.classList.toggle('is-collapsed');
+        const open = !body.classList.contains('is-collapsed');
+        hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
     }
 
     function initLogin() {
@@ -1006,17 +1375,30 @@
         e.preventDefault();
         loginUser();
       });
+      document.getElementById('login-back-home')?.addEventListener('click', () => {
+        poReplaceHash('#/');
+        showLanding();
+      });
+      document.getElementById('landing-screen')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-po-portal]');
+        if (!btn) return;
+        const portal = btn.getAttribute('data-po-portal');
+        const cfg = portal && PO_LOGIN_PORTALS[portal];
+        if (!cfg) return;
+        poReplaceHash(cfg.hash);
+        showLoginPortal(portal);
+      });
       (async function () {
         const rememberedRole = sessionStorage.getItem('po_logged_in');
         if (!rememberedRole) {
-          showLogin();
+          syncRouteFromHash();
           return;
         }
         try {
           const r = await poApiFetch('api/me');
           if (!r.ok) {
             sessionStorage.removeItem('po_logged_in');
-            showLogin();
+            syncRouteFromHash();
             return;
           }
           const j = await r.json();
@@ -1025,21 +1407,21 @@
             return;
           }
           sessionStorage.removeItem('po_logged_in');
-          showLogin();
+          syncRouteFromHash();
         } catch (_) {
-          showLogin();
+          syncRouteFromHash();
         }
       })();
     }
 
     function fmtDate(d) {
-      if (d == null || d === '') return '—';
+      if (d == null || d === '') return PO_TEXT.emDash;
       const s = String(d).trim();
       const core = s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
       const parts = core.split('-');
-      if (parts.length < 3) return '—';
+      if (parts.length < 3) return PO_TEXT.emDash;
       const [y, m, day] = parts;
-      if (!y || !m || !day) return '—';
+      if (!y || !m || !day) return PO_TEXT.emDash;
       return `${day}/${m}/${y}`;
     }
 
@@ -1057,6 +1439,11 @@
       return (
         s.status === 'Completed' || s.status === 'Rescheduled' || s.status === 'Cancelled'
       );
+    }
+
+    /** Speaker may submit post-activity for Planned or finalize a Rescheduled session. */
+    function canSpeakerPostUpdate(s) {
+      return s.status === 'Planned' || s.status === 'Rescheduled';
     }
 
     const SPK_SORT_BY_KEY = 'po_spk_sort_by';
@@ -1191,7 +1578,7 @@
       wrapN.style.display = show ? '' : 'none';
     }
 
-    /** Planned sessions: toggle full form vs remarks-only for Rescheduled/Cancelled. */
+    /** Speaker post-activity: toggle full form vs remarks-only for Rescheduled/Cancelled. */
     function applySpeakerActionLayout(sid, action) {
       const plan = document.getElementById(`spk-plan-fields-${sid}`);
       const remBlk = document.getElementById(`spk-remarks-block-${sid}`);
@@ -1244,7 +1631,7 @@
         return `#/pmo/plan/edit/${encodeURIComponent(editSessionId)}`;
       }
       let path = `/pmo/${section}`;
-      if (section === 'analytics' && monthKey) path += `/${monthKey}`;
+      if ((section === 'analytics' || section === 'meetings') && monthKey) path += `/${monthKey}`;
       return `#${path}`;
     }
 
@@ -1293,24 +1680,53 @@
       if (section === 'plan') {
         initPlanFormRegionAndBranch();
       }
+      if (section === 'meetings') {
+        populatePmoMeetingsMonthOptions();
+        const sel = document.getElementById('f-meetings-month');
+        if (sel) sel.value = month && /^\d{4}-\d{2}$/.test(month) ? month : '';
+      }
+    }
+
+    function populatePmoMeetingsMonthOptions() {
+      const sel = document.getElementById('f-meetings-month');
+      if (!sel) return;
+      const keep = sel.value;
+      const months = new Set();
+      for (const s of sessions) {
+        const mk = sessionMonthKey(s);
+        if (mk && mk !== '_nodate') months.add(mk);
+      }
+      const sorted = [...months].sort().reverse();
+      sel.innerHTML =
+        '<option value="">All months</option>' +
+        sorted
+          .map((m) => `<option value="${escapeAttr(m)}">${escapeHtml(formatMonthLabel(m))}</option>`)
+          .join('');
+      if (keep && (keep === '' || sorted.includes(keep))) sel.value = keep;
     }
 
     function switchRole(r) {
       const vpmo = document.getElementById('view-pmo');
       const vspk = document.getElementById('view-speaker');
-      if (r === 'pmo') {
-        vpmo.style.display = 'block';
-        vpmo.style.pointerEvents = 'auto';
-        vspk.style.display = 'none';
-        vspk.style.pointerEvents = 'none';
-      } else {
-        vpmo.style.display = 'none';
-        vpmo.style.pointerEvents = 'none';
-        vspk.style.display = 'block';
-        vspk.style.pointerEvents = 'auto';
-      }
-      document.getElementById('tab-pmo').classList.toggle('active', r === 'pmo');
-      document.getElementById('tab-spk').classList.toggle('active', r === 'speaker');
+      const vsales = document.getElementById('view-sales-admin');
+      const hide = (el) => {
+        if (!el) return;
+        el.style.display = 'none';
+        el.style.pointerEvents = 'none';
+      };
+      const show = (el) => {
+        if (!el) return;
+        el.style.display = 'block';
+        el.style.pointerEvents = 'auto';
+      };
+      hide(vpmo);
+      hide(vspk);
+      hide(vsales);
+      if (r === 'pmo') show(vpmo);
+      else if (r === 'sales_admin') show(vsales);
+      else show(vspk);
+      document.getElementById('tab-pmo')?.classList.toggle('active', r === 'pmo');
+      document.getElementById('tab-spk')?.classList.toggle('active', r === 'speaker');
     }
 
     function pickGrade(val) {
@@ -1352,13 +1768,15 @@
       const hint = document.getElementById('p-location-hint');
       const wrap = document.getElementById('p-location-open-wrap');
       const openA = document.getElementById('p-location-open');
+      const locLabel = document.getElementById('p-location-label');
       if (!el) return;
       const z = el.value.trim();
 
       if (_selVenue !== 'Online' && _selVenue !== 'Offline') {
         el.type = 'text';
         el.removeAttribute('inputmode');
-        el.placeholder = 'Select Online or Offline above…';
+        if (locLabel) locLabel.textContent = 'Meeting link or venue';
+        el.placeholder = 'Choose Online or Offline above first';
         el.setCustomValidity('');
         if (hint) {
           hint.style.display = 'none';
@@ -1371,17 +1789,18 @@
       if (_selVenue === 'Online') {
         el.type = 'url';
         el.setAttribute('inputmode', 'url');
-        el.placeholder = 'https://zoom.us/j/… or https://meet.google.com/…';
+        if (locLabel) locLabel.textContent = 'Meeting link (required)';
+        el.placeholder = 'https://zoom.us/j/... or https://meet.google.com/...';
         el.setCustomValidity(safeZoomHref(z) ? '' : 'For online sessions, paste a full meeting link starting with https:// or http://');
         if (hint) {
           hint.style.display = 'block';
-          hint.textContent = 'Online sessions must use a full web link (https:// or http://). Plain text is not accepted.';
+          hint.textContent = 'Paste a full https:// or http:// link. Plain text is not accepted for online sessions.';
         }
         const href = safeZoomHref(z);
         if (wrap && openA) {
           if (href) {
             openA.href = href;
-            wrap.style.display = 'block';
+            wrap.style.display = 'flex';
           } else {
             wrap.style.display = 'none';
           }
@@ -1391,9 +1810,10 @@
 
       el.type = 'text';
       el.removeAttribute('inputmode');
+      if (locLabel) locLabel.textContent = 'Venue / address';
       el.placeholder = 'e.g. Auditorium, branch address, or N/A';
       if (offlineFieldLooksLikeLink(z)) {
-        el.setCustomValidity('Offline venue must be plain text only — not a web link (http://, https://, www.…).');
+        el.setCustomValidity('Offline venue must be plain text only — not a web link (http://, https://, www., etc.).');
       } else if (z.length === 0) {
         el.setCustomValidity('For offline sessions, enter the venue or location (you can type N/A if not applicable).');
       } else {
@@ -1401,7 +1821,7 @@
       }
       if (hint) {
         hint.style.display = 'block';
-        hint.textContent = 'Offline: enter the physical venue or N/A — plain text only, not a web link.';
+        hint.textContent = 'Offline: physical venue or N/A — plain text only, not a web link.';
       }
       if (wrap) wrap.style.display = 'none';
     }
@@ -1761,9 +2181,19 @@
       syncPlanLocationValidity();
     }
 
+    const PLAN_FORM_SUBTITLE_DEFAULT =
+      'Overlap is blocked when two plans share the same date, region, branch, overlapping times, and at least one of the same grades. Different grades with no overlap can run in parallel.';
+
+    function setPlanFormHeader(title, subtitle) {
+      const t = document.getElementById('form-title');
+      const s = document.getElementById('form-title-sub');
+      if (t) t.textContent = title;
+      if (s) s.textContent = subtitle || PLAN_FORM_SUBTITLE_DEFAULT;
+    }
+
     function cancelEdit() {
       editingId = null;
-      document.getElementById('form-title').innerHTML = `Plan New Session <span class="sec-sub">Overlap is blocked when two plans share the same date, region, branch, overlapping times, and at least one of the same grades. Different grades with no overlap in the lists can run in parallel.</span>`;
+      setPlanFormHeader('Plan New Session', PLAN_FORM_SUBTITLE_DEFAULT);
       document.getElementById('btn-save-plan').textContent = 'Save Session Plan';
       document.getElementById('btn-cancel-edit').style.display = 'none';
       if (sessionStorage.getItem('po_logged_in') === 'pmo' && (location.hash || '').includes('/plan/edit/')) {
@@ -1822,10 +2252,7 @@
         inv !== null && inv !== undefined && inv !== '' && !Number.isNaN(Number(inv)) ? String(Number(inv)) : ''
       );
 
-      const ft = document.getElementById('form-title');
-      if (ft) {
-        ft.innerHTML = `Edit Session <span class="sec-sub">Updating details for ${escapeHtml(s.branch || '')}</span>`;
-      }
+      setPlanFormHeader('Edit Session', `Updating details for ${s.branch || 'this school'}.`);
       const bsave = document.getElementById('btn-save-plan');
       if (bsave) bsave.textContent = 'Update Session Plan';
       const bcancel = document.getElementById('btn-cancel-edit');
@@ -2037,7 +2464,7 @@
         if (arrEl) arrEl.classList.add('open');
         if (mode === 'spk') {
           applySpeakerFollowUpVisibility(sid);
-          if (s.status === 'Planned') {
+          if (canSpeakerPostUpdate(s)) {
             applySpeakerActionLayout(sid, _selAction[sid] || 'Completed');
             const attIn = document.getElementById(`f-att-${sid}`);
             if (attIn) syncSpeakerAttendedError(attIn);
@@ -2067,7 +2494,7 @@
         <div id="spk-plan-fields-${s.id}">
         <div class="fg">
           <label>No. of Parents Attended *</label>
-          <input type="number" id="f-att-${s.id}" data-po-invited-cap="${invitedCap}" placeholder="0" min="0" max="${invitedCap}" title="Must be ≤ parents invited (${invitedCap})" value="${escapeAttr(attVal)}" aria-describedby="f-att-err-${s.id}">
+          <input type="number" id="f-att-${s.id}" data-po-invited-cap="${invitedCap}" placeholder="0" min="0" max="${invitedCap}" title="Must be â‰¤ parents invited (${invitedCap})" value="${escapeAttr(attVal)}" aria-describedby="f-att-err-${s.id}">
           <div id="f-att-err-${s.id}" class="po-att-err" role="alert" style="display:none;color:#c62828;font-size:12px;margin-top:4px;font-weight:500"></div>
         </div>
         <div class="fg">
@@ -2110,9 +2537,23 @@
       </div>`;
     }
 
+    function speakerPostActionBarHtml(s) {
+      const sid = escapeAttr(s.id);
+      const fromRescheduled = s.status === 'Rescheduled';
+      return `
+    <div class="fg" style="margin-bottom:12px">
+      <label>Update Action *</label>
+      <div class="grade-bar" id="p-action-bar-${s.id}">
+        <button type="button" class="gb active" id="act-Completed-${s.id}" data-po-pick-action="1" data-po-sid="${sid}" data-po-act="Completed">Completed</button>
+        ${fromRescheduled ? '' : `<button type="button" class="gb" id="act-Rescheduled-${s.id}" data-po-pick-action="1" data-po-sid="${sid}" data-po-act="Rescheduled">Rescheduled</button>`}
+        <button type="button" class="gb" id="act-Cancelled-${s.id}" data-po-pick-action="1" data-po-sid="${sid}" data-po-act="Cancelled">Cancelled</button>
+      </div>
+    </div>`;
+    }
+
     function buildExpandContent(s) {
       const isSpeaker = isSpeakerViewVisible();
-      const canUpdatePlanned = isSpeaker && s.status === 'Planned';
+      const canUpdate = isSpeaker && canSpeakerPostUpdate(s);
 
       const infoGrid = `
     <div class="ig">
@@ -2121,7 +2562,8 @@
       <div class="ii"><label>Start time</label><p>${escapeHtml(String(s.scheduled_start_time || '').trim() || '—')}</p></div>
       <div class="ii"><label>End time</label><p>${escapeHtml(String(s.scheduled_end_time || '').trim() || '—')}</p></div>
       <div class="ii"><label>Grade</label><p>${s.grade ? escapeHtml(s.grade) : '—'}</p></div>
-      <div class="ii"><label>Link or location</label><p>${locationLinkHtml(s.location)}</p></div>
+      <div class="ii"><label>Link or location</label><p>${locationLinkHtml(s.location, { sessionId: s.id, venue: s.venue })}</p></div>
+      ${!isSpeaker && s.venue === 'Online' ? `<div class="ii"><label>Student IDs</label><p>${formatStudentIdsCell(s)}</p></div>` : ''}
       <div class="ii"><label>Branch</label><p>${s.branch ? escapeHtml(s.branch) : '—'}</p></div>
       <div class="ii"><label>Region</label><p>${s.region ? escapeHtml(s.region) : '—'}</p></div>
       <div class="ii"><label>Venue / Medium</label><p>${s.venue ? escapeHtml(s.venue) : '—'}</p></div>
@@ -2133,7 +2575,7 @@
     </div>`;
 
       const readOnlyPost =
-        isSessionClosed(s)
+        isSessionClosed(s) && !canUpdate
           ? `
       <div class="divhr"></div>
       <div class="stl">Post-Activity Details</div>
@@ -2146,22 +2588,20 @@
       </div>`
           : '';
 
-      if (!canUpdatePlanned) {
+      if (!canUpdate) {
         return infoGrid + readOnlyPost;
       }
+
+      const reschNote =
+        s.status === 'Rescheduled' && s.remarks
+          ? `<div class="fg full" style="margin-bottom:12px"><label>Reschedule reason</label><p style="margin:0;color:var(--po-text,#1a1a2e)">${escapeHtml(s.remarks)}</p></div>`
+          : '';
 
       return `${infoGrid}
     <div class="divhr"></div>
     <div class="stl">Post-Activity Update</div>
-    
-    <div class="fg" style="margin-bottom:12px">
-      <label>Update Action *</label>
-      <div class="grade-bar" id="p-action-bar-${s.id}">
-        <button type="button" class="gb active" id="act-Completed-${s.id}" data-po-pick-action="1" data-po-sid="${escapeAttr(s.id)}" data-po-act="Completed">Completed</button>
-        <button type="button" class="gb" id="act-Rescheduled-${s.id}" data-po-pick-action="1" data-po-sid="${escapeAttr(s.id)}" data-po-act="Rescheduled">Rescheduled</button>
-        <button type="button" class="gb" id="act-Cancelled-${s.id}" data-po-pick-action="1" data-po-sid="${escapeAttr(s.id)}" data-po-act="Cancelled">Cancelled</button>
-      </div>
-    </div>
+    ${reschNote}
+    ${speakerPostActionBarHtml(s)}
 
     <div id="upd-form-fields-${s.id}">
       ${speakerPostFieldsInnerHtml(s)}
@@ -2316,6 +2756,7 @@
         if (!map[mk]) {
           map[mk] = {
             scheduled: 0,
+            planned: 0,
             completed: 0,
             rescheduled: 0,
             cancelled: 0,
@@ -2324,7 +2765,8 @@
           };
         }
         map[mk].scheduled += 1;
-        if (s.status === 'Completed') {
+        if (s.status === 'Planned') map[mk].planned += 1;
+        else if (s.status === 'Completed') {
           map[mk].completed += 1;
           map[mk].attended += parseInt(s.attended, 10) || 0;
         } else if (s.status === 'Rescheduled') {
@@ -2464,40 +2906,668 @@
   `;
     }
 
+    function sessionStatusCounts(list) {
+      return {
+        total: list.length,
+        planned: list.filter((s) => s.status === 'Planned').length,
+        completed: list.filter((s) => s.status === 'Completed').length,
+        rescheduled: list.filter((s) => s.status === 'Rescheduled').length,
+        cancelled: list.filter((s) => s.status === 'Cancelled').length,
+        invited: list.reduce((a, s) => a + (Number(s.invited) || 0), 0),
+        attended: list.reduce((a, s) => a + (parseInt(s.attended, 10) || 0), 0),
+      };
+    }
+
+    function pmoMonthStackedBarHtml(r) {
+      const total = Math.max(1, r.scheduled);
+      const segs = [
+        { w: (r.completed / total) * 100, cls: 'month-card__stack-seg--done', title: `Completed ${r.completed}` },
+        { w: (r.planned / total) * 100, cls: 'month-card__stack-seg--plan', title: `Planned ${r.planned}` },
+        { w: (r.rescheduled / total) * 100, cls: 'month-card__stack-seg--resch', title: `Rescheduled ${r.rescheduled}` },
+        { w: (r.cancelled / total) * 100, cls: 'month-card__stack-seg--canc', title: `Cancelled ${r.cancelled}` },
+      ].filter((s) => s.w > 0);
+      return `<div class="month-card__stack" title="${escapeAttr(segs.map((s) => s.title).join(', '))}">${segs
+        .map(
+          (s) =>
+            `<span class="month-card__stack-seg ${s.cls}" style="width:${s.w}%"></span>`
+        )
+        .join('')}</div>`;
+    }
+
+    function pmoTimelineSegHtml(w, cls, _label, count) {
+      if (w <= 0 || !count) return '';
+      return `<span class="pmo-mo-timeline-seg pmo-mo-timeline-seg--${cls}" style="width:${w}%"></span>`;
+    }
+
+    function pmoTimelineStatusItemsFromRowEl(row) {
+      return [
+        { cls: 'done', label: 'Completed', count: Number(row.dataset.completed) || 0 },
+        { cls: 'plan', label: 'Planned', count: Number(row.dataset.planned) || 0 },
+        { cls: 'resch', label: 'Rescheduled', count: Number(row.dataset.rescheduled) || 0 },
+        { cls: 'canc', label: 'Cancelled', count: Number(row.dataset.cancelled) || 0 },
+      ].filter((x) => x.count > 0);
+    }
+
+    function pmoTimelineSegLabelFromEl(seg) {
+      if (seg.classList.contains('pmo-mo-timeline-seg--done')) return 'Completed';
+      if (seg.classList.contains('pmo-mo-timeline-seg--plan')) return 'Planned';
+      if (seg.classList.contains('pmo-mo-timeline-seg--resch')) return 'Rescheduled';
+      if (seg.classList.contains('pmo-mo-timeline-seg--canc')) return 'Cancelled';
+      return '';
+    }
+
+    function pmoTimelineFloatTipHtml(row, highlightLabel) {
+      const month = row.dataset.monthLabel || '';
+      const scheduled = Number(row.dataset.scheduled) || 0;
+      const items = pmoTimelineStatusItemsFromRowEl(row);
+      const lines = items.length
+        ? items
+            .map((x) => {
+              const hi = highlightLabel === x.label ? ' pmo-mo-timeline-tip__line--hi' : '';
+              return `<div class="pmo-mo-timeline-tip__line${hi}"><span class="pmo-mo-timeline-tip__dot pmo-mo-timeline-tip__dot--${x.cls}"></span>${escapeHtml(x.label)}: <strong>${x.count}</strong></div>`;
+            })
+            .join('')
+        : '<div class="pmo-mo-timeline-tip__line">No sessions</div>';
+      return `<div class="pmo-mo-timeline-tip__title">${escapeHtml(month)}</div>${lines}<div class="pmo-mo-timeline-tip__total">${scheduled} session${scheduled !== 1 ? 's' : ''} total</div>`;
+    }
+
+    let pmoTimelineFloatTipEl = null;
+
+    function ensurePmoTimelineFloatTip() {
+      if (pmoTimelineFloatTipEl) return pmoTimelineFloatTipEl;
+      pmoTimelineFloatTipEl = document.createElement('div');
+      pmoTimelineFloatTipEl.id = 'pmo-timeline-float-tip';
+      pmoTimelineFloatTipEl.className = 'pmo-mo-timeline-float-tip';
+      pmoTimelineFloatTipEl.setAttribute('role', 'tooltip');
+      pmoTimelineFloatTipEl.hidden = true;
+      document.body.appendChild(pmoTimelineFloatTipEl);
+      return pmoTimelineFloatTipEl;
+    }
+
+    function positionPmoTimelineFloatTip(clientX, clientY) {
+      const tip = pmoTimelineFloatTipEl;
+      if (!tip || tip.hidden) return;
+      const pad = 14;
+      const rect = tip.getBoundingClientRect();
+      let left = clientX + pad;
+      let top = clientY - rect.height - pad;
+      if (top < 8) top = clientY + pad;
+      if (left + rect.width > window.innerWidth - 8) {
+        left = Math.max(8, clientX - rect.width - pad);
+      }
+      if (left < 8) left = 8;
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    }
+
+    function initPmoTimelineFloatTip() {
+      ensurePmoTimelineFloatTip();
+      if (document.body.dataset.pmoTimelineTipInit === '1') return;
+      document.body.dataset.pmoTimelineTipInit = '1';
+      const tip = pmoTimelineFloatTipEl;
+
+      document.addEventListener(
+        'mousemove',
+        (e) => {
+          const hit = e.target.closest('.pmo-mo-timeline-row__track, .pmo-mo-timeline-seg');
+          if (!hit) {
+            tip.hidden = true;
+            return;
+          }
+          const row = hit.closest('[data-pmo-timeline-row]');
+          if (!row) {
+            tip.hidden = true;
+            return;
+          }
+          const seg = e.target.closest('.pmo-mo-timeline-seg');
+          const highlight = seg ? pmoTimelineSegLabelFromEl(seg) : '';
+          tip.innerHTML = pmoTimelineFloatTipHtml(row, highlight);
+          tip.hidden = false;
+          positionPmoTimelineFloatTip(e.clientX, e.clientY);
+        },
+        { passive: true }
+      );
+
+      document.addEventListener('scroll', () => {
+        if (pmoTimelineFloatTipEl) pmoTimelineFloatTipEl.hidden = true;
+      }, true);
+    }
+
+    function pmoTimelineRowHtml(r) {
+      const total = Math.max(1, r.scheduled);
+      const doneW = (r.completed / total) * 100;
+      const planW = (r.planned / total) * 100;
+      const reschW = (r.rescheduled / total) * 100;
+      const cancW = (r.cancelled / total) * 100;
+      const short = formatMonthLabel(r.monthKey).replace(/,?\s*\d{4}$/, '').trim();
+      const monthLabel = formatMonthLabel(r.monthKey);
+      return `<div class="pmo-mo-timeline-row" data-pmo-timeline-row="1"
+        data-month-label="${escapeAttr(monthLabel)}"
+        data-completed="${r.completed}"
+        data-planned="${r.planned}"
+        data-rescheduled="${r.rescheduled}"
+        data-cancelled="${r.cancelled}"
+        data-scheduled="${r.scheduled}">
+        <span class="pmo-mo-timeline-row__label">${escapeHtml(short)}</span>
+        <div class="pmo-mo-timeline-row__track-wrap">
+          <div class="pmo-mo-timeline-row__track">
+            ${pmoTimelineSegHtml(doneW, 'done', 'Completed', r.completed)}
+            ${pmoTimelineSegHtml(planW, 'plan', 'Planned', r.planned)}
+            ${pmoTimelineSegHtml(reschW, 'resch', 'Rescheduled', r.rescheduled)}
+            ${pmoTimelineSegHtml(cancW, 'canc', 'Cancelled', r.cancelled)}
+          </div>
+        </div>
+        <span class="num">${r.scheduled}</span>
+      </div>`;
+    }
+
+    /**
+     * Marker % on Wikimedia India outline (667×777), tuned to city anchors:
+     * Chandigarh, Delhi, Jaipur, Kolkata, Mumbai, Hyderabad, Bengaluru, Chennai, etc.
+     */
+    const PMO_REGION_MAP_POS = {
+      Punjab: { left: 28, top: 16, short: 'Punjab' },
+      'Delhi NCR': { left: 33, top: 22, short: 'Delhi NCR' },
+      Haryana: { left: 31, top: 25, short: 'Haryana' },
+      Uttarakhand: { left: 36, top: 18, short: 'Uttarakhand' },
+      'Uttar Pradesh': { left: 41, top: 29, short: 'U.P.' },
+      Rajasthan: { left: 23, top: 31, short: 'Rajasthan' },
+      'West Bengal': { left: 65, top: 33, short: 'W. Bengal' },
+      Maharashtra: { left: 21, top: 47, short: 'Maharashtra' },
+      Telangana: { left: 37, top: 53, short: 'Telangana' },
+      'Andhra Pradesh': { left: 43, top: 58, short: 'A.P.' },
+      Bengaluru: { left: 32, top: 65, short: 'Bengaluru' },
+      'Rest of Karnataka': { left: 27, top: 68, short: 'Karnataka' },
+      Chennai: { left: 44, top: 70, short: 'Chennai' },
+      'Rest of Tamil Nadu': { left: 38, top: 78, short: 'Tamil Nadu' },
+    };
+
+    function pmoRegionMapSortedKeys() {
+      return Object.keys(regionBranches).sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' })
+      );
+    }
+
+    function pmoRegionMapPos(name) {
+      return PMO_REGION_MAP_POS[name] || { left: 50, top: 50, short: name };
+    }
+
+    function poPublicAssetUrl(file) {
+      const p = window.location.pathname || '';
+      return p === '/pmo' || p.startsWith('/pmo/') ? `/pmo/${file}` : file;
+    }
+
+    let _pmoMapSelectedRegion = null;
+    let _pmoMapHoverRegion = null;
+    let pmoMapFloatTipEl = null;
+
+    function branchesForRegion(region) {
+      const raw = regionBranches[region];
+      if (!raw) return [];
+      return [...new Set(raw.map((b) => String(b).replace(/\s+/g, ' ').trim()).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' })
+      );
+    }
+
+    function ensurePmoMapFloatTip() {
+      if (pmoMapFloatTipEl) return pmoMapFloatTipEl;
+      pmoMapFloatTipEl = document.createElement('div');
+      pmoMapFloatTipEl.id = 'pmo-map-float-tip';
+      pmoMapFloatTipEl.className = 'pmo-map-float-tip';
+      pmoMapFloatTipEl.hidden = true;
+      document.body.appendChild(pmoMapFloatTipEl);
+      return pmoMapFloatTipEl;
+    }
+
+    function positionPmoMapFloatTip(clientX, clientY) {
+      const tip = pmoMapFloatTipEl;
+      if (!tip || tip.hidden) return;
+      const pad = 12;
+      const rect = tip.getBoundingClientRect();
+      let left = clientX + pad;
+      let top = clientY - rect.height - pad;
+      if (top < 8) top = clientY + pad;
+      if (left + rect.width > window.innerWidth - 8) left = Math.max(8, clientX - rect.width - pad);
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    }
+
+    function pmoMapTipHtml(region) {
+      const schools = branchesForRegion(region).length;
+      return `<strong>${escapeHtml(region)}</strong>
+        <span class="pmo-map-float-tip__line">${schools} school${schools !== 1 ? 's' : ''}</span>
+        <span class="pmo-map-float-tip__hint">Click to view all branches</span>`;
+    }
+
+    function pmoRegionMapMarkersHtml() {
+      return pmoRegionMapSortedKeys()
+        .map((name) => {
+          const pos = pmoRegionMapPos(name);
+          const count = branchesForRegion(name).length;
+          const active = _pmoMapSelectedRegion === name;
+          const hover = _pmoMapHoverRegion === name && !active;
+          const label = pos.short || name;
+          return `<button type="button" class="pmo-map-marker-btn${active ? ' is-active' : ''}${hover ? ' is-hover' : ''}" data-pmo-map-region="${escapeAttr(name)}" style="left:${pos.left}%;top:${pos.top}%" aria-pressed="${active ? 'true' : 'false'}" aria-label="${escapeAttr(name)} — ${count} schools">
+          <span class="pmo-map-marker-btn__pulse"></span>
+          <span class="pmo-map-marker-btn__pin">
+            <span class="pmo-map-marker-btn__dot"></span>
+            <span class="pmo-map-marker-btn__count">${count}</span>
+          </span>
+          <span class="pmo-map-marker-btn__label">${escapeHtml(label)}</span>
+        </button>`;
+        })
+        .join('');
+    }
+
+    function pmoRegionMapQuickPicksHtml() {
+      const picks = Object.keys(regionBranches)
+        .map((name) => ({ name, n: branchesForRegion(name).length }))
+        .sort((a, b) => b.n - a.n)
+        .slice(0, 6);
+      return `<div class="pmo-map-quick-picks">
+        <p class="pmo-region-map__empty">Hover a dot on the map for a preview, or click a region to list every school branch.</p>
+        <p class="pmo-map-quick-picks__lbl">Popular regions</p>
+        <div class="pmo-map-quick-picks__row">${picks
+          .map(
+            (p) =>
+              `<button type="button" class="pmo-map-chip" data-pmo-map-region="${escapeAttr(p.name)}">${escapeHtml(p.name)} <span class="pmo-map-chip__n">${p.n}</span></button>`
+          )
+          .join('')}</div>
+      </div>`;
+    }
+
+    function pmoRegionMapPanelHtml(region, branchFilter) {
+      if (!region) return pmoRegionMapQuickPicksHtml();
+      const branches = branchesForRegion(region);
+      const q = String(branchFilter || '')
+        .trim()
+        .toLowerCase();
+      const filtered = q ? branches.filter((b) => b.toLowerCase().includes(q)) : branches;
+      const list =
+        filtered.length > 0
+          ? `<ul class="pmo-map-branch-list" id="pmo-map-branch-list">${filtered
+              .map(
+                (b) =>
+                  `<li class="pmo-map-branch-item" data-branch-name="${escapeAttr(b)}"><span class="pmo-map-branch-item__name">${escapeHtml(b)}</span></li>`
+              )
+              .join('')}</ul>`
+          : `<p class="pmo-region-map__empty">${q ? 'No schools match your search.' : 'No branches listed for this region.'}</p>`;
+      return `<div class="pmo-region-map__panel-head">
+        <div class="pmo-region-map__panel-head-row">
+          <h4 class="pmo-region-map__panel-title">${escapeHtml(region)}</h4>
+          <button type="button" class="btn btn-o btn-sm" data-pmo-map-clear title="Clear selection">Clear</button>
+        </div>
+        <p class="pmo-region-map__panel-meta"><strong>${branches.length}</strong> school${branches.length !== 1 ? 's' : ''} in this region</p>
+      </div>
+      <div class="pmo-map-panel-tools">
+        <input type="search" class="pmo-map-search" data-pmo-map-search placeholder="Search schools in ${escapeAttr(region)}…" autocomplete="off" value="${escapeAttr(q)}">
+        <span class="pmo-map-search-count" data-pmo-map-count>${filtered.length} shown</span>
+      </div>
+      ${list}`;
+    }
+
+    function pmoRegionMapCardHtml() {
+      const chips = Object.keys(regionBranches)
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+        .map((name) => {
+          const active = _pmoMapSelectedRegion === name;
+          const hover = _pmoMapHoverRegion === name && !active;
+          const n = branchesForRegion(name).length;
+          return `<button type="button" class="pmo-map-chip${active ? ' is-active' : ''}${hover ? ' is-hover' : ''}" data-pmo-map-region="${escapeAttr(name)}">${escapeHtml(name)} <span class="pmo-map-chip__n">${n}</span></button>`;
+        })
+        .join('');
+      return `<div class="sales-chart-card sales-chart-card--wide pmo-region-map-card">
+        <h3 class="sales-chart-title">Regions &amp; school branches</h3>
+        <div class="pmo-region-map__body">
+          <div class="pmo-region-map__viz">
+            <div class="pmo-map-stage" tabindex="0" role="application" aria-label="Interactive map of India — use arrow keys to move between regions, Enter to select">
+              <img class="pmo-map-img" src="${escapeAttr(poPublicAssetUrl('india-outline.svg'))}" width="667" height="777" alt="India outline" decoding="async">
+              <div class="pmo-map-markers-overlay" aria-hidden="false">${pmoRegionMapMarkersHtml()}</div>
+              <p class="pmo-map-hint">Hover for preview · Click to list schools · Arrow keys to browse</p>
+            </div>
+          </div>
+          <div class="pmo-region-map__panel pmo-region-map__panel--interactive" id="pmo-map-branch-panel" aria-live="polite">
+            ${pmoRegionMapPanelHtml(_pmoMapSelectedRegion)}
+          </div>
+        </div>
+        <div class="pmo-map-region-chips" role="toolbar" aria-label="Select region">${chips}</div>
+      </div>`;
+    }
+
+    function syncPmoMapHighlightStates() {
+      const root = document.getElementById('analytics-overview-viz');
+      if (!root) return;
+      root.querySelectorAll('[data-pmo-map-region]').forEach((el) => {
+        const name = el.getAttribute('data-pmo-map-region');
+        const active = name === _pmoMapSelectedRegion;
+        const hover = name === _pmoMapHoverRegion && !active;
+        el.classList.toggle('is-active', active);
+        el.classList.toggle('is-hover', hover);
+        if (el.classList.contains('pmo-map-marker-btn') || el.classList.contains('pmo-map-chip')) {
+          el.setAttribute('aria-pressed', active ? 'true' : 'false');
+        }
+      });
+    }
+
+    function refreshPmoMapMarkersOverlay() {
+      const overlay = document.querySelector('#analytics-overview-viz .pmo-map-markers-overlay');
+      if (overlay) overlay.innerHTML = pmoRegionMapMarkersHtml();
+    }
+
+    function updatePmoMapPanel(region, branchFilter, opts) {
+      const panel = document.getElementById('pmo-map-branch-panel');
+      if (!panel) return;
+      const focusSearch = Boolean(opts && opts.focusSearch);
+      panel.classList.remove('pmo-region-map__panel--pop');
+      panel.innerHTML = pmoRegionMapPanelHtml(region, branchFilter);
+      void panel.offsetWidth;
+      panel.classList.add('pmo-region-map__panel--pop');
+      if (focusSearch && region) {
+        const search = panel.querySelector('[data-pmo-map-search]');
+        search?.focus();
+      }
+    }
+
+    function filterPmoMapBranches(query) {
+      if (!_pmoMapSelectedRegion) return;
+      updatePmoMapPanel(_pmoMapSelectedRegion, query);
+    }
+
+    function hoverPmoMapRegion(region) {
+      _pmoMapHoverRegion = region || null;
+      syncPmoMapHighlightStates();
+      refreshPmoMapMarkersOverlay();
+    }
+
+    function hidePmoMapTip() {
+      if (pmoMapFloatTipEl) pmoMapFloatTipEl.hidden = true;
+    }
+
+    function showPmoMapTip(region, clientX, clientY) {
+      if (!region) {
+        hidePmoMapTip();
+        return;
+      }
+      const tip = ensurePmoMapFloatTip();
+      tip.innerHTML = pmoMapTipHtml(region);
+      tip.hidden = false;
+      positionPmoMapFloatTip(clientX, clientY);
+    }
+
+    function updatePmoMapSelection(region, opts) {
+      syncPmoMapHighlightStates();
+      refreshPmoMapMarkersOverlay();
+      updatePmoMapPanel(region, '', { focusSearch: Boolean(region && (!opts || opts.focusSearch !== false)) });
+    }
+
+    function stepPmoMapRegion(delta) {
+      const keys = pmoRegionMapSortedKeys();
+      if (!keys.length) return;
+      let idx = _pmoMapSelectedRegion ? keys.indexOf(_pmoMapSelectedRegion) : -1;
+      idx = (idx + delta + keys.length) % keys.length;
+      selectPmoMapRegion(keys[idx]);
+      const btn = document.querySelector(
+        `#analytics-overview-viz .pmo-map-marker-btn[data-pmo-map-region="${escapeAttr(keys[idx])}"]`
+      );
+      btn?.focus();
+    }
+
+    function clearPmoMapSelection() {
+      _pmoMapSelectedRegion = null;
+      _pmoMapHoverRegion = null;
+      hidePmoMapTip();
+      updatePmoMapSelection(null);
+    }
+
+    function selectPmoMapRegion(region) {
+      const name = String(region || '').trim();
+      if (!name || !regionBranches[name]) return;
+      _pmoMapSelectedRegion = name;
+      hidePmoMapTip();
+      updatePmoMapSelection(name);
+    }
+
+    function initPmoRegionMap() {
+      ensurePmoMapFloatTip();
+      if (document.body.dataset.pmoRegionMapInit === '1') return;
+      document.body.dataset.pmoRegionMapInit = '1';
+
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-pmo-map-clear]')) {
+          e.preventDefault();
+          clearPmoMapSelection();
+          return;
+        }
+        if (e.target.closest('.pmo-map-stage') && !e.target.closest('[data-pmo-map-region]')) {
+          clearPmoMapSelection();
+          return;
+        }
+        const hit = e.target.closest('#analytics-overview-viz [data-pmo-map-region]');
+        if (!hit) return;
+        selectPmoMapRegion(hit.getAttribute('data-pmo-map-region'));
+      });
+
+      document.addEventListener('keydown', (e) => {
+        const onMap =
+          e.target.closest('.pmo-map-stage') ||
+          e.target.closest('#analytics-overview-viz [data-pmo-map-region]');
+        if (onMap && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) {
+          e.preventDefault();
+          stepPmoMapRegion(1);
+          return;
+        }
+        if (onMap && (e.key === 'ArrowLeft' || e.key === 'ArrowUp')) {
+          e.preventDefault();
+          stepPmoMapRegion(-1);
+          return;
+        }
+        if (e.key === 'Escape' && _pmoMapSelectedRegion) {
+          const inMap = e.target.closest('#analytics-overview-viz .pmo-region-map-card');
+          if (inMap) {
+            e.preventDefault();
+            clearPmoMapSelection();
+          }
+          return;
+        }
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const hit = e.target.closest('#analytics-overview-viz [data-pmo-map-region]');
+        if (!hit) return;
+        e.preventDefault();
+        selectPmoMapRegion(hit.getAttribute('data-pmo-map-region'));
+      });
+
+      document.addEventListener('mouseover', (e) => {
+        const hit = e.target.closest('#analytics-overview-viz [data-pmo-map-region]');
+        if (!hit) return;
+        const name = hit.getAttribute('data-pmo-map-region');
+        if (_pmoMapHoverRegion === name) return;
+        hoverPmoMapRegion(name);
+        showPmoMapTip(name, e.clientX, e.clientY);
+      });
+
+      document.addEventListener('mouseout', (e) => {
+        const hit = e.target.closest('#analytics-overview-viz [data-pmo-map-region]');
+        if (!hit) return;
+        const name = hit.getAttribute('data-pmo-map-region');
+        const rel = e.relatedTarget && e.relatedTarget.closest('[data-pmo-map-region]');
+        if (rel && rel.getAttribute('data-pmo-map-region') === name) return;
+        hoverPmoMapRegion(null);
+        hidePmoMapTip();
+      });
+
+      document.addEventListener(
+        'mousemove',
+        (e) => {
+          const hit = e.target.closest('#analytics-overview-viz .pmo-map-marker-btn[data-pmo-map-region]');
+          if (!hit || pmoMapFloatTipEl?.hidden) return;
+          const name = hit.getAttribute('data-pmo-map-region');
+          if (name && name !== _pmoMapSelectedRegion) {
+            showPmoMapTip(name, e.clientX, e.clientY);
+          }
+        },
+        { passive: true }
+      );
+
+      document.addEventListener('input', (e) => {
+        if (e.target.matches('[data-pmo-map-search]')) {
+          filterPmoMapBranches(e.target.value);
+        }
+      });
+
+      document.addEventListener('scroll', hidePmoMapTip, true);
+    }
+
+    function renderAnalyticsMonthGrid(rows) {
+      if (!rows.length) {
+        return '<div class="empty" style="padding:20px 12px">No sessions yet. Open <strong>New session</strong> to add plans.</div>';
+      }
+      return `<div class="analytics-month-pick"><h3>Pick a month</h3><div class="month-grid">${rows
+        .map((r) => {
+          const attPct = r.invited ? Math.round((r.attended / r.invited) * 100) : 0;
+          return `<button type="button" class="month-card" data-pmo-month="${escapeAttr(r.monthKey)}">
+        <div class="month-card-label">${escapeHtml(formatMonthLabel(r.monthKey))}</div>
+        <div class="month-card__viz">${pmoMonthStackedBarHtml(r)}</div>
+        <div class="month-card__kpis">
+          <span><strong>${r.scheduled}</strong> sessions</span>
+          <span><strong>${r.completed}</strong> done</span>
+          <span class="month-card__att-pct">Parents: <strong>${r.attended}</strong> / ${r.invited} invited (${attPct}%)</span>
+        </div>
+      </button>`;
+        })
+        .join('')}</div></div>`;
+    }
+
+    function renderAnalyticsOverviewViz() {
+      const root = document.getElementById('analytics-overview-viz');
+      if (!root) return;
+      if (!sessions.length) {
+        root.innerHTML =
+          '<div class="empty" style="padding:20px 12px">No sessions yet. Open <strong>New session</strong> to add plans.</div>';
+        return;
+      }
+      const rows = aggregateByMonth(sessions);
+      const all = sessionStatusCounts(sessions);
+      const maxAtt = Math.max(1, ...rows.map((r) => (r.invited ? Math.round((r.attended / r.invited) * 100) : 0)));
+      const attRowsHtml = rows
+        .map((r) => {
+          const pct = r.invited ? Math.round((r.attended / r.invited) * 100) : 0;
+          const short = formatMonthLabel(r.monthKey).replace(/,?\s*\d{4}$/, '').trim();
+          return `<div class="pmo-mo-att-row">
+          <span>${escapeHtml(short)}</span>
+          <div class="pmo-mo-att-row__bar"><span class="pmo-mo-att-row__fill" style="width:${Math.round((pct / maxAtt) * 100)}%"></span></div>
+          <span class="num"><strong>${pct}%</strong></span>
+        </div>`;
+        })
+        .join('');
+      const totalStatus = Math.max(1, all.total);
+      const statusSegs = [
+        { value: Math.round((all.completed / totalStatus) * 100), color: '#16a34a' },
+        { value: Math.round((all.planned / totalStatus) * 100), color: '#94a3b8' },
+        { value: Math.round((all.rescheduled / totalStatus) * 100), color: '#3b82f6' },
+        { value: Math.round((all.cancelled / totalStatus) * 100), color: '#ef4444' },
+      ].filter((s) => s.value > 0);
+      const donePct = all.total ? Math.round((all.completed / all.total) * 100) : 0;
+      const attRateAll = all.invited ? Math.round((all.attended / all.invited) * 100) : 0;
+      root.innerHTML = `
+        <div class="analytics-overview-charts">
+          <div class="sales-chart-card sales-chart-card--wide">
+            <h3 class="sales-chart-title">Sessions by month (stacked status)</h3>
+            <div class="pmo-mo-timeline">${rows.map(pmoTimelineRowHtml).join('')}</div>
+            <div class="pmo-mo-legend">
+              <span><i style="background:#16a34a"></i> Completed</span>
+              <span><i style="background:#94a3b8"></i> Planned</span>
+              <span><i style="background:#3b82f6"></i> Rescheduled</span>
+              <span><i style="background:#ef4444"></i> Cancelled</span>
+            </div>
+          </div>
+          <div class="sales-chart-card">
+            <h3 class="sales-chart-title">All sessions — status mix</h3>
+            <div class="sales-donut-wrap">
+              ${salesDonutSvg(donePct, statusSegs.length ? statusSegs : [{ value: 100, color: '#e5e7eb' }])}
+              <ul class="sales-donut-legend">
+                <li><span class="sales-donut-swatch" style="background:#16a34a"></span> ${all.completed} completed</li>
+                <li><span class="sales-donut-swatch" style="background:#94a3b8"></span> ${all.planned} planned</li>
+                <li><span class="sales-donut-swatch" style="background:#3b82f6"></span> ${all.rescheduled} rescheduled</li>
+                <li><span class="sales-donut-swatch" style="background:#ef4444"></span> ${all.cancelled} cancelled</li>
+              </ul>
+            </div>
+          </div>
+          <div class="sales-chart-card">
+            <h3 class="sales-chart-title">Parent attendance rate by month</h3>
+            <div class="pmo-mo-att-bars">${attRowsHtml}</div>
+            <p class="card-lead" style="margin:10px 0 0;font-size:0.75rem">All months combined: <strong>${attRateAll}%</strong> (${all.attended} / ${all.invited} invited)</p>
+          </div>
+          ${pmoRegionMapCardHtml()}
+        </div>
+        ${renderAnalyticsMonthGrid(rows)}`;
+      initPmoTimelineFloatTip();
+      if (_pmoMapSelectedRegion) updatePmoMapSelection(_pmoMapSelectedRegion);
+    }
+
+    function renderAnalyticsMonthViz(list) {
+      const el = document.getElementById('analytics-month-viz');
+      if (!el) return;
+      const c = sessionStatusCounts(list);
+      const attPct = c.invited ? Math.round((c.attended / c.invited) * 100) : 0;
+      const totalStatus = Math.max(1, c.total);
+      const statusSegs = [
+        { value: Math.round((c.completed / totalStatus) * 100), color: '#16a34a' },
+        { value: Math.round((c.planned / totalStatus) * 100), color: '#94a3b8' },
+        { value: Math.round((c.rescheduled / totalStatus) * 100), color: '#3b82f6' },
+        { value: Math.round((c.cancelled / totalStatus) * 100), color: '#ef4444' },
+      ].filter((s) => s.value > 0);
+      const donePct = c.total ? Math.round((c.completed / c.total) * 100) : 0;
+      el.innerHTML = `
+        <div class="analytics-month-viz__grid">
+          <div class="analytics-month-viz__kpi"><div class="analytics-month-viz__kpi-val">${c.total}</div><div class="analytics-month-viz__kpi-lbl">Sessions</div></div>
+          <div class="analytics-month-viz__kpi"><div class="analytics-month-viz__kpi-val">${c.completed}</div><div class="analytics-month-viz__kpi-lbl">Completed</div></div>
+          <div class="analytics-month-viz__kpi"><div class="analytics-month-viz__kpi-val">${c.planned}</div><div class="analytics-month-viz__kpi-lbl">Planned</div></div>
+          <div class="analytics-month-viz__kpi"><div class="analytics-month-viz__kpi-val">${c.rescheduled}</div><div class="analytics-month-viz__kpi-lbl">Rescheduled</div></div>
+          <div class="analytics-month-viz__kpi"><div class="analytics-month-viz__kpi-val">${c.cancelled}</div><div class="analytics-month-viz__kpi-lbl">Cancelled</div></div>
+          <div class="analytics-month-viz__kpi"><div class="analytics-month-viz__kpi-val">${c.invited}</div><div class="analytics-month-viz__kpi-lbl">Parents invited</div></div>
+          <div class="analytics-month-viz__kpi"><div class="analytics-month-viz__kpi-val">${c.attended}</div><div class="analytics-month-viz__kpi-lbl">Parents attended</div></div>
+          <div class="analytics-month-viz__kpi"><div class="analytics-month-viz__kpi-val">${attPct}%</div><div class="analytics-month-viz__kpi-lbl">Attendance rate</div></div>
+        </div>
+        <div class="analytics-month-viz__charts">
+          <div class="sales-chart-card">
+            <h3 class="sales-chart-title">This month — status mix</h3>
+            <div class="sales-donut-wrap">
+              ${c.total ? salesDonutSvg(donePct, statusSegs.length ? statusSegs : [{ value: 100, color: '#e5e7eb' }]) : '<p class="empty" style="margin:0">No sessions</p>'}
+              <ul class="sales-donut-legend">
+                <li><span class="sales-donut-swatch" style="background:#16a34a"></span> ${c.completed} completed</li>
+                <li><span class="sales-donut-swatch" style="background:#94a3b8"></span> ${c.planned} planned</li>
+                <li><span class="sales-donut-swatch" style="background:#3b82f6"></span> ${c.rescheduled} rescheduled</li>
+                <li><span class="sales-donut-swatch" style="background:#ef4444"></span> ${c.cancelled} cancelled</li>
+              </ul>
+            </div>
+          </div>
+          <div class="sales-chart-card">
+            <h3 class="sales-chart-title">Parent attendance</h3>
+            <div class="sales-donut-wrap">
+              ${salesDonutSvg(attPct, [{ value: 100, color: attPct >= 60 ? '#16a34a' : '#f97316' }])}
+              <ul class="sales-donut-legend">
+                <li><span class="sales-donut-swatch" style="background:#f97316"></span> ${c.attended} attended</li>
+                <li><span class="sales-donut-swatch" style="background:#e5e7eb"></span> ${Math.max(0, c.invited - c.attended)} not recorded</li>
+                <li>Invited total: <strong>${c.invited}</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>`;
+    }
+
     function setMetricContainerHtml(id, html) {
       const el = document.getElementById(id);
       if (el) el.innerHTML = html;
     }
 
     function renderAnalyticsUI() {
-      setMetricContainerHtml('analytics-hero-metrics', metricTilesHtmlForList(sessions));
-      const grid = document.getElementById('analytics-month-grid');
-      if (grid) {
-        if (!sessions.length) {
-          grid.innerHTML =
-            '<div class="empty" style="padding:20px 12px">No sessions yet. Open <strong>New session</strong> to add plans.</div>';
-        } else {
-          const rows = aggregateByMonth(sessions);
-          grid.innerHTML = rows
-            .map(
-              (r) => `
-      <button type="button" class="month-card" data-pmo-month="${escapeAttr(r.monthKey)}">
-        <div class="month-card-label">${escapeHtml(formatMonthLabel(r.monthKey))}</div>
-        <div class="month-card-stats">
-          <div>Scheduled: <b>${r.scheduled}</b> · Completed: <b>${r.completed}</b> · Rescheduled: <b>${r.rescheduled}</b> · Cancelled: <b>${r.cancelled}</b></div>
-          <div>Parents attended: <b>${r.attended}</b> · Invited: <b>${r.invited}</b></div>
-        </div>
-      </button>`
-            )
-            .join('');
-        }
-      }
+      renderAnalyticsOverviewViz();
       const { month } = parsePmoHash();
       const panels = document.getElementById('analytics-detail-panels');
-      const mm = document.getElementById('analytics-month-metrics');
+      const monthViz = document.getElementById('analytics-month-viz');
       if (month) {
         const filtered = sessions.filter((s) => sessionMonthKey(s) === month);
-        setMetricContainerHtml('analytics-month-metrics', metricTilesHtmlForList(filtered));
+        renderAnalyticsMonthViz(filtered);
         const h = document.getElementById('analytics-detail-heading');
         if (h) h.textContent = formatMonthLabel(month);
         if (panels) {
@@ -2513,41 +3583,66 @@
               dashboardTableHtml('By grade', 'Grade', byG, false, { hideParentsAttended: true });
           }
         }
+        renderPmoMonthTargets(month);
       } else {
-        if (mm) mm.innerHTML = '';
+        if (monthViz) monthViz.innerHTML = '';
         if (panels) panels.innerHTML = '';
+        clearPmoTargetsSection();
       }
     }
 
     function renderMetrics() {
-      setMetricContainerHtml('metrics', metricTilesHtmlForList(sessions));
+      setMetricContainerHtml('metrics', metricTilesHtmlForList(getPmoMeetingsFilteredList()));
     }
 
-    function sessionRowHTML(s, speakerMode) {
+    /** PMO Scheduled meetings list after month, status, and search filters. */
+    function getPmoMeetingsFilteredList() {
+      const sf = document.getElementById('f-status')?.value || '';
+      const monthF = String(document.getElementById('f-meetings-month')?.value || '').trim();
+      const q = (document.getElementById('f-search')?.value || '').toLowerCase();
+      let list = sessions;
+      if (monthF) list = list.filter((s) => sessionMonthKey(s) === monthF);
+      if (sf) list = list.filter((s) => s.status === sf);
+      if (q) {
+        list = list.filter(
+          (s) =>
+            (s.branch || '').toLowerCase().includes(q) ||
+            (s.teacher || '').toLowerCase().includes(q) ||
+            (s.region || '').toLowerCase().includes(q)
+        );
+      }
+      return list;
+    }
+
+    function sessionRowHTML(s, speakerMode, cardIndex) {
       const pillCls = sessionStatusPillClass(s);
       const mode = speakerMode ? 'spk' : 'pmo';
       const key = expandKey(s.id, mode);
       const isOpen = openExpand[key];
+      const delayStyle =
+        speakerMode && typeof cardIndex === 'number'
+          ? ` style="animation-delay:${Math.min(cardIndex, 14) * 0.05}s"`
+          : '';
       return `
-    <div class="srow">
+    <div class="srow"${delayStyle}>
       <div class="shead" data-po-row="1" data-po-sid="${escapeAttr(s.id)}" data-po-mode="${escapeAttr(mode)}" role="button" tabindex="0">
         <div class="smeta">
           <div class="strow">
-            <span class="sname">${escapeHtml(s.branch || '—')}</span>
+            <span class="sname">${escapeHtml(s.branch || PO_TEXT.emDash)}</span>
             <span class="pill ${pillCls}">${escapeHtml(s.status)}</span>
             ${s.region ? `<span style="font-size:11px;color:#888">${escapeHtml(s.region)}</span>` : ''}
           </div>
           <div class="sdet">
-            ${!speakerMode ? `<span title="Session id (UUID)">🆔 <code style="font-size:11px;user-select:all;word-break:break-all">${escapeHtml(s.id)}</code></span>` : ''}
-            <span>📅 ${escapeHtml(fmtSessionScheduleSummary(s))}</span>
-            <span>👤 ${escapeHtml(s.teacher || '—')}${s.co_host ? ' + ' + escapeHtml(s.co_host) : ''}</span>
-            ${s.venue ? `<span>📍 ${escapeHtml(s.venue)}</span>` : ''}
+            ${!speakerMode ? `<span title="Session id (UUID)">${PO_TEXT.iconId} <code style="font-size:11px;user-select:all;word-break:break-all">${escapeHtml(s.id)}</code></span>` : ''}
+            <span>${PO_TEXT.iconCal} ${escapeHtml(fmtSessionScheduleSummary(s))}</span>
+            <span>${PO_TEXT.iconPerson} ${escapeHtml(s.teacher || PO_TEXT.emDash)}${s.co_host ? ' + ' + escapeHtml(s.co_host) : ''}</span>
+            ${s.venue ? `<span>${PO_TEXT.iconPin} ${escapeHtml(s.venue)}</span>` : ''}
             <span>Invited: <b>${escapeHtml(String(s.invited || 0))}</b></span>
             ${s.status === 'Completed' ? `<span>Attended: <b>${escapeHtml(String(s.attended))}</b></span>` : ''}
           </div>
         </div>
         <div class="sact">
-          <button type="button" class="btn btn-o btn-sm" data-po-details="1" data-po-sid="${escapeAttr(s.id)}" data-po-mode="${escapeAttr(mode)}">Details <span class="arrow ${isOpen ? 'open' : ''}" id="arr-${mode}-${s.id}">▼</span></button>
+          <button type="button" class="btn btn-o btn-sm" data-po-details="1" data-po-sid="${escapeAttr(s.id)}" data-po-mode="${escapeAttr(mode)}">Details <span class="arrow ${isOpen ? 'open' : ''}" id="arr-${mode}-${s.id}">${PO_TEXT.arrowDown}</span></button>
           ${!speakerMode && s.status === 'Planned'
           ? `<button type="button" class="btn btn-o btn-sm" data-po-edit="1" data-po-sid="${escapeAttr(s.id)}">Edit</button><button type="button" class="btn btn-d btn-sm" data-po-del="1" data-po-sid="${escapeAttr(s.id)}">Delete</button>`
           : ''}
@@ -2561,85 +3656,1452 @@
 
     function renderPMO() {
       applyPmoRoute();
-      renderMetrics();
       renderAnalyticsUI();
-      const sf = document.getElementById('f-status')?.value || '';
-      const q = (document.getElementById('f-search')?.value || '').toLowerCase();
-      let list = sessions;
-      if (sf) list = list.filter(s => s.status === sf);
-      if (q) list = list.filter(s =>
-        (s.branch || '').toLowerCase().includes(q) ||
-        (s.teacher || '').toLowerCase().includes(q) ||
-        (s.region || '').toLowerCase().includes(q)
-      );
+      populatePmoMeetingsMonthOptions();
+      const { section, month } = parsePmoHash();
+      if (section === 'meetings') {
+        const sel = document.getElementById('f-meetings-month');
+        if (sel) sel.value = month && /^\d{4}-\d{2}$/.test(month) ? month : '';
+      }
+      const list = getPmoMeetingsFilteredList();
+      renderMetrics();
       document.getElementById('count-lbl').textContent = `${list.length} session${list.length !== 1 ? 's' : ''}`;
       document.getElementById('pmo-list').innerHTML = list.length
         ? list.map(s => sessionRowHTML(s, false)).join('')
         : '<div class="empty">No sessions yet. Use <strong>New session</strong> to add a plan.</div>';
     }
 
-    function renderSpeaker() {
+    function getSpeakerRouteMonth() {
+      const route = parseAppRoute();
+      if (route.name !== 'speaker') return null;
+      return route.params.month || null;
+    }
+
+    function spkTriggerPanelAnimation(wrap) {
+      if (!wrap || wrap.classList.contains('is-hidden')) return;
+      wrap.classList.remove('spk-animate-in');
+      void wrap.offsetWidth;
+      wrap.classList.add('spk-animate-in');
+    }
+
+    function applySpeakerRoute() {
+      const month = getSpeakerRouteMonth();
+      const monthsWrap = document.getElementById('spk-months-wrap');
+      const detailWrap = document.getElementById('spk-detail-wrap');
+      if (!monthsWrap || !detailWrap) return;
+      const showDetail = Boolean(month);
+      monthsWrap.classList.toggle('is-hidden', showDetail);
+      detailWrap.classList.toggle('is-hidden', !showDetail);
+      const lbl = document.getElementById('spk-breadcrumb-label');
+      if (lbl) lbl.textContent = month ? 'This month' : '';
+      const h = document.getElementById('spk-detail-heading');
+      if (h && month) h.textContent = formatMonthLabel(month);
+      spkTriggerPanelAnimation(showDetail ? detailWrap : monthsWrap);
+    }
+
+    function speakerMonthStackHtml(r) {
+      const total = Math.max(1, r.scheduled);
+      const seg = (n, cls) => {
+        const w = n > 0 ? Math.max(4, Math.round((n / total) * 100)) : 0;
+        return w ? `<span class="spk-month-tile__seg ${cls}" style="flex:${w} 1 0"></span>` : '';
+      };
+      return (
+        seg(r.completed, 'spk-month-tile__seg--done') +
+        seg(r.planned, 'spk-month-tile__seg--plan') +
+        seg(r.rescheduled, 'spk-month-tile__seg--resch') +
+        seg(r.cancelled, 'spk-month-tile__seg--canc')
+      );
+    }
+
+    function speakerMonthTileHtml(r, index) {
+      const pendingBadge =
+        r.planned > 0
+          ? `<span class="spk-pending-badge"><span aria-hidden="true">⚡</span> ${r.planned} pending</span>`
+          : '';
+      const delay = Math.min(index, 12);
+      return `<button type="button" class="spk-month-tile" data-spk-month="${escapeAttr(r.monthKey)}" style="animation-delay:${delay * 0.07}s">
+        <div class="spk-month-tile__label">${escapeHtml(formatMonthLabel(r.monthKey))}</div>
+        <div class="spk-month-tile__bar" aria-hidden="true">${speakerMonthStackHtml(r)}</div>
+        <div class="spk-month-tile__kpis">
+          <span>Total <strong>${r.scheduled}</strong></span>
+          <span>Done <strong>${r.completed}</strong></span>
+          <span>Pending <strong>${r.planned}</strong></span>
+          <span>Resched. <strong>${r.rescheduled}</strong></span>
+        </div>
+        ${pendingBadge}
+      </button>`;
+    }
+
+    function renderSpeakerDetailStats(list) {
+      const el = document.getElementById('spk-detail-stats');
+      if (!el) return;
+      const pending = list.filter((s) => s.status === 'Planned').length;
+      const completed = list.filter((s) => s.status === 'Completed').length;
+      const rescheduled = list.filter((s) => s.status === 'Rescheduled').length;
+      const cancelled = list.filter((s) => s.status === 'Cancelled').length;
+      const pills = [
+        { cls: 'spk-stat-pill--pending', label: 'Pending', val: pending, delay: 0 },
+        { cls: 'spk-stat-pill--done', label: 'Completed', val: completed, delay: 1 },
+        { cls: '', label: 'Rescheduled', val: rescheduled, delay: 2 },
+        { cls: '', label: 'Cancelled', val: cancelled, delay: 3 },
+      ];
+      el.innerHTML = pills
+        .map(
+          (p) =>
+            `<div class="spk-stat-pill ${p.cls}" style="animation-delay:${p.delay * 0.08}s"><strong>${p.val}</strong>${escapeHtml(p.label)}</div>`
+        )
+        .join('');
+    }
+
+    function speakerStatusLaneHtml(laneCls, icon, title, count, cardsHtml, laneDelay) {
+      return `<section class="spk-status-lane spk-status-lane--${laneCls}" style="animation-delay:${laneDelay * 0.1}s">
+        <div class="spk-status-lane__hd">
+          <span class="spk-status-lane__icon" aria-hidden="true">${icon}</span>
+          <h3 class="spk-status-lane__title">${escapeHtml(title)}</h3>
+          <span class="spk-status-lane__count">${count}</span>
+        </div>
+        <div class="slist slist--spk-grid">${cardsHtml}</div>
+      </section>`;
+    }
+
+    function renderSpeakerMonthGrid() {
+      const grid = document.getElementById('spk-month-grid');
+      if (!grid) return;
+      if (!sessions.length) {
+        grid.innerHTML =
+          '<div class="spk-empty-state">No sessions yet. Ask PMO to add plans — your months will appear here with live progress.</div>';
+        return;
+      }
+      const rows = aggregateByMonth(sessions).filter((r) => r.monthKey !== '_nodate');
+      grid.innerHTML = rows.map((r, i) => speakerMonthTileHtml(r, i)).join('');
+    }
+
+    function renderSpeakerSessionList(list) {
       syncSpeakerSortControls();
       const { sortBy, sortDir } = getSpeakerSortPrefs();
       const pending = sortSessionsForSpeaker(
-        sessions.filter((s) => s.status === 'Planned'),
+        list.filter((s) => s.status === 'Planned'),
         sortBy,
         sortDir
       );
       const completed = sortSessionsForSpeaker(
-        sessions.filter((s) => s.status === 'Completed'),
+        list.filter((s) => s.status === 'Completed'),
         sortBy,
         sortDir
       );
       const rescheduled = sortSessionsForSpeaker(
-        sessions.filter((s) => s.status === 'Rescheduled'),
+        list.filter((s) => s.status === 'Rescheduled'),
         sortBy,
         sortDir
       );
       const cancelled = sortSessionsForSpeaker(
-        sessions.filter((s) => s.status === 'Cancelled'),
+        list.filter((s) => s.status === 'Cancelled'),
         sortBy,
         sortDir
       );
 
       const tb = document.getElementById('spk-toolbar');
-      if (tb) tb.hidden = sessions.length === 0;
+      if (tb) tb.hidden = list.length === 0;
+
+      renderSpeakerDetailStats(list);
 
       let html = '';
+      let lane = 0;
+      let cardIdx = 0;
       if (pending.length) {
-        html += `<div class="spk-sec">
-          <div class="spk-sec-hd"><div class="glbl">Pending update (${pending.length})</div></div>
-          <div class="slist slist--spk-grid">${pending.map((s) => sessionRowHTML(s, true)).join('')}</div>
-        </div>`;
+        html += speakerStatusLaneHtml(
+          'pending',
+          '⚡',
+          'Pending update',
+          pending.length,
+          pending.map((s) => sessionRowHTML(s, true, cardIdx++)).join(''),
+          lane++
+        );
       }
       if (completed.length) {
-        html += `<div class="spk-sec">
-          <div class="spk-sec-hd"><div class="glbl">Completed (${completed.length})</div></div>
-          <div class="slist slist--spk-grid">${completed.map((s) => sessionRowHTML(s, true)).join('')}</div>
-        </div>`;
+        html += speakerStatusLaneHtml(
+          'completed',
+          '✓',
+          'Completed',
+          completed.length,
+          completed.map((s) => sessionRowHTML(s, true, cardIdx++)).join(''),
+          lane++
+        );
       }
       if (rescheduled.length) {
-        html += `<div class="spk-sec">
-          <div class="spk-sec-hd"><div class="glbl">Rescheduled (${rescheduled.length})</div></div>
-          <div class="slist slist--spk-grid">${rescheduled.map((s) => sessionRowHTML(s, true)).join('')}</div>
-        </div>`;
+        html += speakerStatusLaneHtml(
+          'rescheduled',
+          '↻',
+          'Rescheduled',
+          rescheduled.length,
+          rescheduled.map((s) => sessionRowHTML(s, true, cardIdx++)).join(''),
+          lane++
+        );
       }
       if (cancelled.length) {
-        html += `<div class="spk-sec">
-          <div class="spk-sec-hd"><div class="glbl">Cancelled (${cancelled.length})</div></div>
-          <div class="slist slist--spk-grid">${cancelled.map((s) => sessionRowHTML(s, true)).join('')}</div>
+        html += speakerStatusLaneHtml(
+          'cancelled',
+          '×',
+          'Cancelled',
+          cancelled.length,
+          cancelled.map((s) => sessionRowHTML(s, true, cardIdx++)).join(''),
+          lane++
+        );
+      }
+      const listEl = document.getElementById('spk-list');
+      if (listEl) {
+        listEl.innerHTML =
+          html ||
+          '<div class="spk-empty-state">No sessions in this month.</div>';
+      }
+    }
+
+    function renderSpeaker() {
+      applySpeakerRoute();
+      const month = getSpeakerRouteMonth();
+      if (!month) {
+        renderSpeakerMonthGrid();
+        return;
+      }
+      const filtered = sessions.filter((s) => sessionMonthKey(s) === month);
+      renderSpeakerSessionList(filtered);
+    }
+
+    function currentCalendarMonthKey() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      return `${y}-${m}`;
+    }
+
+    function parseSalesRoute() {
+      const r = parseAppRoute();
+      if (r.name === 'sales-admin') {
+        const section = PO_SALES_SECTIONS.has(r.params.section) ? r.params.section : 'overview';
+        return { section, month: r.params.month || null };
+      }
+      return { section: 'overview', month: null };
+    }
+
+    function buildSalesHash(section, monthKey) {
+      const sec = PO_SALES_SECTIONS.has(section) ? section : 'overview';
+      let path = `/sales-admin/${sec}`;
+      if (monthKey && /^\d{4}-\d{2}$/.test(monthKey)) path += `/${monthKey}`;
+      return `#${path}`;
+    }
+
+    function setSalesHash(section, monthKey) {
+      const next = buildSalesHash(section, monthKey);
+      if (location.hash !== next) location.hash = next;
+      else {
+        applySalesRoute();
+        renderSalesAdmin();
+      }
+    }
+
+    function getSalesSelectedMonth() {
+      const el = document.getElementById('sales-month');
+      const v = el ? String(el.value || '').trim() : '';
+      if (/^\d{4}-\d{2}$/.test(v)) return v;
+      const { month } = parseSalesRoute();
+      if (month) return month;
+      return currentCalendarMonthKey();
+    }
+
+    function applySalesRoute() {
+      const { section, month } = parseSalesRoute();
+      const el = document.getElementById('sales-month');
+      if (el) el.value = month || el.value || currentCalendarMonthKey();
+      document.querySelectorAll('.sales-nav-btn').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.salesNav === section);
+      });
+      document.querySelectorAll('#view-sales-admin .sales-section').forEach((secEl) => {
+        const on = secEl.dataset.salesSection === section;
+        secEl.classList.toggle('is-hidden', !on);
+        if (on) secEl.removeAttribute('hidden');
+        else secEl.setAttribute('hidden', '');
+      });
+    }
+
+    function salesSectionLabel(section) {
+      if (section === 'targets') return 'Targets & schools';
+      return 'Overview';
+    }
+
+    function salesSchoolKey(region, branch) {
+      return `${String(region || '').trim()}\u0001${String(branch || '').trim()}`;
+    }
+
+    function salesCompletionProgressCell(actual, target) {
+      const a = Number(actual) || 0;
+      const t = Number(target) || 0;
+      if (t <= 0) {
+        return `<td class="num sales-td-actual"><span class="sales-meetings-count">${a}</span></td>`;
+      }
+      const pct = Math.min(100, Math.round((a / t) * 100));
+      const met = a >= t;
+      const fillClass = met ? 'sales-prog-fill is-met' : 'sales-prog-fill';
+      const badge = met
+        ? `<span class="sales-badge-met">${a} / ${t}</span>`
+        : `<span class="sales-badge-pending">${a} / ${t}</span>`;
+      return `<td class="num sales-td-actual"><div class="sales-prog-wrap">${badge}<div class="sales-prog-bar"><span class="${fillClass}" style="width:${pct}%"></span></div></div></td>`;
+    }
+
+    function fulfillmentMapFromPayload(payload) {
+      const map = Object.create(null);
+      const schools = payload && Array.isArray(payload.schools) ? payload.schools : [];
+      for (const row of schools) {
+        const key = salesSchoolKey(row.region, row.branch);
+        map[key] = row;
+      }
+      return map;
+    }
+
+    function schoolFulfillmentPct(row) {
+      const t = Number(row.target_completed) || 0;
+      if (t <= 0) return null;
+      const a = Number(row.actual_completed) || 0;
+      return Math.min(100, Math.round((a / t) * 100));
+    }
+
+    function schoolsBelowThreshold(schools, thresholdPct) {
+      const thr = Number(thresholdPct) || 50;
+      return schools
+        .filter((row) => {
+          const t = Number(row.target_completed) || 0;
+          if (t <= 0) return false;
+          const pct = schoolFulfillmentPct(row);
+          return pct !== null && pct < thr;
+        })
+        .sort((a, b) => (schoolFulfillmentPct(a) ?? 0) - (schoolFulfillmentPct(b) ?? 0));
+    }
+
+    function aggregateFulfillmentByRegion(schools) {
+      const map = Object.create(null);
+      for (const row of schools) {
+        const region = String(row.region || '').trim() || '(Region not set)';
+        if (!map[region]) {
+          map[region] = {
+            region,
+            target_completed: 0,
+            actual_scheduled: 0,
+            actual_completed: 0,
+            schools: [],
+          };
+        }
+        map[region].target_completed += Number(row.target_completed) || 0;
+        map[region].actual_scheduled += Number(row.actual_scheduled) || 0;
+        map[region].actual_completed += Number(row.actual_completed) || 0;
+        map[region].schools.push(row);
+      }
+      return Object.keys(map)
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+        .map((k) => map[k]);
+    }
+
+    async function loadPmoFulfillment(month) {
+      if (pmoFulfillmentCache && pmoFulfillmentCache.month === month) {
+        return pmoFulfillmentCache.payload;
+      }
+      try {
+        const r = await poApiFetch(`api/sales/fulfillment?month=${encodeURIComponent(month)}`);
+        if (!r.ok) {
+          pmoFulfillmentCache = null;
+          return null;
+        }
+        const payload = await r.json();
+        pmoFulfillmentCache = { month, payload };
+        return payload;
+      } catch (_) {
+        pmoFulfillmentCache = null;
+        return null;
+      }
+    }
+
+    function clearPmoTargetsSection() {
+      const section = document.getElementById('pmo-targets-section');
+      const viz = document.getElementById('pmo-targets-viz');
+      const regions = document.getElementById('pmo-targets-by-region');
+      if (viz) {
+        for (const id of ['pmo-targets-hero', 'pmo-targets-kpis', 'pmo-targets-charts', 'pmo-targets-focus']) {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = '';
+        }
+      }
+      if (regions) regions.innerHTML = '';
+      if (section) section.classList.add('is-hidden');
+      pmoFulfillmentCache = null;
+    }
+
+    function pmoSchoolCardHtml(row) {
+      const tier = schoolFulfillmentTier(row);
+      const pct = schoolFulfillmentPct(row) ?? 0;
+      const ringColor = tier === 'below' ? '#ef4444' : tier === 'met' ? '#16a34a' : '#3b82f6';
+      const deg = Math.min(100, pct) * 3.6;
+      const ac = Number(row.actual_completed) || 0;
+      const tc = Number(row.target_completed) || 0;
+      return `<article class="pmo-school-card pmo-school-card--${tier}">
+        <div class="pmo-school-card__ring" style="background:conic-gradient(${ringColor} ${deg}deg,#e5e7eb 0)">${pct}%</div>
+        <div class="pmo-school-card__name">${escapeHtml(row.branch)}</div>
+        <div class="pmo-school-card__region">${escapeHtml(row.region)}</div>
+        <div class="pmo-school-card__stat">${ac} / ${tc} completed</div>
+      </article>`;
+    }
+
+    function renderPmoTargetsHero(summary) {
+      const el = document.getElementById('pmo-targets-hero');
+      if (!el) return;
+      const s = summary || {};
+      const target = Number(s.target_completed) || 0;
+      const completed = Number(s.actual_completed) || 0;
+      const scheduled = Number(s.actual_scheduled) || 0;
+      const pct = target > 0 ? Math.min(100, Math.round((completed / target) * 100)) : 0;
+      const barCls = pct >= 100 ? ' pmo-targets-hero__bar-fill--met' : '';
+      const donut =
+        target > 0
+          ? salesDonutSvg(pct, [{ value: 100, color: pct >= 100 ? '#16a34a' : '#f97316' }])
+          : salesDonutSvg(0, [{ value: 100, color: '#e5e7eb' }]);
+      el.innerHTML = `
+        <div class="sales-donut-wrap" style="flex-shrink:0">${donut}</div>
+        <div class="pmo-targets-hero__copy">
+          <h4 class="pmo-targets-hero__title">Monthly target fulfillment</h4>
+          <p class="pmo-targets-hero__sub">All schools combined — completed parent orientation meetings vs Sales Admin targets for this month.</p>
+          <div class="pmo-targets-hero__bar" aria-hidden="true"><span class="pmo-targets-hero__bar-fill${barCls}" style="width:${pct}%"></span></div>
+          <p class="pmo-targets-hero__nums">
+            <strong>${completed}</strong> completed · <strong>${target}</strong> target · <strong>${scheduled}</strong> scheduled
+            ${target > 0 ? ` · <strong>${pct}%</strong> of combined targets` : ''}
+          </p>
+        </div>`;
+    }
+
+    function renderPmoTargetsKpis(summary, schools) {
+      const el = document.getElementById('pmo-targets-kpis');
+      if (!el) return;
+      const s = summary || {};
+      const withTarget = schools.filter((row) => Number(row.target_completed) > 0);
+      let met = 0;
+      let below = 0;
+      let track = 0;
+      for (const row of withTarget) {
+        const tier = schoolFulfillmentTier(row);
+        if (tier === 'met') met += 1;
+        else if (tier === 'below') below += 1;
+        else track += 1;
+      }
+      el.innerHTML = `
+        <div class="pmo-target-kpi"><div class="pmo-target-kpi__val">${Number(s.target_completed) || 0}</div><div class="pmo-target-kpi__lbl">Combined target</div></div>
+        <div class="pmo-target-kpi"><div class="pmo-target-kpi__val pmo-target-kpi__val--warn">${Number(s.actual_completed) || 0}</div><div class="pmo-target-kpi__lbl">Completed</div></div>
+        <div class="pmo-target-kpi"><div class="pmo-target-kpi__val pmo-target-kpi__val--risk">${below}</div><div class="pmo-target-kpi__lbl">Below 50%</div></div>
+        <div class="pmo-target-kpi"><div class="pmo-target-kpi__val pmo-target-kpi__val--ok">${met}</div><div class="pmo-target-kpi__lbl">Target met</div></div>
+        <div class="pmo-target-kpi"><div class="pmo-target-kpi__val">${track}</div><div class="pmo-target-kpi__lbl">On track</div></div>`;
+    }
+
+    function renderPmoTargetsCharts(payload) {
+      const el = document.getElementById('pmo-targets-charts');
+      if (!el) return;
+      const schools = payload && Array.isArray(payload.schools) ? payload.schools : [];
+      const withTarget = schools.filter((s) => Number(s.target_completed) > 0);
+      let met = 0;
+      let track = 0;
+      let below = 0;
+      for (const row of withTarget) {
+        const tier = schoolFulfillmentTier(row);
+        if (tier === 'met') met += 1;
+        else if (tier === 'below') below += 1;
+        else track += 1;
+      }
+      const totalTier = Math.max(1, met + track + below);
+      const segMet = Math.round((met / totalTier) * 100);
+      const segTrack = Math.round((track / totalTier) * 100);
+      const segBelow = Math.round((below / totalTier) * 100);
+      const segRemainder = 100 - segMet - segTrack - segBelow;
+      const donutSegs =
+        withTarget.length > 0
+          ? [
+              { value: segMet, color: '#16a34a' },
+              { value: segTrack, color: '#3b82f6' },
+              { value: segBelow + Math.max(0, segRemainder), color: '#ef4444' },
+            ].filter((s) => s.value > 0)
+          : [{ value: 100, color: '#e5e7eb' }];
+      const statusRows = [
+        { label: 'Target met (100%+)', count: met, cls: 'met' },
+        { label: 'On track (50–99%)', count: track, cls: 'track' },
+        { label: 'Below 50%', count: below, cls: 'risk' },
+      ];
+      const maxStatus = Math.max(1, met, track, below);
+      const barSchools = withTarget
+        .map((row) => ({
+          row,
+          pct: schoolFulfillmentPct(row) ?? 0,
+          tier: schoolFulfillmentTier(row),
+        }))
+        .sort((a, b) => a.pct - b.pct);
+      const schoolBarsHtml = barSchools.length
+        ? barSchools
+            .map(({ row, pct, tier }) => {
+              const cls =
+                tier === 'below'
+                  ? ' sales-school-bar-row--below'
+                  : tier === 'met'
+                    ? ' sales-school-bar-row--met'
+                    : '';
+              return `<div class="sales-school-bar-row${cls}">
+              <span class="sales-school-bar-row__label" title="${escapeAttr(row.branch + ' · ' + row.region)}">${escapeHtml(row.branch)}</span>
+              <span class="num">${pct}%</span>
+              <div class="sales-school-bar-row__track"><span class="sales-school-bar-row__fill" style="width:${Math.min(100, pct)}%"></span></div>
+            </div>`;
+            })
+            .join('')
+        : '<p class="pmo-focus-panel__empty" style="margin:0">No school targets set for this month.</p>';
+      const mixPct = withTarget.length ? Math.round((met / withTarget.length) * 100) : 0;
+      el.innerHTML = `
+        <div class="sales-chart-card">
+          <h3 class="sales-chart-title">School mix</h3>
+          <div class="sales-donut-wrap">
+            ${withTarget.length ? salesDonutSvg(mixPct, donutSegs) : salesDonutSvg(0, [{ value: 100, color: '#e5e7eb' }])}
+            <ul class="sales-donut-legend">
+              <li><span class="sales-donut-swatch" style="background:#16a34a"></span> ${met} met target</li>
+              <li><span class="sales-donut-swatch" style="background:#3b82f6"></span> ${track} on track</li>
+              <li><span class="sales-donut-swatch" style="background:#ef4444"></span> ${below} below 50%</li>
+            </ul>
+          </div>
+        </div>
+        <div class="sales-chart-card">
+          <h3 class="sales-chart-title">Count by status</h3>
+          <div class="sales-status-bars">
+            ${statusRows
+              .map(
+                (st) => `<div class="sales-status-row">
+              <span>${st.label}</span>
+              <div class="sales-status-row__bar"><span class="sales-status-row__fill sales-status-row__fill--${st.cls}" style="width:${Math.round((st.count / maxStatus) * 100)}%"></span></div>
+              <span class="num"><strong>${st.count}</strong></span>
+            </div>`
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="sales-chart-card sales-chart-card--wide">
+          <h3 class="sales-chart-title">Every school — lowest completion first</h3>
+          <div class="sales-school-bars">${schoolBarsHtml}</div>
+        </div>`;
+    }
+
+    function renderPmoTargetsFocus(schools) {
+      const el = document.getElementById('pmo-targets-focus');
+      if (!el) return;
+      const withTarget = schools.filter((row) => Number(row.target_completed) > 0);
+      const below = withTarget
+        .filter((row) => schoolFulfillmentTier(row) === 'below')
+        .sort((a, b) => (schoolFulfillmentPct(a) ?? 0) - (schoolFulfillmentPct(b) ?? 0));
+      const met = withTarget
+        .filter((row) => schoolFulfillmentTier(row) === 'met')
+        .sort((a, b) => String(a.branch).localeCompare(String(b.branch), undefined, { sensitivity: 'base' }));
+      const track = withTarget
+        .filter((row) => schoolFulfillmentTier(row) === 'track')
+        .sort((a, b) => (schoolFulfillmentPct(a) ?? 0) - (schoolFulfillmentPct(b) ?? 0));
+      const belowGrid = below.length
+        ? `<div class="pmo-focus-school-grid">${below.map(pmoSchoolCardHtml).join('')}</div>`
+        : '<p class="pmo-focus-panel__empty">No schools below 50% of target.</p>';
+      const metGrid = met.length
+        ? `<div class="pmo-focus-school-grid">${met.map(pmoSchoolCardHtml).join('')}</div>`
+        : '<p class="pmo-focus-panel__empty">No schools have met target yet.</p>';
+      const trackGrid = track.length
+        ? `<div class="pmo-focus-school-grid">${track.map(pmoSchoolCardHtml).join('')}</div>`
+        : '<p class="pmo-focus-panel__empty">No schools in the 50–99% range.</p>';
+      el.innerHTML = `
+        <section class="pmo-focus-panel pmo-focus-panel--below" aria-label="Schools below target">
+          <div class="pmo-focus-panel__head">
+            <h4 class="pmo-focus-panel__title">Below target</h4>
+            <span class="pmo-focus-panel__count">${below.length}</span>
+          </div>
+          ${belowGrid}
+        </section>
+        <section class="pmo-focus-panel pmo-focus-panel--track" aria-label="Schools on track">
+          <div class="pmo-focus-panel__head">
+            <h4 class="pmo-focus-panel__title">On track (50–99%)</h4>
+            <span class="pmo-focus-panel__count">${track.length}</span>
+          </div>
+          ${trackGrid}
+        </section>
+        <section class="pmo-focus-panel pmo-focus-panel--met" aria-label="Schools that met target">
+          <div class="pmo-focus-panel__head">
+            <h4 class="pmo-focus-panel__title">Target met</h4>
+            <span class="pmo-focus-panel__count">${met.length}</span>
+          </div>
+          ${metGrid}
+        </section>`;
+    }
+
+    function renderPmoTargetsViz(payload) {
+      const schools = payload && Array.isArray(payload.schools) ? payload.schools : [];
+      const summary = payload && payload.summary ? payload.summary : {};
+      renderPmoTargetsHero(summary);
+      renderPmoTargetsKpis(summary, schools);
+      renderPmoTargetsCharts(payload);
+      renderPmoTargetsFocus(schools);
+    }
+
+    function renderPmoTargetsByRegion(payload) {
+      const root = document.getElementById('pmo-targets-by-region');
+      if (!root) return;
+      const fulfillMap = fulfillmentMapFromPayload(payload);
+      const regions = Object.keys(regionBranches).sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' })
+      );
+      if (!regions.length) {
+        root.innerHTML = '<div class="empty">No schools configured.</div>';
+        return;
+      }
+      let html = '';
+      for (const region of regions) {
+        const branches = regionBranches[region] || [];
+        const uniqueBranches = [...new Set(branches.map((b) => String(b).trim()).filter(Boolean))];
+        let regionTarget = 0;
+        let regionScheduledA = 0;
+        let regionCompletedA = 0;
+        const rowData = uniqueBranches.map((branch) => {
+          const key = salesSchoolKey(region, branch);
+          const f = fulfillMap[key] || {
+            region,
+            branch,
+            target_completed: 0,
+            actual_scheduled: 0,
+            actual_completed: 0,
+          };
+          const tc = Number(f.target_completed) || 0;
+          const as = Number(f.actual_scheduled) || 0;
+          const ac = Number(f.actual_completed) || 0;
+          regionTarget += tc;
+          regionScheduledA += as;
+          regionCompletedA += ac;
+          const tier = schoolFulfillmentTier({ target_completed: tc, actual_completed: ac });
+          const pct = schoolFulfillmentPct({ target_completed: tc, actual_completed: ac });
+          return { branch, tc, as, ac, tier, pct: pct ?? -1 };
+        });
+        rowData.sort((a, b) => {
+          const order = { below: 0, track: 1, none: 2, met: 3 };
+          const d = (order[a.tier] ?? 2) - (order[b.tier] ?? 2);
+          if (d !== 0) return d;
+          return a.pct - b.pct;
+        });
+        const rows = rowData
+          .map(({ branch, tc, as, ac, tier }) => {
+            const rowCls =
+              tier === 'below' ? ' sales-row--below' : tier === 'met' ? ' sales-row--met' : '';
+            const badge = salesStatusBadgeHtml(tier);
+            return `<tr class="sales-row${rowCls}">
+              <td>${escapeHtml(branch)} ${badge}</td>
+              <td class="num sales-td-target">${tc}</td>
+              <td class="num sales-td-actual"><span class="sales-meetings-count">${as}</span></td>
+              <td class="num sales-td-actual"><span class="sales-meetings-count">${ac}</span></td>
+              ${salesCompletionProgressCell(ac, tc)}
+            </tr>`;
+          })
+          .join('');
+        html += `<section class="sales-region">
+          <button type="button" class="sales-region-hd" aria-expanded="false">
+            <span>${escapeHtml(region)}</span>
+            <span class="sec-sub">Completed ${regionCompletedA}/${regionTarget} · ${regionScheduledA} scheduled</span>
+          </button>
+          <div class="sales-region-body is-collapsed">
+            <div class="dash-table-wrap">
+              <table class="dash-table" aria-label="${escapeAttr(region)} schools">
+                <thead>
+                  <tr>
+                    <th>School</th>
+                    <th class="num sales-th-target">Completion target</th>
+                    <th class="num sales-th-actual">Meetings scheduled</th>
+                    <th class="num sales-th-actual">Meetings completed</th>
+                    <th class="num sales-th-actual">Completed vs target</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>
+        </section>`;
+      }
+      root.innerHTML = html;
+    }
+
+    async function renderPmoMonthTargets(month) {
+      const section = document.getElementById('pmo-targets-section');
+      if (!section || !month) {
+        clearPmoTargetsSection();
+        return;
+      }
+      section.classList.remove('is-hidden');
+      const vizIds = ['pmo-targets-hero', 'pmo-targets-kpis', 'pmo-targets-charts', 'pmo-targets-focus'];
+      for (const id of vizIds) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<p class="card-lead" style="margin:0">Loading targets…</p>';
+      }
+      const regionsEl = document.getElementById('pmo-targets-by-region');
+      if (regionsEl) regionsEl.innerHTML = '';
+      const payload = await loadPmoFulfillment(month);
+      if (!payload) {
+        for (const id of vizIds) {
+          const el = document.getElementById(id);
+          if (el) {
+            el.innerHTML =
+              '<p class="empty" style="margin:0">Could not load target data. Check database connection.</p>';
+          }
+        }
+        if (regionsEl) regionsEl.innerHTML = '';
+        return;
+      }
+      renderPmoTargetsViz(payload);
+      renderPmoTargetsByRegion(payload);
+    }
+
+    async function loadSalesFulfillment() {
+      const month = getSalesSelectedMonth();
+      try {
+        const r = await poApiFetch(`api/sales/fulfillment?month=${encodeURIComponent(month)}`);
+        if (!r.ok) {
+          salesFulfillmentCache = null;
+          return false;
+        }
+        salesFulfillmentCache = await r.json();
+        return true;
+      } catch (_) {
+        salesFulfillmentCache = null;
+        return false;
+      }
+    }
+
+    function captureSalesTargetsSnapshot() {
+      const snap = {};
+      document.querySelectorAll('[data-sales-school-target]').forEach((inp) => {
+        const region = inp.dataset.region || '';
+        const branch = inp.dataset.branch || '';
+        if (!region || !branch) return;
+        snap[salesSchoolKey(region, branch)] = Math.max(0, parseInt(String(inp.value || '0'), 10) || 0);
+      });
+      return snap;
+    }
+
+    function salesTargetsHaveUnsavedChanges() {
+      if (!salesTargetsSavedSnapshot) return false;
+      const cur = captureSalesTargetsSnapshot();
+      const keys = new Set([
+        ...Object.keys(salesTargetsSavedSnapshot),
+        ...Object.keys(cur),
+      ]);
+      for (const k of keys) {
+        if ((salesTargetsSavedSnapshot[k] || 0) !== (cur[k] || 0)) return true;
+      }
+      return false;
+    }
+
+    function syncSalesSaveTargetsButton() {
+      const btn = document.getElementById('btn-sales-save-targets');
+      if (!btn) return;
+      const dirty = salesTargetsHaveUnsavedChanges();
+      btn.disabled = !dirty;
+      btn.setAttribute('aria-disabled', dirty ? 'false' : 'true');
+    }
+
+    function resetSalesTargetsSavedSnapshot() {
+      salesTargetsSavedSnapshot = captureSalesTargetsSnapshot();
+      syncSalesSaveTargetsButton();
+    }
+
+    async function saveSalesTargets() {
+      const btn = document.getElementById('btn-sales-save-targets');
+      if (btn?.disabled) return;
+      const month = getSalesSelectedMonth();
+      const targets = [];
+      document.querySelectorAll('[data-sales-school-target]').forEach((inp) => {
+        const region = inp.dataset.region || '';
+        const branch = inp.dataset.branch || '';
+        if (!region || !branch) return;
+        targets.push({
+          region,
+          branch,
+          target_completed: Math.max(0, parseInt(String(inp.value || '0'), 10) || 0),
+        });
+      });
+      try {
+        const r = await poApiFetch('api/sales/targets', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month, targets }),
+        });
+        if (!r.ok) {
+          toast('Could not save targets.', 'error');
+          return;
+        }
+        await loadSalesFulfillment();
+        renderSalesAdmin();
+        resetSalesTargetsSavedSnapshot();
+        toast('Targets saved.', 'success');
+      } catch (_) {
+        toast('Could not save targets.', 'error');
+      }
+    }
+
+    function schoolInitials(name) {
+      const parts = String(name || '')
+        .trim()
+        .split(/[\s\-]+/)
+        .filter(Boolean);
+      if (!parts.length) return '??';
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+
+    function schoolLastUpdatedLabel(region, branch, month) {
+      const list = completedSessionsForSchool(region, branch, month);
+      if (!list.length) return '—';
+      const latest = list.reduce((a, b) => (sessionSortTimestamp(a) > sessionSortTimestamp(b) ? a : b));
+      const ts = sessionSortTimestamp(latest);
+      if (!ts) return '—';
+      const diff = Date.now() - ts;
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins} mins ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 48) return `${hrs} hrs ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days} day${days === 1 ? '' : 's'} ago`;
+    }
+
+    function getSalesSchoolSearch() {
+      const el = document.getElementById('sales-school-search');
+      return el ? String(el.value || '').trim().toLowerCase() : '';
+    }
+
+    function populateSalesRegionFilter(payload) {
+      const sel = document.getElementById('sales-region-filter');
+      if (!sel) return;
+      const prev = sel.value;
+      const regions = new Set();
+      const schools = payload && Array.isArray(payload.schools) ? payload.schools : [];
+      for (const row of schools) {
+        const r = String(row.region || '').trim();
+        if (r) regions.add(r);
+      }
+      const sorted = [...regions].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      sel.innerHTML =
+        '<option value="">All regions</option>' +
+        sorted.map((r) => `<option value="${escapeAttr(r)}">${escapeHtml(r)}</option>`).join('');
+      if (prev && sorted.includes(prev)) sel.value = prev;
+    }
+
+    function getSalesRegionFilter() {
+      const sel = document.getElementById('sales-region-filter');
+      return sel ? String(sel.value || '').trim() : '';
+    }
+
+    function salesFilteredSchools(payload) {
+      const schools = payload && Array.isArray(payload.schools) ? payload.schools : [];
+      const region = getSalesRegionFilter();
+      const q = getSalesSchoolSearch();
+      return schools.filter((row) => {
+        if (region && String(row.region || '').trim() !== region) return false;
+        if (q) {
+          const hay = `${row.branch || ''} ${row.region || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    /** Overview risk chart: 80%+ on-track, 50–79% moderate, &lt;50% critical */
+    function salesDashRiskTier(row) {
+      const t = Number(row.target_completed) || 0;
+      if (t <= 0) return 'none';
+      const pct = schoolFulfillmentPct(row);
+      if (pct >= 80) return 'ontrack';
+      if (pct >= 50) return 'moderate';
+      return 'critical';
+    }
+
+    function salesTableStatusBadge(tier) {
+      if (tier === 'met') return '<span class="sales-pill--met">Target Met</span>';
+      if (tier === 'below') return '<span class="sales-pill--below">Below 50%</span>';
+      if (tier === 'track') return '<span class="sales-pill--track">On track</span>';
+      return '<span class="sales-pill--track" style="opacity:0.7">No target</span>';
+    }
+
+    /** Figma Overall Progress: ring = completion %, legend rows below donut */
+    function salesOverallProgressDonutSvg(pct) {
+      const p = Math.max(0, Math.min(100, pct));
+      const cx = 96;
+      const cy = 96;
+      const ringR = 72;
+      const stroke = 22;
+      const c = 2 * Math.PI * ringR;
+      const completedLen = (p / 100) * c;
+      const pendingLen = c - completedLen;
+      return `<svg class="sales-progress-donut" viewBox="0 0 192 192" role="img" aria-label="Overall progress ${p} percent completed">
+        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#e8e2d7" stroke-width="${stroke}"/>
+        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#9d4300" stroke-width="${stroke}" stroke-linecap="butt"
+          stroke-dasharray="${completedLen} ${pendingLen}" transform="rotate(-90 ${cx} ${cy})"/>
+        <circle cx="${cx}" cy="${cy}" r="52" fill="#fff" filter="url(#salesDonutInnerShadow)"/>
+        <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="36" font-weight="800" fill="#9d4300">${p}%</text>
+        <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="500" fill="#584237" letter-spacing="0.6">Completed</text>
+        <defs>
+          <filter id="salesDonutInnerShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.06"/>
+          </filter>
+        </defs>
+      </svg>`;
+    }
+
+    const SALES_KPI_GLYPHS = ['◎', '◷', '✓', '%'];
+
+    /** Mini area sparkline (replaces expired Figma MCP spark images). */
+    function salesKpiSparkSvg(idx, level) {
+      const w = 120;
+      const h = 44;
+      const pad = 3;
+      const seeds = [
+        [0.38, 0.42, 0.4, 0.48, 0.52, 0.56, 0.54, 0.6, 0.64, 0.68],
+        [0.62, 0.58, 0.54, 0.52, 0.48, 0.44, 0.42, 0.38, 0.36, 0.34],
+        [0.42, 0.46, 0.5, 0.48, 0.55, 0.6, 0.58, 0.66, 0.7, 0.76],
+        [0.32, 0.34, 0.3, 0.36, 0.4, 0.38, 0.44, 0.48, 0.46, 0.52],
+      ];
+      const norm = Math.min(0.92, Math.max(0.12, Number(level) || 0.5));
+      const base = seeds[idx] || seeds[0];
+      const pts = [...base.slice(0, -1), norm];
+      const n = pts.length;
+      const step = (w - pad * 2) / (n - 1);
+      const xy = pts.map((p, i) => {
+        const x = pad + i * step;
+        const y = pad + (1 - p) * (h - pad * 2);
+        return [x, y];
+      });
+      const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+      const area = `${pad},${h - pad} ${line} ${(w - pad).toFixed(1)},${h - pad}`;
+      const gid = `salesKpiSpark${idx}`;
+      return `<svg class="sales-kpi-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#9d4300" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#9d4300" stop-opacity="0.04"/>
+          </linearGradient>
+        </defs>
+        <polygon points="${area}" fill="url(#${gid})"/>
+        <polyline points="${line}" fill="none" stroke="#9d4300" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    }
+
+    function renderSalesSummary(summary) {
+      const s = summary || {
+        target_completed: 0,
+        actual_scheduled: 0,
+        actual_completed: 0,
+      };
+      const pct =
+        s.target_completed > 0
+          ? Math.min(100, Math.round((s.actual_completed / s.target_completed) * 100))
+          : 0;
+      const pctLabel = s.target_completed > 0 ? `${pct}%` : '—';
+      const targetNorm = Math.min(1, (Number(s.target_completed) || 0) / 50);
+      const schedNorm = Math.min(1, (Number(s.actual_scheduled) || 0) / Math.max(1, s.target_completed || 1));
+      const doneNorm = Math.min(1, (Number(s.actual_completed) || 0) / Math.max(1, s.target_completed || 1));
+      const rateNorm = s.target_completed > 0 ? pct / 100 : 0.15;
+      const kpis = [
+        { badge: 'Targets', badgeCls: 'sales-kpi-card__badge--up', label: 'Total targets', value: s.target_completed, idx: 0, spark: targetNorm || 0.45 },
+        { badge: 'Scheduled', badgeCls: 'sales-kpi-card__badge--static', label: 'Meetings scheduled', value: s.actual_scheduled, idx: 1, spark: schedNorm || 0.2 },
+        { badge: 'Completed', badgeCls: 'sales-kpi-card__badge--hot', label: 'Meetings completed', value: s.actual_completed, idx: 2, spark: doneNorm || 0.25 },
+        { badge: 'Rate', badgeCls: 'sales-kpi-card__badge--up', label: 'Completion %', value: pctLabel, idx: 3, spark: rateNorm },
+      ];
+      setMetricContainerHtml(
+        'sales-summary-metrics',
+        kpis
+          .map(
+            (k) => `<div class="sales-kpi-card">
+            <div class="sales-kpi-card__top">
+              <span class="sales-kpi-card__icon sales-kpi-card__icon--glyph" aria-hidden="true">${SALES_KPI_GLYPHS[k.idx]}</span>
+              <span class="sales-kpi-card__badge ${k.badgeCls}">${escapeHtml(k.badge)}</span>
+            </div>
+            <div class="sales-kpi-card__label">${escapeHtml(k.label)}</div>
+            <div class="sales-kpi-card__value">${escapeHtml(String(k.value))}</div>
+            ${salesKpiSparkSvg(k.idx, k.spark)}
+          </div>`
+          )
+          .join('')
+      );
+    }
+
+    /** Overview charts only: 80% on-track threshold (targets tab keeps schoolFulfillmentTier). */
+    function salesChartFulfillmentTier(row) {
+      const t = Number(row.target_completed) || 0;
+      if (t <= 0) return 'none';
+      const pct = schoolFulfillmentPct(row);
+      if (pct >= 100) return 'met';
+      if (pct < 80) return 'below';
+      return 'track';
+    }
+
+    function schoolFulfillmentTier(row) {
+      const t = Number(row.target_completed) || 0;
+      if (t <= 0) return 'none';
+      const pct = schoolFulfillmentPct(row);
+      if (pct >= 100) return 'met';
+      if (pct < 50) return 'below';
+      return 'track';
+    }
+
+    function salesStatusBadgeHtml(tier, opts) {
+      const figma = opts && opts.figma;
+      if (tier === 'below') {
+        return `<span class="sales-badge-status sales-badge-status--below">${figma ? 'BELOW 50%' : 'Below 50%'}</span>`;
+      }
+      if (tier === 'met') {
+        return `<span class="sales-badge-status sales-badge-status--met">${figma ? 'TARGET MET' : 'Target met'}</span>`;
+      }
+      return '';
+    }
+
+    function completedSessionsForSchool(region, branch, month) {
+      const r = String(region || '').trim();
+      const b = String(branch || '').trim();
+      return sessions.filter((s) => {
+        if (sessionMonthKey(s) !== month) return false;
+        if (String(s.region || '').trim() !== r) return false;
+        if (String(s.branch || '').trim() !== b) return false;
+        return s.status === 'Completed';
+      });
+    }
+
+    function renderSalesStudentIdsHtml(s) {
+      const ids = s && Array.isArray(s.student_ids) ? s.student_ids : [];
+      if (!ids.length) {
+        return '<span class="sales-student-empty">No student IDs recorded yet (students join via share link).</span>';
+      }
+      const chips = ids.map((id) => `<span class="sales-student-chip">${escapeHtml(id)}</span>`).join('');
+      return `<div class="sales-student-ids">${chips}</div>`;
+    }
+
+    function renderSalesMeetingsPanel(region, branch, month) {
+      const list = completedSessionsForSchool(region, branch, month);
+      if (!list.length) {
+        return '<p class="sales-student-empty" style="margin:0">No completed meetings this month.</p>';
+      }
+      const sorted = [...list].sort((a, b) => sessionSortTimestamp(b) - sessionSortTimestamp(a));
+      return sorted
+        .map((s) => {
+          const attended = parseInt(s.attended, 10) || 0;
+          const idCount = Array.isArray(s.student_ids) ? s.student_ids.length : 0;
+          return `<article class="sales-meeting-card">
+            <div class="sales-meeting-card__head">${escapeHtml(fmtSessionScheduleSummary(s))}</div>
+            <div class="sales-meeting-card__meta">Parents attended (recorded): <strong>${attended}</strong> · Student IDs from join: <strong>${idCount}</strong></div>
+            ${renderSalesStudentIdsHtml(s)}
+          </article>`;
+        })
+        .join('');
+    }
+
+    function salesDonutSvg(pctComplete, segments) {
+      const r = 42;
+      const c = 2 * Math.PI * r;
+      let offset = 0;
+      const arcs = segments
+        .map((seg) => {
+          const len = (seg.value / 100) * c;
+          const dash = `${len} ${c - len}`;
+          const el = `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${seg.color}" stroke-width="14" stroke-dasharray="${dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 60 60)"/>`;
+          offset += len;
+          return el;
+        })
+        .join('');
+      return `<svg class="sales-donut" viewBox="0 0 120 120" role="img" aria-label="Overall completion ${pctComplete} percent">
+        <circle cx="60" cy="60" r="${r}" fill="none" stroke="#f1f5f9" stroke-width="14"/>
+        ${arcs}
+        <text x="60" y="56" text-anchor="middle" font-size="18" font-weight="700" fill="#1e3a5f">${pctComplete}%</text>
+        <text x="60" y="72" text-anchor="middle" font-size="9" fill="#64748b">completed</text>
+      </svg>`;
+    }
+
+    function renderSalesCharts(payload) {
+      const el = document.getElementById('sales-charts-root');
+      if (!el) return;
+      const schools = salesFilteredSchools(payload);
+      const summary = payload && payload.summary ? payload.summary : {};
+      const target = Number(summary.target_completed) || 0;
+      const completed = Number(summary.actual_completed) || 0;
+      const pctOverall =
+        target > 0 ? Math.min(100, Math.round((completed / target) * 100)) : 0;
+
+      let activeTargets = 0;
+      let pendingReview = 0;
+      let ontrack = 0;
+      let moderate = 0;
+      let critical = 0;
+      for (const row of schools) {
+        const t = Number(row.target_completed) || 0;
+        if (t <= 0) {
+          pendingReview += 1;
+          continue;
+        }
+        activeTargets += 1;
+        const risk = salesDashRiskTier(row);
+        if (risk === 'ontrack') ontrack += 1;
+        else if (risk === 'moderate') moderate += 1;
+        else if (risk === 'critical') critical += 1;
+      }
+
+      const riskRows = [
+        { label: 'On Track Performance', count: ontrack, cls: 'ontrack', labelCls: 'ontrack' },
+        { label: 'Moderate Risk Schools', count: moderate, cls: 'moderate', labelCls: 'moderate' },
+        { label: 'Critical Risk (Below 50%)', count: critical, cls: 'critical', labelCls: 'critical' },
+      ];
+      const maxRisk = Math.max(1, ontrack, moderate, critical);
+
+      function salesStatusItemHtml(st) {
+        const pct = Math.round((st.count / maxRisk) * 100);
+        return `<div class="sales-status-item">
+          <div class="sales-status-item__head">
+            <span class="sales-status-item__label sales-status-item__label--${st.labelCls}">${escapeHtml(st.label)}</span>
+            <span class="sales-status-item__count"><span class="sales-status-item__num">${st.count}</span> Schools</span>
+          </div>
+          <div class="sales-status-item__track" role="presentation">
+            <span class="sales-status-item__fill sales-status-item__fill--${st.cls}" style="width:${pct}%"></span>
+          </div>
         </div>`;
       }
-      document.getElementById('spk-list').innerHTML =
-        html || '<div class="empty">No sessions planned yet. Ask PMO to add sessions.</div>';
+
+      el.innerHTML = `
+        <div class="sales-insight-card sales-progress-card">
+          <div class="sales-insight-card__head">
+            <h3 class="sales-insight-card__title">Overall Progress</h3>
+          </div>
+          <div class="sales-progress-card__viz">
+            ${salesOverallProgressDonutSvg(pctOverall)}
+            <ul class="sales-progress-legend">
+              <li class="sales-progress-legend__row">
+                <span class="sales-progress-legend__label">
+                  <span class="sales-progress-legend__dot sales-progress-legend__dot--active"></span>
+                  Active Targets
+                </span>
+                <span class="sales-progress-legend__value">${activeTargets} Schools</span>
+              </li>
+              <li class="sales-progress-legend__row">
+                <span class="sales-progress-legend__label">
+                  <span class="sales-progress-legend__dot sales-progress-legend__dot--pending"></span>
+                  Pending Review
+                </span>
+                <span class="sales-progress-legend__value">${pendingReview} Schools</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="sales-insight-card sales-status-card">
+          <div class="sales-insight-card__head">
+            <h3 class="sales-insight-card__title">Schools by Status</h3>
+            <div class="sales-status-legend" aria-hidden="true">
+              <span><i class="ontrack"></i> On Track</span>
+              <span><i class="moderate"></i> Moderate</span>
+              <span><i class="critical"></i> Critical</span>
+            </div>
+          </div>
+          <div class="sales-status-list">
+            ${riskRows.map(salesStatusItemHtml).join('')}
+          </div>
+        </div>`;
+    }
+
+    function renderSalesAlerts(payload) {
+      const el = document.getElementById('sales-alerts-root');
+      if (!el) return;
+      const schools = payload && Array.isArray(payload.schools) ? payload.schools : [];
+      let critical = 0;
+      let met = 0;
+      const regionBelow = Object.create(null);
+      for (const row of schools) {
+        const tier = schoolFulfillmentTier(row);
+        if (tier === 'below') {
+          critical += 1;
+          const r = String(row.region || '').trim() || 'Other';
+          regionBelow[r] = (regionBelow[r] || 0) + 1;
+        }
+        if (tier === 'met') met += 1;
+      }
+      let worstRegion = '';
+      let worstCount = 0;
+      for (const [r, n] of Object.entries(regionBelow)) {
+        if (n > worstCount) {
+          worstCount = n;
+          worstRegion = r;
+        }
+      }
+      const criticalMsg =
+        critical > 0
+          ? `${critical} school${critical === 1 ? '' : 's'} below 50% completion — review targets and speaker follow-up.`
+          : 'No schools are in critical range this month.';
+      const regionMsg =
+        worstRegion && worstCount > 0
+          ? `${worstRegion} has ${worstCount} school${worstCount === 1 ? '' : 's'} below 50% — highest concentration in one region.`
+          : 'Regional performance is evenly distributed.';
+      const successMsg =
+        met > 0
+          ? `${met} school${met === 1 ? ' has' : 's have'} met completion targets this month.`
+          : 'No schools have met targets yet — keep momentum on scheduled sessions.';
+
+      el.innerHTML = `
+        <div class="sales-alert-card sales-alert-card--critical">
+          <span class="sales-alert-card__icon" aria-hidden="true">!</span>
+          <div class="sales-alert-card__body">
+            <strong>Critical performance alert</strong>
+            ${escapeHtml(criticalMsg)}
+          </div>
+        </div>
+        <div class="sales-alert-card sales-alert-card--warn">
+          <span class="sales-alert-card__icon" aria-hidden="true">⚠</span>
+          <div class="sales-alert-card__body">
+            <strong>Regional drop</strong>
+            ${escapeHtml(regionMsg)}
+          </div>
+        </div>
+        <div class="sales-alert-card sales-alert-card--success">
+          <span class="sales-alert-card__icon" aria-hidden="true">✓</span>
+          <div class="sales-alert-card__body">
+            <strong>Success milestone</strong>
+            ${escapeHtml(successMsg)}
+          </div>
+        </div>`;
+    }
+
+    function renderSalesSchoolTable(payload, month) {
+      const root = document.getElementById('sales-school-table-root');
+      const pager = document.getElementById('sales-school-table-pager');
+      if (!root || !pager) return;
+
+      const schools = salesFilteredSchools(payload)
+        .filter((row) => Number(row.target_completed) > 0)
+        .map((row) => ({
+          row,
+          pct: schoolFulfillmentPct(row) ?? 0,
+          tier: schoolFulfillmentTier(row),
+        }))
+        .sort((a, b) => a.pct - b.pct);
+
+      const total = schools.length;
+      const totalPages = Math.max(1, Math.ceil(total / SALES_TABLE_PAGE_SIZE));
+      if (salesTablePage >= totalPages) salesTablePage = totalPages - 1;
+      if (salesTablePage < 0) salesTablePage = 0;
+      const start = salesTablePage * SALES_TABLE_PAGE_SIZE;
+      const pageRows = schools.slice(start, start + SALES_TABLE_PAGE_SIZE);
+
+      if (!total) {
+        root.innerHTML =
+          '<p class="sales-student-empty" style="margin:12px">Set school targets on the <strong>Targets &amp; schools</strong> tab to see performance rows.</p>';
+        pager.innerHTML = '';
+        return;
+      }
+
+      const rowsHtml = pageRows
+        .map(({ row, pct, tier }) => {
+          const risk = salesDashRiskTier(row);
+          const fillCls =
+            tier === 'met' ? 'is-met' : risk === 'critical' ? 'is-critical' : risk === 'moderate' ? 'is-moderate' : '';
+          const updated = schoolLastUpdatedLabel(row.region, row.branch, month);
+          return `<tr>
+            <td><div class="sales-school-name-cell"><span class="sales-school-avatar">${escapeHtml(schoolInitials(row.branch))}</span><span>${escapeHtml(row.branch)}</span></div></td>
+            <td>
+              <div class="sales-table-prog">
+                <span class="num" style="min-width:2.5rem;text-align:left">${pct}%</span>
+                <div class="sales-table-prog__bar"><span class="sales-table-prog__fill ${fillCls}" style="width:${Math.min(100, pct)}%"></span></div>
+              </div>
+            </td>
+            <td>${salesTableStatusBadge(tier)}</td>
+            <td style="color:#584237;opacity:0.85">${escapeHtml(updated)}</td>
+            <td class="num"><button type="button" class="sales-table-action" data-sales-goto-targets="1" title="Open targets" aria-label="Manage school">↗</button></td>
+          </tr>`;
+        })
+        .join('');
+
+      root.innerHTML = `<table class="sales-school-table" aria-label="School-wise performance">
+        <thead>
+          <tr>
+            <th>School name</th>
+            <th>Orientation progress</th>
+            <th>Status</th>
+            <th>Last updated</th>
+            <th class="num">Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`;
+
+      const from = start + 1;
+      const to = Math.min(start + SALES_TABLE_PAGE_SIZE, total);
+      pager.innerHTML = `
+        <span>Showing ${from}–${to} of ${total} schools</span>
+        <div class="sales-table-pager__btns">
+          <button type="button" data-sales-page="prev" ${salesTablePage <= 0 ? 'disabled' : ''}>Previous</button>
+          <button type="button" data-sales-page="next" ${salesTablePage >= totalPages - 1 ? 'disabled' : ''}>Next</button>
+        </div>`;
+    }
+
+    function renderSalesOverview() {
+      const month = getSalesSelectedMonth();
+      const payload = salesFulfillmentCache;
+      populateSalesRegionFilter(payload);
+      const summary = payload && payload.summary ? payload.summary : null;
+      renderSalesSummary(summary);
+      renderSalesCharts(payload);
+      renderSalesAlerts(payload);
+      renderSalesSchoolTable(payload, month);
+    }
+
+    function getSalesTypeFilter() {
+      const sel = document.getElementById('sales-type-filter');
+      return sel ? String(sel.value || '').trim() : '';
+    }
+
+    function branchMatchesSchoolType(branch, typeFilter) {
+      if (!typeFilter) return true;
+      const name = String(branch || '').toLowerCase();
+      if (typeFilter === 'elite') return name.includes('elite');
+      return true;
+    }
+
+    function renderSalesTargets() {
+      const root = document.getElementById('sales-regions-root');
+      if (!root) return;
+      const month = getSalesSelectedMonth();
+      const payload = salesFulfillmentCache;
+      const fulfillMap = fulfillmentMapFromPayload(payload);
+      populateSalesRegionFilter(payload);
+      const regionFilter = getSalesRegionFilter();
+      const searchQ = getSalesSchoolSearch();
+      const typeFilter = getSalesTypeFilter();
+      let regions = Object.keys(regionBranches).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      if (regionFilter) regions = regions.filter((r) => r === regionFilter);
+      if (!regions.length) {
+        root.innerHTML = '<div class="empty">No schools configured.</div>';
+        salesTargetsSavedSnapshot = {};
+        syncSalesSaveTargetsButton();
+        return;
+      }
+      let html = '';
+      let detailSeq = 0;
+      let regionsRendered = 0;
+      for (const region of regions) {
+        const branches = regionBranches[region] || [];
+        let uniqueBranches = [...new Set(branches.map((b) => String(b).trim()).filter(Boolean))];
+        uniqueBranches = uniqueBranches.filter((b) => branchMatchesSchoolType(b, typeFilter));
+        if (searchQ) {
+          uniqueBranches = uniqueBranches.filter((b) => {
+            const hay = `${b} ${region}`.toLowerCase();
+            return hay.includes(searchQ);
+          });
+        }
+        if (!uniqueBranches.length) continue;
+        let regionTarget = 0;
+        let regionScheduledA = 0;
+        let regionCompletedA = 0;
+        const rows = uniqueBranches
+          .map((branch) => {
+            const key = salesSchoolKey(region, branch);
+            const f = fulfillMap[key] || {};
+            const tc = Number(f.target_completed) || 0;
+            const as = Number(f.actual_scheduled) || 0;
+            const ac = Number(f.actual_completed) || 0;
+            regionTarget += tc;
+            regionScheduledA += as;
+            regionCompletedA += ac;
+            const safeBranch = escapeAttr(branch);
+            const safeRegion = escapeAttr(region);
+            const tier = schoolFulfillmentTier({ target_completed: tc, actual_completed: ac });
+            const rowCls =
+              tier === 'below' ? ' sales-row--below' : tier === 'met' ? ' sales-row--met' : '';
+            const badge = salesStatusBadgeHtml(tier);
+            const detailId = `sales-meetings-${detailSeq++}`;
+            const canExpand = ac > 0;
+            const schoolCell = canExpand
+              ? `<button type="button" class="sales-school-toggle" aria-expanded="false" aria-controls="${detailId}">
+                  <span class="sales-school-toggle__chev" aria-hidden="true">▶</span>
+                  <span>${escapeHtml(branch)}</span>
+                </button> ${badge}`
+              : `${escapeHtml(branch)} ${badge}`;
+            const mainRow = `<tr class="sales-row${rowCls}">
+              <td>${schoolCell}</td>
+              <td class="num sales-td-target"><input type="number" class="sales-target-inp" min="0" step="1" value="${tc}" data-sales-school-target="1" data-region="${safeRegion}" data-branch="${safeBranch}" aria-label="Completion target for ${escapeAttr(branch)}"></td>
+              <td class="num sales-td-actual"><span class="sales-meetings-count">${as}</span></td>
+              <td class="num sales-td-actual"><span class="sales-meetings-count">${ac}</span></td>
+              ${salesCompletionProgressCell(ac, tc)}
+            </tr>`;
+            if (!canExpand) return mainRow;
+            return `${mainRow}
+            <tr id="${detailId}" class="sales-meetings-detail is-hidden">
+              <td colspan="5">
+                <div class="sales-meetings-panel">
+                  <p class="sales-meetings-panel__title">Completed meetings · student IDs</p>
+                  ${renderSalesMeetingsPanel(region, branch, month)}
+                </div>
+              </td>
+            </tr>`;
+          })
+          .join('');
+        const expandRegion = Boolean(regionFilter) || regions.length === 1;
+        regionsRendered += 1;
+        html += `<section class="sales-region">
+          <button type="button" class="sales-region-hd" aria-expanded="${expandRegion ? 'true' : 'false'}">
+            <span>${escapeHtml(region)}</span>
+            <span class="sec-sub">Target ${regionCompletedA}/${regionTarget} completed · ${regionScheduledA} scheduled</span>
+          </button>
+          <div class="sales-region-body${expandRegion ? '' : ' is-collapsed'}">
+            <div class="dash-table-wrap">
+              <table class="dash-table" aria-label="${escapeAttr(region)} schools">
+                <thead>
+                  <tr>
+                    <th>School</th>
+                    <th class="num sales-th-target">Completion target</th>
+                    <th class="num sales-th-actual">Meetings scheduled</th>
+                    <th class="num sales-th-actual">Meetings completed</th>
+                    <th class="num sales-th-actual">Completed vs target</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>
+        </section>`;
+      }
+      root.innerHTML = regionsRendered
+        ? html
+        : '<div class="empty">No schools match the current filters.</div>';
+      resetSalesTargetsSavedSnapshot();
+    }
+
+    function renderSalesAdmin() {
+      if (sessionStorage.getItem('po_logged_in') !== 'sales_admin') return;
+      applySalesRoute();
+      const { section } = parseSalesRoute();
+      const month = getSalesSelectedMonth();
+      const sub = document.querySelector('.app-sub');
+      if (sub) sub.textContent = `Sales Admin · ${salesSectionLabel(section)} · ${formatMonthLabel(month)}`;
+      const monthInp = document.getElementById('sales-month');
+      if (monthInp && monthInp.value !== month) monthInp.value = month;
+      if (section === 'targets') renderSalesTargets();
+      else renderSalesOverview();
+    }
+
+    async function ensureSalesAdminData() {
+      if (sessionStorage.getItem('po_logged_in') !== 'sales_admin') return;
+      applySalesRoute();
+      const ok = await loadSalesFulfillment();
+      if (!ok) toast('Could not load fulfillment data. Check database connection.', 'warning');
+      renderSalesAdmin();
     }
 
     function renderAll() {
+      const role = sessionStorage.getItem('po_logged_in');
+      if (role === 'sales_admin') {
+        ensureSalesAdminData();
+        return;
+      }
       renderPMO();
       renderSpeaker();
     }
 
-    // ── Excel Export ─────────────────────────────────────────────────────────────
+    // â”€â”€ Excel Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async function exportExcel() {
       await refreshData();
       toast('Generating Excel file... Please wait.', 'info', { autoClose: 4500 });

@@ -2,6 +2,7 @@ const express = require('express');
 const {
   requireAuth,
   requirePmo,
+  requireSalesAdmin,
 } = require('../middleware/auth');
 const { loginLimiter, uploadLimiter, apiGeneralLimiter } = require('../middleware/rateLimiters');
 const { getHealth } = require('../controllers/systemController');
@@ -12,8 +13,10 @@ const {
   updateSession,
   deleteSession,
   replaceSessions,
+  postSessionStudentId,
 } = require('../controllers/sessionController');
 const { sendTemplateXlsx, uploadExcel } = require('../controllers/fileController');
+const { getTargets, putTargets, getFulfillment } = require('../controllers/targetController');
 
 function mountApiRoutes(app) {
   app.use(express.json({ limit: '10mb', strict: true }));
@@ -43,6 +46,8 @@ function mountApiRoutes(app) {
 
   app.put('/api/sessions/:id', requireAuth, requirePmo, updateSession);
 
+  app.post('/api/sessions/:id/student-ids', requireAuth, requirePmo, postSessionStudentId);
+
   app.delete('/api/sessions/:id', requireAuth, requirePmo, deleteSession);
 
   app.put('/api/sessions', requireAuth, replaceSessions);
@@ -53,6 +58,10 @@ function mountApiRoutes(app) {
   });
 
   app.post('/api/uploadExcel', requireAuth, requirePmo, uploadLimiter, uploadExcelParser, uploadExcel);
+
+  app.get('/api/sales/targets', requireAuth, getTargets);
+  app.put('/api/sales/targets', requireAuth, requireSalesAdmin, putTargets);
+  app.get('/api/sales/fulfillment', requireAuth, getFulfillment);
 }
 
 module.exports = { mountApiRoutes };

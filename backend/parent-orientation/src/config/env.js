@@ -6,6 +6,7 @@ const COOKIE_SECRET = process.env.COOKIE_SECRET || 'dev-change-me-set-in-env';
 const COOKIE_NAME = 'po_auth';
 const COOKIE_NAME_PMO = 'po_auth_pmo';
 const COOKIE_NAME_SPEAKER = 'po_auth_speaker';
+const COOKIE_NAME_SALES_ADMIN = 'po_auth_sales_admin';
 const ACTIVE_ROLE_HEADER = 'x-po-role';
 
 const MONGODB_DB = process.env.MONGODB_DB || 'parent_orientation';
@@ -28,6 +29,8 @@ const PMO_USER = process.env.PMO_USER || 'PMO';
 const PMO_PASS = process.env.PMO_PASS || 'PMO@123';
 const SPEAKER_USER = process.env.SPEAKER_USER || 'Speaker';
 const SPEAKER_PASS = process.env.SPEAKER_PASS || 'Speaker@123';
+const SALES_ADMIN_USER = process.env.SALES_ADMIN_USER || 'SalesAdmin';
+const SALES_ADMIN_PASS = process.env.SALES_ADMIN_PASS || 'SalesAdmin@123';
 const _adminEnv = process.env.ADMIN_USER;
 const ADMIN_USER =
   _adminEnv !== undefined && _adminEnv !== '' ? String(_adminEnv).trim().toLowerCase() : 'admin';
@@ -40,6 +43,7 @@ module.exports = {
   COOKIE_NAME,
   COOKIE_NAME_PMO,
   COOKIE_NAME_SPEAKER,
+  COOKIE_NAME_SALES_ADMIN,
   ACTIVE_ROLE_HEADER,
   MONGODB_DB,
   trustProxyRaw,
@@ -49,5 +53,7 @@ module.exports = {
   PMO_PASS,
   SPEAKER_USER,
   SPEAKER_PASS,
+  SALES_ADMIN_USER,
+  SALES_ADMIN_PASS,
   ADMIN_USER,
 };

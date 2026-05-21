@@ -2,6 +2,7 @@ const {
   COOKIE_NAME,
   COOKIE_NAME_PMO,
   COOKIE_NAME_SPEAKER,
+  COOKIE_NAME_SALES_ADMIN,
   ACTIVE_ROLE_HEADER,
   cookieSecure,
 } = require('../config/env');
@@ -26,6 +27,10 @@ function hasSpeakerCookie(req) {
   return req.signedCookies[COOKIE_NAME_SPEAKER] === 'speaker' || req.signedCookies[COOKIE_NAME] === 'speaker';
 }
 
+function hasSalesAdminCookie(req) {
+  return req.signedCookies[COOKIE_NAME_SALES_ADMIN] === 'sales_admin';
+}
+
 function resolveAuthRole(req) {
   const want = String(req.get(ACTIVE_ROLE_HEADER) || '').trim().toLowerCase();
   if (want === 'pmo') {
@@ -38,22 +43,35 @@ function resolveAuthRole(req) {
     if (req.signedCookies[COOKIE_NAME] === 'speaker') return 'speaker';
     return null;
   }
+  if (want === 'sales_admin') {
+    if (hasSalesAdminCookie(req)) return 'sales_admin';
+    return null;
+  }
   const pmo = hasPmoCookie(req);
   const spk = hasSpeakerCookie(req);
-  if (pmo && !spk) return 'pmo';
-  if (spk && !pmo) return 'speaker';
+  const sales = hasSalesAdminCookie(req);
+  const count = (pmo ? 1 : 0) + (spk ? 1 : 0) + (sales ? 1 : 0);
+  if (count > 1) return null;
+  if (pmo) return 'pmo';
+  if (spk) return 'speaker';
+  if (sales) return 'sales_admin';
   return null;
 }
 
 function requireAuth(req, res, next) {
   const role = resolveAuthRole(req);
-  if (role === 'pmo' || role === 'speaker') {
+  if (role === 'pmo' || role === 'speaker' || role === 'sales_admin') {
     req.userRole = role;
     return next();
   }
-  if (hasPmoCookie(req) && hasSpeakerCookie(req)) {
+  const pmo = hasPmoCookie(req);
+  const spk = hasSpeakerCookie(req);
+  const sales = hasSalesAdminCookie(req);
+  const count = (pmo ? 1 : 0) + (spk ? 1 : 0) + (sales ? 1 : 0);
+  if (count > 1) {
     return res.status(401).json({
-      error: 'Both roles signed in — send X-PO-Role: pmo or speaker on API requests (refresh the app).',
+      error:
+        'Multiple roles signed in — send X-PO-Role: pmo, speaker, or sales_admin on API requests (refresh the app).',
     });
   }
   return res.sendStatus(401);
@@ -64,15 +82,23 @@ function requirePmo(req, res, next) {
   next();
 }
 
+function requireSalesAdmin(req, res, next) {
+  if (req.userRole !== 'sales_admin') return res.sendStatus(403);
+  next();
+}
+
 module.exports = {
   COOKIE_NAME,
   COOKIE_NAME_PMO,
   COOKIE_NAME_SPEAKER,
+  COOKIE_NAME_SALES_ADMIN,
   COOKIE_OPTS,
   clearAuthCookieOpts,
   hasPmoCookie,
   hasSpeakerCookie,
+  hasSalesAdminCookie,
   resolveAuthRole,
   requireAuth,
   requirePmo,
+  requireSalesAdmin,
 };

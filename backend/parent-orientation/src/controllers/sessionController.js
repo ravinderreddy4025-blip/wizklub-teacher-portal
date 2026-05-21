@@ -10,7 +10,9 @@ const {
   deleteSessionById,
   replaceAllByPmo,
   replaceAllBySpeakerMerged,
+  appendStudentIdToSession,
 } = require('../models/sessionModel');
+const { isValidStudentId, normalizeStudentId } = require('../domain/studentIds');
 const {
   validatePmoBulkPayload,
   validateSpeakerBulkPayload,
@@ -98,9 +100,14 @@ async function updateSession(req, res) {
     const id = req.params.id;
     if (!validateSessionId(id)) return res.status(400).send('Invalid id in URL.');
     const all = await readAllSessions();
-    const v = validateCreateOrUpdateItem(req.body, all, id);
+    const body = { ...req.body };
+    if (!Array.isArray(body.student_ids)) {
+      const existing = all.find((s) => String(s.id) === String(id));
+      if (existing && Array.isArray(existing.student_ids)) body.student_ids = existing.student_ids;
+    }
+    const v = validateCreateOrUpdateItem(body, all, id);
     if (!v.ok) return res.status(v.status).send(v.msg);
-    await upsertSessionById(id, req.body);
+    await upsertSessionById(id, body);
     return res.status(204).end();
   } catch (err) {
     mongo.ready = false;
@@ -162,11 +169,36 @@ async function replaceSessions(req, res) {
   }
 }
 
+async function postSessionStudentId(req, res) {
+  if (!(await ensureMongoWritable(res))) return;
+  try {
+    const id = req.params.id;
+    if (!validateSessionId(id)) return res.status(400).json({ error: 'Invalid session id.' });
+    const raw = req.body && req.body.student_id != null ? req.body.student_id : '';
+    const studentId = normalizeStudentId(raw);
+    if (!isValidStudentId(studentId)) {
+      return res.status(400).json({
+        error: 'Student ID must be 1–40 characters (letters, digits, hyphen, underscore).',
+      });
+    }
+    const result = await appendStudentIdToSession(id, studentId);
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.msg });
+    }
+    return res.json({ student_ids: result.student_ids });
+  } catch (err) {
+    mongo.ready = false;
+    logMongoError('MongoDB add session student id', err);
+    return res.status(500).json({ error: 'Database write failed' });
+  }
+}
+
 module.exports = {
   getSessions,
   createSession,
   updateSession,
   deleteSession,
   replaceSessions,
+  postSessionStudentId,
 };
 

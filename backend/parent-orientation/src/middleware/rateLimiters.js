@@ -17,6 +17,14 @@ const uploadLimiter = rateLimit({
   message: 'Too many uploads, slow down.',
 });
 
+const joinPostLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_JOIN_MAX) || (isProd ? 30 : 120),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many join attempts, try again in a minute.',
+});
+
 const apiGeneralLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: Number(process.env.RATE_LIMIT_API_MAX) || (isProd ? 400 : 2000),
@@ -34,5 +42,6 @@ const apiGeneralLimiter = rateLimit({
 module.exports = {
   loginLimiter,
   uploadLimiter,
+  joinPostLimiter,
   apiGeneralLimiter,
 };

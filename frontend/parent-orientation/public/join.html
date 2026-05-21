@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Join online meeting</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: linear-gradient(160deg, #fff7ed 0%, #f1f5f9 45%, #e0f2fe 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+    }
+
+    .join-card {
+      width: min(420px, 100%);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+      padding: 28px 24px 24px;
+    }
+
+    .join-brand {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #c2410c;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      color: #0f172a;
+    }
+
+    .join-meta {
+      margin: 0 0 20px;
+      font-size: 14px;
+      color: #64748b;
+      line-height: 1.45;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 16px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #c2410c;
+    }
+
+    .join-err {
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      color: #b91c1c;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #c2410c;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #9a3412;
+    }
+
+    .join-hint {
+      margin: 12px 0 0;
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="join-card">
+    <div class="join-brand">WIZKLUB</div>
+    <h1>Enter your student ID</h1>
+    <p class="join-meta"><strong>__BRANCH__</strong><br>Session date: __DATE__</p>
+    __ERROR__
+    <form method="post" action="" id="join-form">
+      <label for="student_id">Student ID</label>
+      <input type="text" id="student_id" name="student_id" required maxlength="40" autocomplete="off"
+        spellcheck="false" inputmode="text" placeholder="e.g. STU12345">
+      <button type="submit">Continue to meeting</button>
+    </form>
+    <p class="join-hint">Your ID is stored in uppercase. You will be redirected to the video meeting after submitting.</p>
+  </div>
+  <script>
+    (function () {
+      var input = document.getElementById('student_id');
+      if (!input) return;
+      input.addEventListener('input', function () {
+        var start = input.selectionStart;
+        var end = input.selectionEnd;
+        input.value = input.value.toUpperCase().replace(/\s+/g, '');
+        if (start != null) input.setSelectionRange(start, end);
+      });
+      var form = document.getElementById('join-form');
+      if (form) {
+        form.addEventListener('submit', function () {
+          input.value = input.value.trim().toUpperCase();
+        });
+      }
+    })();
+  </script>
+</body>
+
+</html>

@@ -20,6 +20,7 @@ services:
     restart: unless-stopped
     environment:
       # Technathon backend
+      NODE_ENV: ${NODE_ENV:-production}
       MONGO_URI: ${MONGO_URI:?Set MONGO_URI in .env}
       MONGO_DB_NAME: ${MONGO_DB_NAME:-}
       TECH_MONGO_DB_NAME: ${TECH_MONGO_DB_NAME:-}
@@ -27,8 +28,8 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env}
       STUDENT_FORM_SECRET: ${STUDENT_FORM_SECRET:?Set STUDENT_FORM_SECRET in .env}
-      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-http://localhost:8080}
-      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-http://localhost:8080/technathon}
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-https://localhost:8080}
+      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-https://localhost:8080/technathon}
       AWS_REGION: ${AWS_REGION:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
@@ -50,6 +51,8 @@ services:
       PMO_PASS: ${PMO_PASS:?Set PMO_PASS in .env}
       SPEAKER_USER: ${SPEAKER_USER:?Set SPEAKER_USER in .env}
       SPEAKER_PASS: ${SPEAKER_PASS:?Set SPEAKER_PASS in .env}
+      SALES_ADMIN_USER: ${SALES_ADMIN_USER:?Set SALES_ADMIN_USER in .env}
+      SALES_ADMIN_PASS: ${SALES_ADMIN_PASS:?Set SALES_ADMIN_PASS in .env}
       ADMIN_USER: ${ADMIN_USER:-admin}
       COOKIE_SECRET: ${COOKIE_SECRET:?Set COOKIE_SECRET in .env}
     volumes:
@@ -84,8 +87,8 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "0.0.0.0:8080:80/tcp"
-      - "[::]:8080:80/tcp"
+      - "0.0.0.0:8080:443/tcp"
+      - "[::]:8080:443/tcp"
     networks:
       - wizklub
 

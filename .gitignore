@@ -17,7 +17,9 @@ build/
 **/.env.production
 **/.env.staging
 *.local
-
+.env.wsl.preprod
+.env.wsl-preprod
+.env.example
 # ── Logs ─────────────────────────────────────────────────
 logs/
 *.log
@@ -33,12 +35,19 @@ coverage/
 # ── Uploads (local dev only) ──────────────────────────────
 uploads/
 
+# ── Local dev helpers (not for deploy) ─────────────────────
+/scripts/
+/env-example/
+test-mongo.js
+desktop.ini
+debug-*.log
+
 # ── OS / Editor ──────────────────────────────────────────
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/*
-!.vscode/extensions.json
+.cursor/
+.vscode/
 *.suo
 *.ntvs*
 *.njsproj

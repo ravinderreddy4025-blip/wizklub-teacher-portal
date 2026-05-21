@@ -14,6 +14,8 @@ RUN npm ci --omit=dev --prefix ./backend/technathon \
 
 # Copy backend source trees and boot script.
 COPY backend ./backend
+# Join gateway page (read by PMO backend joinController).
+COPY frontend/parent-orientation/public/join.html ./backend/parent-orientation/public/join.html
 COPY backend/start-backends.sh /usr/local/bin/start-backends.sh
 RUN sed -i 's/\r$//' /usr/local/bin/start-backends.sh \
   && chmod +x /usr/local/bin/start-backends.sh

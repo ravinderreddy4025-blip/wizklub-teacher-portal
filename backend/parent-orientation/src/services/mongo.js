@@ -3,6 +3,7 @@ const { MONGODB_DB } = require('../config/env');
 const { STATE_DOC_ID, SESSIONS_COLLECTION } = require('../config/constants');
 const { validateSessionId } = require('../domain/sessions');
 const { migrateLegacyToCanonical } = require('../domain/sessionKeys');
+const { normalizeStudentIds } = require('../domain/studentIds');
 
 const mongo = {
   client: null,
@@ -46,7 +47,8 @@ function toSessionDocument(item) {
   const row = migrateLegacyToCanonical({ ...item });
   const now = new Date();
   const location = row.location != null ? String(row.location).trim() : '';
-  return { ...row, _id: row.id, location, updatedAt: now };
+  const student_ids = normalizeStudentIds(row.student_ids);
+  return { ...row, _id: row.id, location, student_ids, updatedAt: now };
 }
 
 function normalizeSessionRecord(s) {
