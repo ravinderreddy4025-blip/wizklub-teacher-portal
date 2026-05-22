@@ -12,13 +12,6 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
-# Generate self-signed SSL certificate for development
-RUN apk add --no-cache openssl && \
-    mkdir -p /etc/nginx/ssl && \
-    openssl req -x509 -newkey rsa:2048 -keyout /etc/nginx/ssl/server.key -out /etc/nginx/ssl/server.crt \
-    -days 365 -nodes -subj "/CN=localhost" && \
-    apk del openssl
-
 COPY nginx-combined.conf /etc/nginx/conf.d/default.conf
 
 # PMO static app
@@ -27,6 +20,6 @@ COPY frontend/parent-orientation/public /usr/share/nginx/html/pmo
 # Technathon SPA build
 COPY --from=technathon-build /app/dist /usr/share/nginx/html/technathon
 
-EXPOSE 80 443
+EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
