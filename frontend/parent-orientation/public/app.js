@@ -920,6 +920,7 @@
         ls.style.pointerEvents = 'none';
       }
       if (app) app.style.display = 'none';
+      document.body.classList.remove('body--sales-admin');
     }
 
     function showLanding() {
@@ -1014,6 +1015,7 @@
         if (tabs) tabs.style.display = 'none';
       }
       document.querySelector('.app')?.classList.toggle('app--sales-admin', role === 'sales_admin');
+      document.body.classList.toggle('body--sales-admin', role === 'sales_admin');
       const exportBtn = document.getElementById('btn-export-excel');
       if (exportBtn) exportBtn.style.display = role === 'sales_admin' ? 'none' : '';
       const sub = document.querySelector('.app-sub');
@@ -1298,24 +1300,6 @@
         const m = getSalesSelectedMonth();
         setSalesHash(parseSalesRoute().section, m);
         loadSalesFulfillment().then(() => renderSalesAdmin());
-      });
-      document.getElementById('sales-region-filter')?.addEventListener('change', () => {
-        salesTablePage = 0;
-        const { section } = parseSalesRoute();
-        if (section === 'targets') renderSalesTargets();
-        else renderSalesOverview();
-      });
-      document.getElementById('sales-type-filter')?.addEventListener('change', () => {
-        salesTablePage = 0;
-        const { section } = parseSalesRoute();
-        if (section === 'targets') renderSalesTargets();
-        else renderSalesOverview();
-      });
-      document.getElementById('sales-school-search')?.addEventListener('input', () => {
-        salesTablePage = 0;
-        const { section } = parseSalesRoute();
-        if (section === 'targets') renderSalesTargets();
-        else renderSalesSchoolTable(salesFulfillmentCache, getSalesSelectedMonth());
       });
       document.getElementById('btn-sales-logout')?.addEventListener('click', () => {
         document.getElementById('btn-logout')?.click();
@@ -3062,25 +3046,29 @@
     }
 
     /**
-     * Marker % on Wikimedia India outline (667×777), tuned to city anchors:
-     * Chandigarh, Delhi, Jaipur, Kolkata, Mumbai, Hyderabad, Bengaluru, Chennai, etc.
+     * India map markers: left/top are direct percentages within the visible India outline
+     * on india-outline.svg (viewBox 666×777). Tuned visually against the rendered map.
      */
-    const PMO_REGION_MAP_POS = {
-      Punjab: { left: 28, top: 16, short: 'Punjab' },
-      'Delhi NCR': { left: 33, top: 22, short: 'Delhi NCR' },
-      Haryana: { left: 31, top: 25, short: 'Haryana' },
-      Uttarakhand: { left: 36, top: 18, short: 'Uttarakhand' },
-      'Uttar Pradesh': { left: 41, top: 29, short: 'U.P.' },
-      Rajasthan: { left: 23, top: 31, short: 'Rajasthan' },
-      'West Bengal': { left: 65, top: 33, short: 'W. Bengal' },
-      Maharashtra: { left: 21, top: 47, short: 'Maharashtra' },
-      Telangana: { left: 37, top: 53, short: 'Telangana' },
-      'Andhra Pradesh': { left: 43, top: 58, short: 'A.P.' },
-      Bengaluru: { left: 32, top: 65, short: 'Bengaluru' },
-      'Rest of Karnataka': { left: 27, top: 68, short: 'Karnataka' },
-      Chennai: { left: 44, top: 70, short: 'Chennai' },
-      'Rest of Tamil Nadu': { left: 38, top: 78, short: 'Tamil Nadu' },
-    };
+    const PMO_REGION_MAP_COORDS = [
+      { name: 'Andhra Pradesh', left: 50, top: 60, short: 'A.P.' },
+      { name: 'Bengaluru', left: 42, top: 67, short: 'Bengaluru' },
+      { name: 'Chennai', left: 53, top: 70, short: 'Chennai' },
+      { name: 'Delhi NCR', left: 42, top: 21, short: 'Delhi NCR' },
+      { name: 'Haryana', left: 40, top: 23, short: 'Haryana' },
+      { name: 'Maharashtra', left: 30, top: 48, short: 'Maharashtra' },
+      { name: 'Punjab', left: 35, top: 16, short: 'Punjab' },
+      { name: 'Rajasthan', left: 30, top: 30, short: 'Rajasthan' },
+      { name: 'Rest of Karnataka', left: 38, top: 63, short: 'Karnataka' },
+      { name: 'Rest of Tamil Nadu', left: 48, top: 78, short: 'Tamil Nadu' },
+      { name: 'Telangana', left: 45, top: 53, short: 'Telangana' },
+      { name: 'Uttar Pradesh', left: 50, top: 27, short: 'U.P.' },
+      { name: 'Uttarakhand', left: 47, top: 18, short: 'Uttarakhand' },
+      { name: 'West Bengal', left: 60, top: 33, short: 'W. Bengal' },
+    ];
+
+    const PMO_REGION_MAP_POS = Object.fromEntries(
+      PMO_REGION_MAP_COORDS.map((r) => [r.name, { left: r.left, top: r.top, short: r.short }])
+    );
 
     function pmoRegionMapSortedKeys() {
       return Object.keys(regionBranches).sort((a, b) =>
@@ -3122,12 +3110,15 @@
     function positionPmoMapFloatTip(clientX, clientY) {
       const tip = pmoMapFloatTipEl;
       if (!tip || tip.hidden) return;
-      const pad = 12;
+      const pad = 8;
       const rect = tip.getBoundingClientRect();
-      let left = clientX + pad;
-      let top = clientY - rect.height - pad;
-      if (top < 8) top = clientY + pad;
-      if (left + rect.width > window.innerWidth - 8) left = Math.max(8, clientX - rect.width - pad);
+      let left = clientX;
+      let top = clientY - pad;
+      if (top - rect.height < pad) top = clientY + rect.height * 0.2 + pad;
+      if (left - rect.width / 2 < pad) left = pad + rect.width / 2;
+      if (left + rect.width / 2 > window.innerWidth - pad) {
+        left = window.innerWidth - pad - rect.width / 2;
+      }
       tip.style.left = `${left}px`;
       tip.style.top = `${top}px`;
     }
@@ -4435,8 +4426,7 @@
         await loadSalesFulfillment();
         renderSalesAdmin();
         resetSalesTargetsSavedSnapshot();
-        toast('Targets saved.', 'success');
-      } catch (_) {
+        toast('Targets updated successfully for this month.', 'success');      } catch (_) {
         toast('Could not save targets.', 'error');
       }
     }
@@ -4495,17 +4485,25 @@
     }
 
     function salesFilteredSchools(payload) {
-      const schools = payload && Array.isArray(payload.schools) ? payload.schools : [];
-      const region = getSalesRegionFilter();
-      const q = getSalesSchoolSearch();
-      return schools.filter((row) => {
-        if (region && String(row.region || '').trim() !== region) return false;
-        if (q) {
-          const hay = `${row.branch || ''} ${row.region || ''}`.toLowerCase();
-          if (!hay.includes(q)) return false;
+      return payload && Array.isArray(payload.schools) ? payload.schools : [];
+    }
+
+    /** Count targets set vs not set across the full school catalog (209 schools). */
+    function salesCatalogTargetCounts(payload) {
+      const fulfillMap = fulfillmentMapFromPayload(payload);
+      let targetsSet = 0;
+      let targetsNotSet = 0;
+      for (const region of Object.keys(regionBranches)) {
+        const branches = [
+          ...new Set((regionBranches[region] || []).map((b) => String(b).trim()).filter(Boolean)),
+        ];
+        for (const branch of branches) {
+          const tc = Number((fulfillMap[salesSchoolKey(region, branch)] || {}).target_completed) || 0;
+          if (tc > 0) targetsSet += 1;
+          else targetsNotSet += 1;
         }
-        return true;
-      });
+      }
+      return { targetsSet, targetsNotSet };
     }
 
     /** Overview risk chart: 80%+ on-track, 50–79% moderate, &lt;50% critical */
@@ -4536,12 +4534,12 @@
       const completedLen = (p / 100) * c;
       const pendingLen = c - completedLen;
       return `<svg class="sales-progress-donut" viewBox="0 0 192 192" role="img" aria-label="Overall progress ${p} percent completed">
-        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#e8e2d7" stroke-width="${stroke}"/>
-        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#9d4300" stroke-width="${stroke}" stroke-linecap="butt"
+        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#fff4e6" stroke-width="${stroke}"/>
+        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#f97316" stroke-width="${stroke}" stroke-linecap="butt"
           stroke-dasharray="${completedLen} ${pendingLen}" transform="rotate(-90 ${cx} ${cy})"/>
         <circle cx="${cx}" cy="${cy}" r="52" fill="#fff" filter="url(#salesDonutInnerShadow)"/>
-        <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="36" font-weight="800" fill="#9d4300">${p}%</text>
-        <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="500" fill="#584237" letter-spacing="0.6">Completed</text>
+        <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="36" font-weight="800" fill="#f97316">${p}%</text>
+        <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="500" fill="#9a3412" letter-spacing="0.6">Completed</text>
         <defs>
           <filter id="salesDonutInnerShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.06"/>
@@ -4552,39 +4550,73 @@
 
     const SALES_KPI_GLYPHS = ['◎', '◷', '✓', '%'];
 
-    /** Mini area sparkline (replaces expired Figma MCP spark images). */
-    function salesKpiSparkSvg(idx, level) {
+    /** Topic mini graphics for KPI cards (same slot/size as former sparklines). */
+    function salesKpiTopicGraphic(idx, level) {
       const w = 120;
       const h = 44;
-      const pad = 3;
-      const seeds = [
-        [0.38, 0.42, 0.4, 0.48, 0.52, 0.56, 0.54, 0.6, 0.64, 0.68],
-        [0.62, 0.58, 0.54, 0.52, 0.48, 0.44, 0.42, 0.38, 0.36, 0.34],
-        [0.42, 0.46, 0.5, 0.48, 0.55, 0.6, 0.58, 0.66, 0.7, 0.76],
-        [0.32, 0.34, 0.3, 0.36, 0.4, 0.38, 0.44, 0.48, 0.46, 0.52],
-      ];
-      const norm = Math.min(0.92, Math.max(0.12, Number(level) || 0.5));
-      const base = seeds[idx] || seeds[0];
-      const pts = [...base.slice(0, -1), norm];
-      const n = pts.length;
-      const step = (w - pad * 2) / (n - 1);
-      const xy = pts.map((p, i) => {
-        const x = pad + i * step;
-        const y = pad + (1 - p) * (h - pad * 2);
-        return [x, y];
-      });
-      const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-      const area = `${pad},${h - pad} ${line} ${(w - pad).toFixed(1)},${h - pad}`;
-      const gid = `salesKpiSpark${idx}`;
-      return `<svg class="sales-kpi-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#9d4300" stop-opacity="0.4"/>
-            <stop offset="100%" stop-color="#9d4300" stop-opacity="0.04"/>
-          </linearGradient>
-        </defs>
-        <polygon points="${area}" fill="url(#${gid})"/>
-        <polyline points="${line}" fill="none" stroke="#9d4300" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+      const p = Math.min(1, Math.max(0.08, Number(level) || 0.35));
+      const orange = '#f97316';
+      const orangeSoft = 'rgba(249, 115, 22, 0.22)';
+      const orangeFade = 'rgba(249, 115, 22, 0.08)';
+      if (idx === 0) {
+        const bars = [0.45, 0.72, 0.55 + p * 0.35].map((f, i) => {
+          const bw = 18;
+          const x = 14 + i * 32;
+          const bh = 8 + f * 28;
+          return `<rect x="${x}" y="${h - 6 - bh}" width="${bw}" height="${bh}" rx="4" fill="${i === 2 ? orange : orangeSoft}"/>`;
+        });
+        return `<svg class="sales-kpi-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${bars.join('')}</svg>`;
+      }
+      if (idx === 1) {
+        const cx = 28;
+        const cy = 22;
+        const r = 14;
+        const tick = Math.round(p * 8);
+        let marks = '';
+        for (let i = 0; i < 8; i++) {
+          const a = (-Math.PI / 2) + (i / 8) * Math.PI * 1.5;
+          const x1 = cx + Math.cos(a) * (r - 2);
+          const y1 = cy + Math.sin(a) * (r - 2);
+          const x2 = cx + Math.cos(a) * (r + 3);
+          const y2 = cy + Math.sin(a) * (r + 3);
+          marks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${i < tick ? orange : orangeSoft}" stroke-width="2" stroke-linecap="round"/>`;
+        }
+        return `<svg class="sales-kpi-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${orangeFade}" stroke-width="3"/>
+          <line x1="${cx}" y1="${cy}" x2="${cx + 4}" y2="${cy - 8}" stroke="${orange}" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="${cx}" y1="${cy}" x2="${cx + 10}" y2="${cy + 2}" stroke="${orangeSoft}" stroke-width="2" stroke-linecap="round"/>
+          ${marks}
+          <rect x="52" y="10" width="58" height="8" rx="4" fill="${orangeFade}"/>
+          <rect x="52" y="24" width="42" height="8" rx="4" fill="${orangeSoft}"/>
+          <rect x="52" y="38" width="28" height="6" rx="3" fill="${orangeFade}"/>
+        </svg>`;
+      }
+      if (idx === 2) {
+        const n = 5;
+        let blocks = '';
+        const filled = Math.max(1, Math.round(p * n));
+        for (let i = 0; i < n; i++) {
+          const x = 10 + i * 22;
+          const on = i < filled;
+          blocks += `<rect x="${x}" y="14" width="16" height="16" rx="4" fill="${on ? orangeSoft : orangeFade}"/>`;
+          if (on) {
+            blocks += `<path d="M${x + 4} ${22} L${x + 7} ${25} L${x + 12} ${18}" fill="none" stroke="${orange}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+          }
+        }
+        return `<svg class="sales-kpi-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${blocks}</svg>`;
+      }
+      const cx = 60;
+      const cy = 38;
+      const r = 26;
+      const c = Math.PI * r;
+      const filled = p * c;
+      return `<svg class="sales-kpi-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <path d="M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}" fill="none" stroke="${orangeFade}" stroke-width="8" stroke-linecap="round"/>
+        <path d="M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}" fill="none" stroke="${orange}" stroke-width="8" stroke-linecap="round"
+          stroke-dasharray="${filled.toFixed(1)} ${c.toFixed(1)}"/>
+        <circle cx="${cx - 18}" cy="${cy - 6}" r="3" fill="${orangeSoft}"/>
+        <circle cx="${cx}" cy="${cy - 10}" r="3" fill="${orange}"/>
+        <circle cx="${cx + 18}" cy="${cy - 6}" r="3" fill="${orangeFade}"/>
       </svg>`;
     }
 
@@ -4620,7 +4652,7 @@
             </div>
             <div class="sales-kpi-card__label">${escapeHtml(k.label)}</div>
             <div class="sales-kpi-card__value">${escapeHtml(String(k.value))}</div>
-            ${salesKpiSparkSvg(k.idx, k.spark)}
+            ${salesKpiTopicGraphic(k.idx, k.spark)}
           </div>`
           )
           .join('')
@@ -4727,30 +4759,25 @@
       const pctOverall =
         target > 0 ? Math.min(100, Math.round((completed / target) * 100)) : 0;
 
-      let activeTargets = 0;
-      let pendingReview = 0;
-      let ontrack = 0;
-      let moderate = 0;
-      let critical = 0;
+      const { targetsSet, targetsNotSet } = salesCatalogTargetCounts(payload);
+      let metCount = 0;
+      let trackCount = 0;
+      let belowCount = 0;
       for (const row of schools) {
         const t = Number(row.target_completed) || 0;
-        if (t <= 0) {
-          pendingReview += 1;
-          continue;
-        }
-        activeTargets += 1;
-        const risk = salesDashRiskTier(row);
-        if (risk === 'ontrack') ontrack += 1;
-        else if (risk === 'moderate') moderate += 1;
-        else if (risk === 'critical') critical += 1;
+        if (t <= 0) continue;
+        const tier = schoolFulfillmentTier(row);
+        if (tier === 'met') metCount += 1;
+        else if (tier === 'below') belowCount += 1;
+        else if (tier === 'track') trackCount += 1;
       }
 
       const riskRows = [
-        { label: 'On Track Performance', count: ontrack, cls: 'ontrack', labelCls: 'ontrack' },
-        { label: 'Moderate Risk Schools', count: moderate, cls: 'moderate', labelCls: 'moderate' },
-        { label: 'Critical Risk (Below 50%)', count: critical, cls: 'critical', labelCls: 'critical' },
+        { label: 'Target met', count: metCount, cls: 'met', labelCls: 'met' },
+        { label: 'On track', count: trackCount, cls: 'track', labelCls: 'track' },
+        { label: 'Below 50%', count: belowCount, cls: 'critical', labelCls: 'critical' },
       ];
-      const maxRisk = Math.max(1, ontrack, moderate, critical);
+      const maxRisk = Math.max(1, metCount, trackCount, belowCount);
 
       function salesStatusItemHtml(st) {
         const pct = Math.round((st.count / maxRisk) * 100);
@@ -4776,16 +4803,16 @@
               <li class="sales-progress-legend__row">
                 <span class="sales-progress-legend__label">
                   <span class="sales-progress-legend__dot sales-progress-legend__dot--active"></span>
-                  Active Targets
+                  Targets set
                 </span>
-                <span class="sales-progress-legend__value">${activeTargets} Schools</span>
+                <span class="sales-progress-legend__value">${targetsSet} Schools</span>
               </li>
               <li class="sales-progress-legend__row">
                 <span class="sales-progress-legend__label">
                   <span class="sales-progress-legend__dot sales-progress-legend__dot--pending"></span>
-                  Pending Review
+                  Targets not set
                 </span>
-                <span class="sales-progress-legend__value">${pendingReview} Schools</span>
+                <span class="sales-progress-legend__value">${targetsNotSet} Schools</span>
               </li>
             </ul>
           </div>
@@ -4794,9 +4821,9 @@
           <div class="sales-insight-card__head">
             <h3 class="sales-insight-card__title">Schools by Status</h3>
             <div class="sales-status-legend" aria-hidden="true">
-              <span><i class="ontrack"></i> On Track</span>
-              <span><i class="moderate"></i> Moderate</span>
-              <span><i class="critical"></i> Critical</span>
+              <span><i class="met"></i> Target met</span>
+              <span><i class="track"></i> On track</span>
+              <span><i class="critical"></i> Below 50%</span>
             </div>
           </div>
           <div class="sales-status-list">
@@ -4896,10 +4923,8 @@
 
       const rowsHtml = pageRows
         .map(({ row, pct, tier }) => {
-          const risk = salesDashRiskTier(row);
           const fillCls =
-            tier === 'met' ? 'is-met' : risk === 'critical' ? 'is-critical' : risk === 'moderate' ? 'is-moderate' : '';
-          const updated = schoolLastUpdatedLabel(row.region, row.branch, month);
+            tier === 'met' ? 'is-met' : tier === 'below' ? 'is-critical' : tier === 'track' ? 'is-moderate' : '';
           return `<tr>
             <td><div class="sales-school-name-cell"><span class="sales-school-avatar">${escapeHtml(schoolInitials(row.branch))}</span><span>${escapeHtml(row.branch)}</span></div></td>
             <td>
@@ -4909,8 +4934,6 @@
               </div>
             </td>
             <td>${salesTableStatusBadge(tier)}</td>
-            <td style="color:#584237;opacity:0.85">${escapeHtml(updated)}</td>
-            <td class="num"><button type="button" class="sales-table-action" data-sales-goto-targets="1" title="Open targets" aria-label="Manage school">↗</button></td>
           </tr>`;
         })
         .join('');
@@ -4921,8 +4944,6 @@
             <th>School name</th>
             <th>Orientation progress</th>
             <th>Status</th>
-            <th>Last updated</th>
-            <th class="num">Actions</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
@@ -4941,7 +4962,6 @@
     function renderSalesOverview() {
       const month = getSalesSelectedMonth();
       const payload = salesFulfillmentCache;
-      populateSalesRegionFilter(payload);
       const summary = payload && payload.summary ? payload.summary : null;
       renderSalesSummary(summary);
       renderSalesCharts(payload);
@@ -4967,12 +4987,7 @@
       const month = getSalesSelectedMonth();
       const payload = salesFulfillmentCache;
       const fulfillMap = fulfillmentMapFromPayload(payload);
-      populateSalesRegionFilter(payload);
-      const regionFilter = getSalesRegionFilter();
-      const searchQ = getSalesSchoolSearch();
-      const typeFilter = getSalesTypeFilter();
       let regions = Object.keys(regionBranches).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-      if (regionFilter) regions = regions.filter((r) => r === regionFilter);
       if (!regions.length) {
         root.innerHTML = '<div class="empty">No schools configured.</div>';
         salesTargetsSavedSnapshot = {};
@@ -4985,13 +5000,6 @@
       for (const region of regions) {
         const branches = regionBranches[region] || [];
         let uniqueBranches = [...new Set(branches.map((b) => String(b).trim()).filter(Boolean))];
-        uniqueBranches = uniqueBranches.filter((b) => branchMatchesSchoolType(b, typeFilter));
-        if (searchQ) {
-          uniqueBranches = uniqueBranches.filter((b) => {
-            const hay = `${b} ${region}`.toLowerCase();
-            return hay.includes(searchQ);
-          });
-        }
         if (!uniqueBranches.length) continue;
         let regionTarget = 0;
         let regionScheduledA = 0;
@@ -5039,7 +5047,7 @@
             </tr>`;
           })
           .join('');
-        const expandRegion = Boolean(regionFilter) || regions.length === 1;
+        const expandRegion = regions.length === 1;
         regionsRendered += 1;
         html += `<section class="sales-region">
           <button type="button" class="sales-region-hd" aria-expanded="${expandRegion ? 'true' : 'false'}">

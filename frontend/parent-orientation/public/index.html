@@ -55,6 +55,11 @@
       font-feature-settings: 'kern' 1, 'liga' 1
     }
 
+    body.body--sales-admin {
+      background: linear-gradient(90deg, #fff4e6 0%, #fffbf7 38%, #ffffff 72%, #ffffff 100%);
+      background-attachment: fixed
+    }
+
     .app {
       max-width: 1200px;
       margin: 0 auto;
@@ -1360,12 +1365,12 @@
       gap: 6px;
       margin: 0;
       padding: 7px 8px;
-      background: rgba(255, 255, 255, 0.85);
-      border: 1px solid rgba(157, 67, 0, 0.12);
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(255, 228, 204, 0.85);
       border-radius: 999px;
       width: fit-content;
       max-width: 100%;
-      box-shadow: 0 2px 8px rgba(157, 67, 0, 0.06)
+      box-shadow: 0 2px 10px rgba(255, 180, 120, 0.12)
     }
 
     .sales-nav-btn {
@@ -1375,21 +1380,21 @@
       background: transparent;
       font-size: 0.8125rem;
       font-weight: 600;
-      color: #8c7164;
+      color: #a8a29e;
       cursor: pointer;
       font-family: inherit;
       transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease
     }
 
     .sales-nav-btn:hover {
-      color: #9d4300;
-      background: rgba(255, 220, 189, 0.25)
+      color: #9a3412;
+      background: rgba(251, 146, 60, 0.12)
     }
 
     .sales-nav-btn.is-active {
-      background: #9d4300;
+      background: var(--po-gradient-btn);
       color: #fff;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)
+      box-shadow: 0 4px 16px rgba(234, 88, 12, 0.32), var(--po-shadow-inset)
     }
 
     .sales-section.is-hidden {
@@ -1482,9 +1487,8 @@
 
     .pmo-map-stage {
       position: relative;
-      width: 100%;
-      max-width: 400px;
-      aspect-ratio: 667 / 777;
+      width: min(100%, 650px);
+      max-width: 650px;
       margin: 0 auto;
       outline: none;
       border-radius: 10px;
@@ -1511,10 +1515,9 @@
     }
 
     .pmo-map-img {
-      width: 100%;
-      height: 100%;
       display: block;
-      object-fit: contain;
+      width: 100%;
+      height: auto;
       pointer-events: none;
       user-select: none
     }
@@ -1535,12 +1538,18 @@
       cursor: pointer;
       pointer-events: auto;
       outline: none;
-      z-index: 1
+      z-index: 1;
+      transition: transform 0.2s ease, z-index 0s
     }
 
-    .pmo-map-marker-btn.is-active,
+    .pmo-map-marker-btn:hover,
     .pmo-map-marker-btn.is-hover {
-      z-index: 3
+      transform: translate(-50%, -50%) scale(1.45);
+      z-index: 20
+    }
+
+    .pmo-map-marker-btn.is-active {
+      z-index: 15
     }
 
     .pmo-map-marker-btn__pin {
@@ -1643,7 +1652,7 @@
     .pmo-map-float-tip {
       position: fixed;
       z-index: 10050;
-      max-width: 220px;
+      max-width: 240px;
       padding: 10px 12px;
       background: #1e293b;
       color: #f8fafc;
@@ -1651,7 +1660,9 @@
       font-size: 0.75rem;
       line-height: 1.45;
       pointer-events: none;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28)
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+      transform: translate(-50%, -120%)
     }
 
     .pmo-map-float-tip strong {
@@ -3004,11 +3015,14 @@
     }
 
     #view-sales-admin .card-title {
-      color: #9d4300
+      color: var(--po-blue)
     }
 
     .app.app--sales-admin {
-      max-width: 1440px
+      max-width: 1440px;
+      padding: 0;
+      background: linear-gradient(90deg, #fff4e6 0%, #fffbf7 38%, #ffffff 72%, #ffffff 100%);
+      background-attachment: fixed
     }
 
     .app.app--sales-admin > .top-bar {
@@ -3017,18 +3031,14 @@
 
     #view-sales-admin {
       font-family: Montserrat, 'DM Sans', system-ui, sans-serif;
-      background: #fff8ef;
+      background: linear-gradient(90deg, #fff4e6 0%, #fffbf7 38%, #ffffff 72%, #ffffff 100%);
+      background-attachment: local;
       border-radius: 0;
       padding: 0;
       margin: 0 -1.25rem;
       width: calc(100% + 2.5rem);
-      max-width: none
-    }
-
-    .app.app--sales-admin {
-      max-width: 1440px;
-      padding-left: 0;
-      padding-right: 0
+      max-width: none;
+      min-height: 100vh
     }
 
     .app.app--sales-admin #view-sales-admin {
@@ -3036,218 +3046,148 @@
       width: 100%
     }
 
-    /* Top nav — Figma TopNavBar */
+    /* Sales Admin top bar */
     .sales-topnav {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 16px 24px;
-      padding: 8px 40px 9px;
-      margin: 0 0 0;
-      background: rgba(255, 248, 239, 0.8);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(157, 67, 0, 0.1);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      gap: 20px;
+      min-height: 72px;
+      padding: 8px clamp(16px, 3vw, 40px);
+      margin: 0;
+      background: #fff;
+      border-bottom: 1px solid rgba(255, 228, 204, 0.85);
+      box-shadow: 0 4px 24px rgba(234, 88, 12, 0.06);
       position: sticky;
       top: 0;
       z-index: 20
     }
 
+    .sales-topnav::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #0d4f6c 0%, #f97316 42%, #fbbf24 100%);
+      opacity: 0.85;
+      pointer-events: none
+    }
+
     .sales-topnav__brand {
       display: flex;
       align-items: center;
-      gap: 16px;
-      min-width: 0
+      gap: clamp(12px, 2vw, 20px);
+      min-width: 0;
+      text-decoration: none;
+      color: inherit
     }
 
-    .sales-topnav__logo-box {
+    .sales-topnav__logo-wrap {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: #f97316;
       flex-shrink: 0;
-      font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
-      font-size: 0.75rem;
-      font-weight: 800;
-      color: #fff
+      padding: 8px 14px;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid rgba(255, 228, 204, 0.9);
+      box-shadow: 0 2px 12px rgba(15, 76, 108, 0.08)
     }
 
     .sales-topnav__logo {
-      width: 22px;
-      height: 18px;
-      object-fit: contain;
+      display: block;
+      height: 40px;
+      width: auto;
+      max-width: min(148px, 36vw);
+      object-fit: contain
+    }
+
+    .sales-topnav__divider {
+      width: 1px;
+      height: 44px;
+      background: linear-gradient(180deg, transparent, rgba(234, 88, 12, 0.35), transparent);
       flex-shrink: 0
     }
 
-    .sales-topnav__nav {
+    .sales-topnav__titles {
       display: flex;
-      align-items: center;
-      gap: 32px;
-      flex: 1;
-      justify-content: center;
+      flex-direction: column;
+      gap: 2px;
       min-width: 0
-    }
-
-    .sales-topnav__link {
-      border: none;
-      background: none;
-      padding: 0 0 6px;
-      font: inherit;
-      font-size: 1rem;
-      font-weight: 500;
-      color: #584237;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      font-family: Montserrat, 'DM Sans', sans-serif
-    }
-
-    .sales-topnav__link:hover:not(:disabled) {
-      color: #9d4300
-    }
-
-    .sales-topnav__link.is-active {
-      font-weight: 700;
-      color: #9d4300;
-      border-bottom-color: #9d4300
-    }
-
-    .sales-topnav__link--muted:disabled {
-      opacity: 0.55;
-      cursor: not-allowed
     }
 
     .sales-topnav__title {
       margin: 0;
-      font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
-      font-size: 1.25rem;
+      font-family: 'Plus Jakarta Sans', Montserrat, 'DM Sans', sans-serif;
+      font-size: clamp(1rem, 2.2vw, 1.2rem);
       font-weight: 700;
-      color: #9d4300;
-      line-height: 1.4
+      color: #0d4f6c;
+      line-height: 1.25;
+      letter-spacing: -0.02em
     }
 
     .sales-topnav__sub {
       margin: 0;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
-      color: #584237;
-      letter-spacing: 0.6px;
-      line-height: 1.33;
-      opacity: 0.8
-    }
-
-    .sales-topnav__center {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      flex: 1;
-      justify-content: center;
-      min-width: 200px
-    }
-
-    .sales-topnav__search {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      padding: 9px 17px;
-      border-radius: 9999px;
-      background: rgba(232, 226, 215, 0.3);
-      border: 1px solid rgba(224, 192, 177, 0.2);
-      min-width: min(100%, 280px);
-      max-width: 320px;
-      flex: 1
-    }
-
-    .sales-topnav__search-icon {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-      margin-right: 12px;
-      opacity: 0.7
-    }
-
-    .sales-topnav__search input {
-      flex: 1;
-      min-width: 0;
-      border: none;
-      background: transparent;
-      font: inherit;
-      font-size: 0.875rem;
-      color: #1e1b15;
-      padding: 0;
-      outline: none
-    }
-
-    .sales-topnav__search input::placeholder {
-      color: #6b7280
+      color: #c2410c;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      line-height: 1.3
     }
 
     .sales-topnav__actions {
       display: flex;
       align-items: center;
-      gap: 12px
-    }
-
-    .sales-topnav__btn {
-      width: 36px;
-      height: 36px;
-      padding: 8px;
-      border: none;
-      border-radius: 9999px;
-      background: transparent;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s ease
-    }
-
-    .sales-topnav__btn:hover {
-      background: rgba(232, 226, 215, 0.35)
-    }
-
-    .sales-topnav__btn img {
-      width: 18px;
-      height: 18px;
-      object-fit: contain;
-      display: block
-    }
-
-    .sales-topnav__btn--notify {
-      position: relative
-    }
-
-    .sales-topnav__btn--notify::after {
-      content: '';
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 8px;
-      height: 8px;
-      background: #9d4300;
-      border: 2px solid #fff8ef;
-      border-radius: 50%;
-      pointer-events: none
-    }
-
-    .sales-topnav__divider {
-      width: 1px;
-      height: 32px;
-      background: rgba(224, 192, 177, 0.3);
+      gap: 12px;
       flex-shrink: 0
     }
 
-    .sales-topnav__avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 2px solid rgba(157, 67, 0, 0.2);
-      object-fit: cover;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05)
+    .sales-topnav__logout {
+      font: inherit;
+      font-family: Montserrat, 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #9a3412;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      border: 1px solid rgba(249, 115, 22, 0.45);
+      background: rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease
+    }
+
+    .sales-topnav__logout:hover,
+    #btn-sales-logout:hover {
+      color: #fff;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-color: transparent;
+      box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28)
+    }
+
+    .sales-topnav__logout:focus-visible,
+    #btn-sales-logout:focus-visible {
+      color: #fff;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-color: transparent;
+      outline: 2px solid #f97316;
+      outline-offset: 2px
+    }
+
+    @media (max-width: 640px) {
+      .sales-topnav__divider {
+        display: none
+      }
+
+      .sales-topnav__titles {
+        display: none
+      }
+
+      .sales-topnav {
+        min-height: 64px
+      }
     }
 
     .sales-dash-shell {
@@ -3268,7 +3208,7 @@
       background: rgba(255, 255, 255, 0.7);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
-      border: 1px solid rgba(157, 67, 0, 0.1);
+      border: 1px solid rgba(234, 88, 12, 0.1);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05)
     }
 
@@ -3284,22 +3224,22 @@
     .sales-dash-filter select {
       min-width: 11rem;
       padding: 9px 36px 9px 17px;
-      border: 1px solid rgba(224, 192, 177, 0.3);
+      border: 1px solid rgba(255, 228, 204, 0.95);
       border-radius: 8px;
       font: inherit;
       font-size: 0.875rem;
       font-weight: 400;
       color: #1e1b15;
-      background: #fff8ef;
+      background: #ffffff;
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%23584237' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%23ea580c' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 12px center
     }
 
     .sales-dash-export.btn-p {
       margin-left: auto;
-      background: #9d4300;
+      background: #ea580c;
       border: none;
       border-radius: 8px;
       padding: 10px 24px;
@@ -3308,7 +3248,7 @@
     }
 
     .sales-dash-export.btn-p:hover {
-      background: #855316
+      background: #c2410c
     }
 
     .sales-dash {
@@ -3335,9 +3275,9 @@
       gap: 4px;
       padding: 25px;
       border-radius: 12px;
-      background: #fff;
-      border: 1px solid rgba(157, 67, 0, 0.1);
-      box-shadow: 0 4px 10px rgba(30, 27, 21, 0.04);
+      background: #ffffff;
+      border: 1px solid rgba(255, 228, 204, 0.55);
+      box-shadow: 0 4px 16px rgba(255, 180, 120, 0.08);
       min-height: 210px
     }
 
@@ -3363,9 +3303,9 @@
       justify-content: center;
       font-size: 1.125rem;
       font-weight: 800;
-      color: #9d4300;
-      background: rgba(255, 220, 189, 0.45);
-      border: 1px solid rgba(157, 67, 0, 0.12)
+      color: #ea580c;
+      background: rgba(254, 215, 170, 0.45);
+      border: 1px solid rgba(234, 88, 12, 0.12)
     }
 
     .sales-kpi-spark {
@@ -3384,24 +3324,24 @@
     }
 
     .sales-kpi-card__badge--up {
-      background: rgba(255, 220, 189, 0.5);
-      color: #855316
+      background: #fff4e6;
+      color: #ea580c
     }
 
     .sales-kpi-card__badge--static {
-      background: #e8e2d7;
-      color: #8c7164
+      background: #fff9f2;
+      color: #a8a29e
     }
 
     .sales-kpi-card__badge--hot {
-      background: rgba(255, 219, 202, 0.5);
-      color: #9d4300
+      background: #fff4e6;
+      color: #f97316
     }
 
     .sales-kpi-card__label {
       font-size: 0.75rem;
       font-weight: 600;
-      color: #584237;
+      color: #9a3412;
       margin: 8px 0 0;
       text-transform: uppercase;
       letter-spacing: 0.6px
@@ -3507,7 +3447,7 @@
       justify-content: space-between;
       gap: 12px;
       padding: 12px;
-      background: #f4ede2;
+      background: #fff4e6;
       border-radius: 12px;
       font-size: 0.875rem;
       color: #1e1b15
@@ -3528,8 +3468,8 @@
       flex-shrink: 0
     }
 
-    .sales-progress-legend__dot--active { background: #9d4300 }
-    .sales-progress-legend__dot--pending { background: #e0c0b1 }
+    .sales-progress-legend__dot--active { background: #f97316 }
+    .sales-progress-legend__dot--pending { background: #ffe4cc }
 
     .sales-progress-legend__value {
       font-weight: 700;
@@ -3537,11 +3477,11 @@
     }
 
     .sales-insight-card {
-      background: #fff;
-      border: 1px solid rgba(157, 67, 0, 0.1);
+      background: #ffffff;
+      border: 1px solid rgba(255, 228, 204, 0.55);
       border-radius: 12px;
       padding: 1.25rem 1.35rem;
-      box-shadow: 0 4px 10px rgba(30, 27, 21, 0.04)
+      box-shadow: 0 4px 16px rgba(255, 180, 120, 0.08)
     }
 
     .sales-insight-card__head {
@@ -3583,7 +3523,7 @@
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.6px;
-      color: #8c7164
+      color: #a8a29e
     }
 
     .sales-status-legend span {
@@ -3600,7 +3540,9 @@
       flex-shrink: 0
     }
 
+    .sales-status-legend i.met,
     .sales-status-legend i.ontrack { background: #10b981 }
+    .sales-status-legend i.track,
     .sales-status-legend i.moderate { background: #fbbf24 }
     .sales-status-legend i.critical { background: #f43f5e }
 
@@ -3625,13 +3567,15 @@
       line-height: 1.5
     }
 
-    .sales-status-item__label--ontrack { color: #9d4300 }
-    .sales-status-item__label--moderate { color: #855316 }
+    .sales-status-item__label--met { color: #15803d }
+    .sales-status-item__label--track { color: #b45309 }
+    .sales-status-item__label--ontrack { color: #ea580c }
+    .sales-status-item__label--moderate { color: #c2410c }
     .sales-status-item__label--critical { color: #ba1a1a }
 
     .sales-status-item__count {
       font-size: 0.875rem;
-      color: #8c7164;
+      color: #a8a29e;
       white-space: nowrap;
       line-height: 1.25
     }
@@ -3645,7 +3589,7 @@
 
     .sales-status-item__track {
       height: 12px;
-      background: #f4ede2;
+      background: #fff4e6;
       border-radius: 9999px;
       overflow: hidden;
       width: 100%
@@ -3658,7 +3602,9 @@
       min-width: 0
     }
 
+    .sales-status-item__fill--met,
     .sales-status-item__fill--ontrack { background: #10b981 }
+    .sales-status-item__fill--track,
     .sales-status-item__fill--moderate { background: #fbbf24 }
     .sales-status-item__fill--critical { background: #f43f5e }
 
@@ -3715,14 +3661,14 @@
     }
 
     .sales-alert-card--warn {
-      background: #fff8ef;
-      border-color: rgba(224, 192, 177, 0.5);
-      color: #584237
+      background: #fff9f2;
+      border-color: rgba(255, 228, 204, 0.85);
+      color: #9a3412
     }
 
     .sales-alert-card--warn .sales-alert-card__icon {
-      background: rgba(255, 220, 189, 0.5);
-      color: #9d4300
+      background: #fff4e6;
+      color: #f97316
     }
 
     .sales-alert-card--success {
@@ -3737,11 +3683,11 @@
     }
 
     .sales-table-card {
-      background: #fff;
-      border: 1px solid rgba(157, 67, 0, 0.1);
+      background: #ffffff;
+      border: 1px solid rgba(255, 228, 204, 0.55);
       border-radius: 12px;
       padding: 1.25rem 1.35rem 1rem;
-      box-shadow: 0 4px 10px rgba(30, 27, 21, 0.04)
+      box-shadow: 0 4px 16px rgba(255, 180, 120, 0.08)
     }
 
     .sales-table-card__head {
@@ -3764,7 +3710,7 @@
       height: 32px;
       border-radius: 4px;
       background: rgba(249, 115, 22, 0.1);
-      color: #9d4300;
+      color: #ea580c;
       font-size: 0.75rem;
       font-weight: 700;
       display: inline-flex;
@@ -3817,7 +3763,7 @@
     .sales-dash-footer {
       text-align: center;
       font-size: 0.75rem;
-      color: #8c7164;
+      color: #a8a29e;
       padding: 1.5rem 0 0.5rem;
       margin-top: 0.5rem
     }
@@ -3877,7 +3823,7 @@
     .sales-table-prog__bar {
       flex: 1;
       height: 8px;
-      background: #f4ede2;
+      background: #fff4e6;
       border-radius: 9999px;
       overflow: hidden
     }
@@ -3886,7 +3832,7 @@
       display: block;
       height: 100%;
       border-radius: 9999px;
-      background: #9d4300
+      background: linear-gradient(90deg, #fdba74 0%, #f97316 100%)
     }
 
     .sales-table-prog__fill.is-met { background: #10b981 }
@@ -3958,7 +3904,7 @@
       justify-content: flex-end;
       margin: 0;
       padding: 16px 28px 24px;
-      border-top: 1px solid rgba(224, 192, 177, 0.35)
+      border-top: 1px solid rgba(251, 146, 60, 0.35)
     }
 
     .sales-save-footer .btn:disabled {
@@ -3983,10 +3929,10 @@
     }
 
     .sales-targets-card {
-      background: #fff;
-      border: 1px solid rgba(157, 67, 0, 0.12);
+      background: #ffffff;
+      border: 1px solid rgba(255, 228, 204, 0.55);
       border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(30, 27, 21, 0.06);
+      box-shadow: 0 4px 16px rgba(255, 180, 120, 0.08);
       overflow: hidden
     }
 
@@ -3999,7 +3945,7 @@
       font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
       font-size: 1.125rem;
       font-weight: 700;
-      color: #9d4300;
+      color: #ea580c;
       letter-spacing: -0.01em
     }
 
@@ -4007,7 +3953,7 @@
       margin: 0;
       font-size: 0.875rem;
       line-height: 1.5;
-      color: #584237;
+      color: #9a3412;
       opacity: 0.85;
       max-width: 52rem
     }
@@ -4017,7 +3963,7 @@
     }
 
     .sales-targets-save.btn-p {
-      background: #9d4300;
+      background: #ea580c;
       border: none;
       border-radius: 8px;
       padding: 10px 24px;
@@ -4025,7 +3971,7 @@
     }
 
     .sales-targets-save.btn-p:hover:not(:disabled) {
-      background: #855316
+      background: #c2410c
     }
 
     .sales-badge-met {
@@ -4117,23 +4063,18 @@
 
     #view-sales-admin .metric {
       background: #fff;
-      border: 1px solid rgba(157, 67, 0, 0.12);
-      box-shadow: 0 2px 8px rgba(157, 67, 0, 0.05)
+      border: 1px solid rgba(234, 88, 12, 0.12);
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.05)
     }
 
     #view-sales-admin .mv {
-      color: #9d4300
+      color: #ea580c
     }
 
     #btn-sales-logout {
       width: auto;
       height: auto;
       min-height: 36px;
-      padding: 8px 16px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #9d4300;
-      border-radius: 8px;
       white-space: nowrap
     }
 
@@ -4785,39 +4726,25 @@
     </div>
 
     <div id="view-sales-admin" style="display:none">
-      <header class="sales-topnav">
-        <div class="sales-topnav__brand">
-          <span class="sales-topnav__logo-box" aria-hidden="true">PO</span>
-          <div>
-            <h1 class="sales-topnav__title">Parent Orientation Tracker</h1>
-            <p class="sales-topnav__sub">Sales Admin Dashboard</p>
-          </div>
-        </div>
-        <div class="sales-topnav__center">
-          <label class="sales-topnav__search">
-            <span class="sales-topnav__search-icon" aria-hidden="true">⌕</span>
-            <input type="search" id="sales-school-search" placeholder="Quick find school..." autocomplete="off" aria-label="Search schools">
-          </label>
-        </div>
+      <header class="sales-topnav" role="banner">
+        <a class="sales-topnav__brand" href="#/sales-admin/overview" id="sales-topnav-home" aria-label="WIZKLUB — Parent Orientation Tracker overview">
+          <span class="sales-topnav__logo-wrap">
+            <img class="sales-topnav__logo po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="WIZKLUB Futurz" width="148" height="40" decoding="async">
+          </span>
+          <span class="sales-topnav__divider" aria-hidden="true"></span>
+          <span class="sales-topnav__titles">
+            <span class="sales-topnav__title">Parent Orientation Tracker</span>
+            <span class="sales-topnav__sub">Sales Admin Dashboard</span>
+          </span>
+        </a>
         <div class="sales-topnav__actions">
-          <button type="button" class="sales-topnav__btn" id="btn-sales-logout" title="Logout" aria-label="Logout">Logout</button>
+          <button type="button" class="sales-topnav__logout" id="btn-sales-logout" title="Logout" aria-label="Log out of Sales Admin">Logout</button>
         </div>
       </header>
       <div class="sales-dash-shell">
       <div class="sales-dash-filters-bar">
         <label class="sales-dash-filter" for="sales-month">
           <input type="month" id="sales-month" required aria-label="Current month">
-        </label>
-        <label class="sales-dash-filter" for="sales-region-filter">
-          <select id="sales-region-filter" aria-label="All regions">
-            <option value="">All regions</option>
-          </select>
-        </label>
-        <label class="sales-dash-filter" for="sales-type-filter">
-          <select id="sales-type-filter" aria-label="School type">
-            <option value="">School type: All</option>
-            <option value="elite">School type: Elite</option>
-          </select>
         </label>
         <button type="button" class="btn btn-p btn-sm sales-dash-export" id="btn-sales-export-report">Export Report</button>
       </div>
@@ -4929,7 +4856,7 @@
       });
     });
   </script>
-  <script src="app.js?v=20260523b" defer></script>
+  <script src="app.js?v=20260525b" defer></script>
 </body>
 
 </html>
