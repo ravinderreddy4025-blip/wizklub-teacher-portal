@@ -21,6 +21,44 @@ const {
 } = require('../services/sessionMutationService');
 const { validateSessionId } = require('../domain/sessions');
 
+const SPEAKER_COMPLETED_WEBHOOK_URL =
+  process.env.WIZKLUB_PARENTS_SESSION_WEBHOOK_URL ||
+  'https://app.srichaitanyacrm.com/apigateway/wizklub_parents_session_webhook/?token=0fe1304bde5e615bbf297d653e43bd2afba04ad3';
+
+function speakerCompletedWebhookPayload(row) {
+  return {
+    id: String(row.id || '').trim(),
+    scheduled_date: String(row.scheduled_date || '').trim(),
+    venue: String(row.venue || '').trim(),
+    teacher: String(row.teacher || '').trim(),
+    student_ids: Array.isArray(row.student_ids)
+      ? row.student_ids.map((x) => String(x || '').trim()).filter(Boolean)
+      : [],
+  };
+}
+
+async function postSpeakerCompletedWebhook(row) {
+  const payload = speakerCompletedWebhookPayload(row);
+  if (!payload.id) return;
+  if (!payload.scheduled_date) return;
+  const ac = new AbortController();
+  const timeout = setTimeout(() => ac.abort(), 8000);
+  try {
+    const r = await fetch(SPEAKER_COMPLETED_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: ac.signal,
+    });
+    if (!r.ok) {
+      await r.text().catch(() => '');
+    }
+  } catch (_) {
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function mongoDisabledOrMissingConfig() {
   const dis =
     process.env.MONGODB_DISABLED === '1' ||
@@ -158,7 +196,20 @@ async function replaceSessions(req, res) {
       const existing = await readAllSessions();
       const vMerged = validateSpeakerMergedPayload(existing, body);
       if (!vMerged.ok) return res.status(vMerged.status).send(vMerged.msg);
+      const existingById = new Map(
+        existing.map((row) => [String(row && row.id != null ? row.id : ''), String(row && row.status ? row.status : '')])
+      );
+      const completedNow = vMerged.merged.filter((row) => {
+        const id = String(row && row.id != null ? row.id : '');
+        if (!id) return false;
+        const before = existingById.get(id) || '';
+        const after = String(row && row.status ? row.status : '');
+        return before !== 'Completed' && after === 'Completed';
+      });
       await replaceAllBySpeakerMerged(vMerged.merged);
+      if (completedNow.length) {
+        await Promise.allSettled(completedNow.map((row) => postSpeakerCompletedWebhook(row)));
+      }
       return res.status(204).end();
     }
     return res.sendStatus(403);

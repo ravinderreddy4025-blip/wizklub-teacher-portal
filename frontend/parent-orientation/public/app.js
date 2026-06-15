@@ -1,5 +1,19 @@
 ﻿    const STORE_KEY = 'po_sessions_v8';
+    const ROLE_KEY = 'po_logged_in';
     const PO_ROLE_HEADER = 'X-PO-Role';
+
+    function poGetRole() {
+      return sessionStorage.getItem(ROLE_KEY) || '';
+    }
+
+    function poSetRole(role) {
+      if (!role) return;
+      sessionStorage.setItem(ROLE_KEY, role);
+    }
+
+    function poClearRole() {
+      sessionStorage.removeItem(ROLE_KEY);
+    }
 
     // Local-only guard: if PMO opens on http://localhost/pmo without port, force :8080.
     (function ensureLocalGatewayPort() {
@@ -130,14 +144,27 @@
       return u;
     }
 
+    function poRoleScopedUrl(url, role) {
+      if (!role) return url;
+      try {
+        const abs = new URL(url, window.location.origin);
+        if (!abs.searchParams.has('role')) abs.searchParams.set('role', role);
+        if (/^(https?:)?\/\//i.test(url)) return abs.toString();
+        return `${abs.pathname}${abs.search}${abs.hash}`;
+      } catch (_) {
+        return url;
+      }
+    }
+
     /** Sends which role this tab uses so PMO and Speaker can both be logged in (separate cookies). */
     function poApiFetch(url, init = {}) {
-      const role = sessionStorage.getItem('po_logged_in');
+      const role = poGetRole();
       const headers = new Headers(init.headers || {});
       if (role === 'pmo' || role === 'speaker' || role === 'sales_admin') {
         headers.set(PO_ROLE_HEADER, role);
       }
-      return fetch(poResolveUrl(url), { credentials: 'include', ...init, headers });
+      const resolved = poResolveUrl(url);
+      return fetch(poRoleScopedUrl(resolved, role), { credentials: 'include', ...init, headers });
     }
 
     let sessions = [];
@@ -147,6 +174,7 @@
     let _selGrades = [];
     let _selVenue = '';
     let editingId = null;
+    let _sessionsSyncTimer = null;
 
     function escapeHtml(s) {
       if (s == null) return '';
@@ -470,7 +498,7 @@
       try {
         const r = await poApiFetch('api/sessions');
         if (r.status === 401) {
-          sessionStorage.removeItem('po_logged_in');
+          poClearRole();
           showLogin();
           toast('Sign in again to load sessions from the server.', 'warning');
           return;
@@ -597,14 +625,11 @@
 
     /** PMO: refresh from server + Excel sync (no bulk PUT). Speaker: full-array merge PUT. */
     async function saveData() {
-      const speakerBeforePut =
-        sessionStorage.getItem('po_logged_in') === 'speaker'
-          ? JSON.parse(JSON.stringify(sessions))
-          : null;
+      const speakerBeforePut = poGetRole() === 'speaker' ? JSON.parse(JSON.stringify(sessions)) : null;
       try {
         localStorage.setItem(STORE_KEY, JSON.stringify(sessions));
       } catch (_) { /* quota */ }
-      const role = sessionStorage.getItem('po_logged_in');
+      const role = poGetRole();
       if (role === 'pmo') {
         const ok = await pullSessionsFromServer();
         if (!ok) toast('Could not refresh sessions from the server.', 'error');
@@ -855,7 +880,7 @@
      */
     function syncRouteFromHash(opts) {
       const render = opts && opts.render === false ? false : true;
-      const role = sessionStorage.getItem('po_logged_in');
+      const role = poGetRole();
       const route = parseAppRoute();
 
       if (!role) {
@@ -989,7 +1014,11 @@
     }
 
     async function logoutUser() {
-      const role = sessionStorage.getItem('po_logged_in');
+      if (_sessionsSyncTimer) {
+        clearInterval(_sessionsSyncTimer);
+        _sessionsSyncTimer = null;
+      }
+      const role = poGetRole();
       try {
         await poApiFetch('api/logout', {
           method: 'POST',
@@ -997,7 +1026,7 @@
           body: JSON.stringify({ role: role || '' })
         });
       } catch (_) { /* offline */ }
-      sessionStorage.removeItem('po_logged_in');
+      poClearRole();
       document.getElementById('login-user').value = '';
       document.getElementById('login-pass').value = '';
       poReplaceHash('#/');
@@ -1005,11 +1034,23 @@
       toast('Logged out successfully', 'success');
     }
 
+    function startSessionsAutoSync() {
+      if (_sessionsSyncTimer) clearInterval(_sessionsSyncTimer);
+      _sessionsSyncTimer = setInterval(async () => {
+        const role = poGetRole();
+        if (!role) return;
+        if (document.hidden) return;
+        if (editingId) return; // avoid replacing in-memory form state mid-edit
+        const ok = await pullSessionsFromServer();
+        if (ok) renderAll();
+      }, 30000);
+    }
+
     function showApp() {
       hideAllShells();
       document.querySelector('.app').style.display = 'block';
 
-      const role = sessionStorage.getItem('po_logged_in');
+      const role = poGetRole();
       const tabs = document.getElementById('role-tabs');
       if (role === 'pmo' || role === 'speaker' || role === 'sales_admin') {
         if (tabs) tabs.style.display = 'none';
@@ -1025,6 +1066,7 @@
 
       syncRouteFromHash({ render: false });
       if (role !== 'sales_admin') initPlanFormRegionAndBranch();
+      startSessionsAutoSync();
       loadData();
     }
 
@@ -1057,11 +1099,11 @@
             );
             return;
           }
-          sessionStorage.setItem('po_logged_in', j.role);
+          poSetRole(j.role);
           const v = await poApiFetch('api/me');
           const me = await v.json().catch(() => ({}));
           if (!v.ok || !me.role) {
-            sessionStorage.removeItem('po_logged_in');
+            poClearRole();
             toast('Login succeeded but the browser did not keep your session. If the URL starts with http://, set COOKIE_SECURE=0 in the server .env and restart.', 'warning');
             return;
           }
@@ -1286,6 +1328,14 @@
         }
       });
       window.addEventListener('hashchange', () => syncRouteFromHash());
+      document.addEventListener('visibilitychange', async () => {
+        if (document.hidden) return;
+        if (editingId) return;
+        const role = poGetRole();
+        if (!role) return;
+        const ok = await pullSessionsFromServer();
+        if (ok) renderAll();
+      });
       const salesMonth = document.getElementById('sales-month');
       if (salesMonth && !salesMonth.value) {
         salesMonth.value = currentCalendarMonthKey();
@@ -1373,7 +1423,7 @@
         showLoginPortal(portal);
       });
       (async function () {
-        const rememberedRole = sessionStorage.getItem('po_logged_in');
+        const rememberedRole = poGetRole();
         if (!rememberedRole) {
           syncRouteFromHash();
           return;
@@ -1381,7 +1431,7 @@
         try {
           const r = await poApiFetch('api/me');
           if (!r.ok) {
-            sessionStorage.removeItem('po_logged_in');
+            poClearRole();
             syncRouteFromHash();
             return;
           }
@@ -1390,7 +1440,7 @@
             showApp();
             return;
           }
-          sessionStorage.removeItem('po_logged_in');
+          poClearRole();
           syncRouteFromHash();
         } catch (_) {
           syncRouteFromHash();
@@ -1626,7 +1676,7 @@
     }
 
     function maybeOpenPlanEditFromHash() {
-      if (sessionStorage.getItem('po_logged_in') !== 'pmo') return;
+      if (poGetRole() !== 'pmo') return;
       const { section, editId } = parsePmoHash();
       if (section !== 'plan' || !editId) return;
       const s = sessions.find((x) => String(x.id) === String(editId));
@@ -2180,7 +2230,7 @@
       setPlanFormHeader('Plan New Session', PLAN_FORM_SUBTITLE_DEFAULT);
       document.getElementById('btn-save-plan').textContent = 'Save Session Plan';
       document.getElementById('btn-cancel-edit').style.display = 'none';
-      if (sessionStorage.getItem('po_logged_in') === 'pmo' && (location.hash || '').includes('/plan/edit/')) {
+      if (poGetRole() === 'pmo' && (location.hash || '').includes('/plan/edit/')) {
         poReplaceHash('#/pmo/plan');
       }
       clearForm();
@@ -2547,7 +2597,7 @@
       <div class="ii"><label>End time</label><p>${escapeHtml(String(s.scheduled_end_time || '').trim() || '—')}</p></div>
       <div class="ii"><label>Grade</label><p>${s.grade ? escapeHtml(s.grade) : '—'}</p></div>
       <div class="ii"><label>Link or location</label><p>${locationLinkHtml(s.location, { sessionId: s.id, venue: s.venue })}</p></div>
-      ${!isSpeaker && s.venue === 'Online' ? `<div class="ii"><label>Student IDs</label><p>${formatStudentIdsCell(s)}</p></div>` : ''}
+      <div class="ii"><label>Student IDs</label><p>${formatStudentIdsCell(s)}</p></div>
       <div class="ii"><label>Branch</label><p>${s.branch ? escapeHtml(s.branch) : '—'}</p></div>
       <div class="ii"><label>Region</label><p>${s.region ? escapeHtml(s.region) : '—'}</p></div>
       <div class="ii"><label>Venue / Medium</label><p>${s.venue ? escapeHtml(s.venue) : '—'}</p></div>
@@ -5079,7 +5129,7 @@
     }
 
     function renderSalesAdmin() {
-      if (sessionStorage.getItem('po_logged_in') !== 'sales_admin') return;
+      if (poGetRole() !== 'sales_admin') return;
       applySalesRoute();
       const { section } = parseSalesRoute();
       const month = getSalesSelectedMonth();
@@ -5092,7 +5142,7 @@
     }
 
     async function ensureSalesAdminData() {
-      if (sessionStorage.getItem('po_logged_in') !== 'sales_admin') return;
+      if (poGetRole() !== 'sales_admin') return;
       applySalesRoute();
       const ok = await loadSalesFulfillment();
       if (!ok) toast('Could not load fulfillment data. Check database connection.', 'warning');
@@ -5100,7 +5150,7 @@
     }
 
     function renderAll() {
-      const role = sessionStorage.getItem('po_logged_in');
+      const role = poGetRole();
       if (role === 'sales_admin') {
         ensureSalesAdminData();
         return;

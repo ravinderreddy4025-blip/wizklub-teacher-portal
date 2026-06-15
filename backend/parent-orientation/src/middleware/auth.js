@@ -32,7 +32,9 @@ function hasSalesAdminCookie(req) {
 }
 
 function resolveAuthRole(req) {
-  const want = String(req.get(ACTIVE_ROLE_HEADER) || '').trim().toLowerCase();
+  const wantHeader = String(req.get(ACTIVE_ROLE_HEADER) || '').trim().toLowerCase();
+  const wantQuery = String((req.query && req.query.role) || '').trim().toLowerCase();
+  const want = wantHeader || wantQuery;
   if (want === 'pmo') {
     if (req.signedCookies[COOKIE_NAME_PMO] === 'pmo') return 'pmo';
     if (req.signedCookies[COOKIE_NAME] === 'pmo') return 'pmo';
