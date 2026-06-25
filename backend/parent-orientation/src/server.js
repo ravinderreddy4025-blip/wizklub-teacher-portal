@@ -11,6 +11,7 @@ const {
   trustProxyRaw,
 } = require('./config/env');
 const { INDEX_HTML_PATH, APP_JS_PATH, REACT_BUNDLE_PATH } = require('./config/paths');
+const { WEAK_PASSWORDS } = require('./config/constants');
 const { assertLsqWebhookProductionConfig } = require('./config/lsqWebhook');
 const { createApp } = require('./app');
 const { ensureExcelTemplateFile } = require('./services/excel');
