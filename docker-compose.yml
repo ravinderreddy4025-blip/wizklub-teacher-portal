@@ -1,14 +1,13 @@
 # Two-container stack:
-# - `backend`: runs BOTH APIs (Technathon on :5000, PMO on :8080)
-# - `frontend`: serves BOTH UIs (/technathon, /pmo) and proxies API routes
+# - `backend`: runs APIs (Technathon :5000, PMO :8080, Testimonials :3001)
+# - `frontend`: serves UIs (/technathon, /pmo, /wizklub-testimonials) and proxies API routes
 #
 # Requires external Mongo hosts (no Mongo containers here).
 # Set these in repo-root `.env`:
-#   MONGO_URI=...          (shared Mongo host/cluster URI)
-#   MONGO_DB_NAME=...      (shared default DB name)
-# Optional per-app DB override keys:
-#   TECH_MONGO_DB_NAME=...
-#   PMO_MONGO_DB_NAME=...
+#   MONGO_URI=...                 (shared Mongo host/cluster URI)
+#   TECH_MONGO_DB_NAME=...        (technathon database)
+#   PMO_MONGO_DB_NAME=...         (PMO database)
+#   TESTIMONIALS_MONGO_DB_NAME=... (testimonials database)
 
 name: wizklub-2c
 
@@ -22,8 +21,9 @@ services:
       # Technathon backend
       NODE_ENV: ${NODE_ENV:-production}
       MONGO_URI: ${MONGO_URI:?Set MONGO_URI in .env}
-      MONGO_DB_NAME: ${MONGO_DB_NAME:-}
       TECH_MONGO_DB_NAME: ${TECH_MONGO_DB_NAME:-}
+      PMO_MONGO_DB_NAME: ${PMO_MONGO_DB_NAME:-}
+      TESTIMONIALS_MONGO_DB_NAME: ${TESTIMONIALS_MONGO_DB_NAME:-}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env}
@@ -45,8 +45,6 @@ services:
 
       # PMO backend
       PMO_NODE_ENV: ${PMO_NODE_ENV:-production}
-      PMO_MONGODB_URI: ${PMO_MONGODB_URI:-}
-      PMO_MONGO_DB_NAME: ${PMO_MONGO_DB_NAME:-}
       PMO_USER: ${PMO_USER:?Set PMO_USER in .env}
       PMO_PASS: ${PMO_PASS:?Set PMO_PASS in .env}
       SPEAKER_USER: ${SPEAKER_USER:?Set SPEAKER_USER in .env}
@@ -56,18 +54,32 @@ services:
       ADMIN_USER: ${ADMIN_USER:-admin}
       COOKIE_SECRET: ${COOKIE_SECRET:?Set COOKIE_SECRET in .env}
       COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      WIZKLUB_PARENTS_SESSION_WEBHOOK_URL: ${WIZKLUB_PARENTS_SESSION_WEBHOOK_URL:-}
+      LSQ_WEBHOOK_DELAY_HOURS: ${LSQ_WEBHOOK_DELAY_HOURS:-8}
+      LSQ_WEBHOOK_POLL_INTERVAL_MS: ${LSQ_WEBHOOK_POLL_INTERVAL_MS:-60000}
+      LSQ_WEBHOOK_MAX_ATTEMPTS: ${LSQ_WEBHOOK_MAX_ATTEMPTS:-10}
+      LSQ_WEBHOOK_BATCH_SIZE: ${LSQ_WEBHOOK_BATCH_SIZE:-25}
+      LSQ_WEBHOOK_DISABLED: ${LSQ_WEBHOOK_DISABLED:-0}
+
+      # Wizklub Testimonials backend
+      TESTIMONIALS_NODE_ENV: ${TESTIMONIALS_NODE_ENV:-production}
+      TESTIMONIALS_PORT: ${TESTIMONIALS_PORT:-3001}
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
+      GCS_FOLDER: ${GCS_FOLDER:-wizklub}
+      GCS_CREDENTIALS: ${GCS_CREDENTIALS:-}
     volumes:
       - ./backend/technathon/assets:/app/backend/technathon/assets:ro
     expose:
       - "5000"
       - "8080"
+      - "3001"
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "const http=require('http');const req=(u)=>new Promise((res,rej)=>{http.get(u,r=>{r.resume();res(r.statusCode>=200&&r.statusCode<400)}).on('error',rej)});Promise.all([req('http://127.0.0.1:5000/health'),req('http://127.0.0.1:8080/api/health')]).then(v=>process.exit(v.every(Boolean)?0:1)).catch(()=>process.exit(1));"
+          "const http=require('http');const req=(u)=>new Promise((res,rej)=>{http.get(u,r=>{r.resume();res(r.statusCode>=200&&r.statusCode<400)}).on('error',rej)});Promise.all([req('http://127.0.0.1:5000/health'),req('http://127.0.0.1:8080/api/health'),req('http://127.0.0.1:3001/health')]).then(v=>process.exit(v.every(Boolean)?0:1)).catch(()=>process.exit(1));"
         ]
       interval: 30s
       timeout: 5s
@@ -82,7 +94,9 @@ services:
       dockerfile: frontend/combined.Dockerfile
       args:
         VITE_API_URL: ""
-        VITE_APP_BASE_PATH: /technathon/
+        TECH_BASE_PATH: /technathon/
+        TESTIMONIALS_BASE_PATH: /wizklub-testimonials/
+        VITE_USE_MOCK: "false"
     restart: unless-stopped
     depends_on:
       backend:

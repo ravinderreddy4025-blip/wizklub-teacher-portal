@@ -7,7 +7,10 @@
  *
  * Doc: ../../docs/file-notes/server/server.js.md  |  Folder map: ./BACKEND.md
  */
-require('dotenv').config(); // Populate process.env from .env before any other reads
+const path = require('path');
+require('dotenv').config({
+  path: path.join(__dirname, '..', '..', '.env'),
+}); // Populate process.env from repo-root .env before any other reads
 
 const express   = require('express');
 const mongoose  = require('mongoose');
@@ -209,7 +212,8 @@ if (isTest) {
   submissionsRouter.init(null, mockSubmissions, false, null, mockRoster);
   syncAdminRosterConfig();
 } else {
-  const mongoDbName = String(process.env.MONGO_DB_NAME || '').trim();
+  const mongoDbName =
+    String(process.env.TECH_MONGO_DB_NAME || process.env.MONGO_DB_NAME || '').trim();
   const mongoConnectOptions = mongoDbName ? { dbName: mongoDbName } : undefined;
   mongoBootstrapPromise = mongoose
     .connect(process.env.MONGO_URI, mongoConnectOptions)

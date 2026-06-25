@@ -11,13 +11,15 @@ const {
   trustProxyRaw,
 } = require('./config/env');
 const { INDEX_HTML_PATH, APP_JS_PATH, REACT_BUNDLE_PATH } = require('./config/paths');
-const { WEAK_PASSWORDS } = require('./config/constants');
+const { assertLsqWebhookProductionConfig } = require('./config/lsqWebhook');
 const { createApp } = require('./app');
 const { ensureExcelTemplateFile } = require('./services/excel');
 const { initMongo, mongo, closeMongo, mongoPingOk } = require('./services/mongo');
+const { startLsqWebhookScheduler, stopLsqWebhookScheduler } = require('./services/lsqWebhook');
 
 function assertProductionConfig() {
   if (!isProd) return;
+  assertLsqWebhookProductionConfig();
   const badSecret =
     !process.env.COOKIE_SECRET ||
     COOKIE_SECRET.length < 32 ||
@@ -79,6 +81,7 @@ async function start(app) {
 
   try {
     await initMongo();
+    if (mongo.client) startLsqWebhookScheduler();
   } catch (err) {
     console.error('MongoDB connection failed:', err.message);
     if (isProd) {
@@ -139,6 +142,7 @@ async function start(app) {
 
   const shutdown = (signal) => {
     console.log(`\n${signal} received, shutting down…`);
+    stopLsqWebhookScheduler();
     server.close(() => {
       if (mongo.client) {
         closeMongo()

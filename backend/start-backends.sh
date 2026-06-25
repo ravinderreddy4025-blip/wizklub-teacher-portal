@@ -2,7 +2,7 @@
 set -eu
 
 cleanup() {
-  kill "${TECH_PID:-0}" "${PMO_PID:-0}" 2>/dev/null || true
+  kill "${TECH_PID:-0}" "${PMO_PID:-0}" "${TESTIMONIALS_PID:-0}" 2>/dev/null || true
 }
 trap cleanup INT TERM
 
@@ -31,18 +31,43 @@ TECH_PID=$!
   export BIND_HOST=0.0.0.0
   export TRUST_PROXY="${PMO_TRUST_PROXY:-true}"
   # Shared Mongo URI + explicit DB name in env.
-  export MONGODB_URI="${PMO_MONGODB_URI:-${MONGO_URI:?MONGO_URI is required}}"
+  export MONGODB_URI="${MONGO_URI:?MONGO_URI is required}"
   if [ -n "${PMO_MONGO_DB_NAME:-}" ]; then
     export MONGODB_DB="${PMO_MONGO_DB_NAME}"
   elif [ -n "${MONGO_DB_NAME:-}" ]; then
     export MONGODB_DB="${MONGO_DB_NAME}"
   fi
+  export WIZKLUB_PARENTS_SESSION_WEBHOOK_URL="${WIZKLUB_PARENTS_SESSION_WEBHOOK_URL:-}"
+  export LSQ_WEBHOOK_DELAY_HOURS="${LSQ_WEBHOOK_DELAY_HOURS:-8}"
+  export LSQ_WEBHOOK_POLL_INTERVAL_MS="${LSQ_WEBHOOK_POLL_INTERVAL_MS:-60000}"
+  export LSQ_WEBHOOK_MAX_ATTEMPTS="${LSQ_WEBHOOK_MAX_ATTEMPTS:-10}"
+  export LSQ_WEBHOOK_BATCH_SIZE="${LSQ_WEBHOOK_BATCH_SIZE:-25}"
+  export LSQ_WEBHOOK_DISABLED="${LSQ_WEBHOOK_DISABLED:-0}"
   node server.js
 ) &
 PMO_PID=$!
 
-# Keep container alive while both processes are healthy.
-while kill -0 "$TECH_PID" 2>/dev/null && kill -0 "$PMO_PID" 2>/dev/null; do
+# Wizklub Testimonials API (port 3001)
+(
+  cd /app/backend/wizklub-testimonials
+  export NODE_ENV="${TESTIMONIALS_NODE_ENV:-${NODE_ENV:-production}}"
+  export PORT="${TESTIMONIALS_PORT:-3001}"
+  export TRUST_PROXY="${TESTIMONIALS_TRUST_PROXY:-true}"
+  export MONGO_URI="${MONGO_URI:?MONGO_URI is required}"
+  export GCS_BUCKET_NAME="${GCS_BUCKET_NAME:-}"
+  export GCS_FOLDER="${GCS_FOLDER:-wizklub}"
+  export GCS_CREDENTIALS="${GCS_CREDENTIALS:-}"
+  if [ -n "${TESTIMONIALS_MONGO_DB_NAME:-}" ]; then
+    export MONGO_DB_NAME="${TESTIMONIALS_MONGO_DB_NAME}"
+  elif [ -n "${MONGO_DB_NAME:-}" ]; then
+    export MONGO_DB_NAME="${MONGO_DB_NAME}"
+  fi
+  node src/index.js
+) &
+TESTIMONIALS_PID=$!
+
+# Keep container alive while all three processes are healthy.
+while kill -0 "$TECH_PID" 2>/dev/null && kill -0 "$PMO_PID" 2>/dev/null && kill -0 "$TESTIMONIALS_PID" 2>/dev/null; do
   sleep 1
 done
 
@@ -52,6 +77,9 @@ if ! kill -0 "$TECH_PID" 2>/dev/null; then
 fi
 if ! kill -0 "$PMO_PID" 2>/dev/null; then
   wait "$PMO_PID" || EXIT_CODE=$?
+fi
+if ! kill -0 "$TESTIMONIALS_PID" 2>/dev/null; then
+  wait "$TESTIMONIALS_PID" || EXIT_CODE=$?
 fi
 
 cleanup

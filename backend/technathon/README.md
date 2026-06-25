@@ -29,13 +29,13 @@ npm ci
 2. Create env file from template:
 
 ```bash
-cp .env.example .env
+cp ../../.env.example ../../.env
 ```
 
 On Windows PowerShell:
 
 ```powershell
-Copy-Item .env.example .env
+Copy-Item ../../.env.example ../../.env
 ```
 
 3. Fill required values in `.env`:

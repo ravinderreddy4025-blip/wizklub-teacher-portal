@@ -3,7 +3,18 @@ const { MONGODB_DB } = require('../config/env');
 const { STATE_DOC_ID, SESSIONS_COLLECTION } = require('../config/constants');
 const { validateSessionId } = require('../domain/sessions');
 const { migrateLegacyToCanonical } = require('../domain/sessionKeys');
+const { lsqWebhookDueAt } = require('../domain/lsqWebhookSchedule');
 const { normalizeStudentIds } = require('../domain/studentIds');
+
+const LSQ_INTERNAL_FIELDS = [
+  'lsq_webhook_sent_at',
+  'lsq_webhook_due_at',
+  'lsq_webhook_claimed_at',
+  'lsq_webhook_attempts',
+  'lsq_webhook_last_error',
+  'lsq_webhook_last_attempt_at',
+  'lsq_webhook_failed_at',
+];
 
 const mongo = {
   client: null,
@@ -65,8 +76,11 @@ function normalizeSessionRecord(s) {
 
 function sessionDocToClient(doc) {
   if (!doc) return null;
-  const { _id, updatedAt, ...rest } = doc;
-  const id = rest.id != null ? String(rest.id) : String(_id);
+  const rest = { ...doc };
+  delete rest._id;
+  delete rest.updatedAt;
+  for (const key of LSQ_INTERNAL_FIELDS) delete rest[key];
+  const id = rest.id != null ? String(rest.id) : String(doc._id);
   const migrated = migrateLegacyToCanonical({ ...rest, id });
   return normalizeSessionRecord(migrated);
 }
@@ -109,6 +123,83 @@ async function readAllSessionsFromDb() {
   }
 }
 
+function attachLsqWebhookFields(doc, existing) {
+  const status = String(doc.status || '');
+  if (status !== 'Completed') {
+    for (const key of LSQ_INTERNAL_FIELDS) delete doc[key];
+    return doc;
+  }
+
+  const due = lsqWebhookDueAt(doc);
+  if (due) doc.lsq_webhook_due_at = due;
+  else delete doc.lsq_webhook_due_at;
+
+  if (existing?.lsq_webhook_sent_at) {
+    doc.lsq_webhook_sent_at = existing.lsq_webhook_sent_at;
+  } else {
+    delete doc.lsq_webhook_sent_at;
+  }
+
+  delete doc.lsq_webhook_claimed_at;
+
+  const wasCompleted = existing && String(existing.status || '') === 'Completed';
+  if (wasCompleted) {
+    if (existing.lsq_webhook_attempts != null) doc.lsq_webhook_attempts = existing.lsq_webhook_attempts;
+    if (existing.lsq_webhook_last_error) doc.lsq_webhook_last_error = existing.lsq_webhook_last_error;
+    if (existing.lsq_webhook_last_attempt_at) {
+      doc.lsq_webhook_last_attempt_at = existing.lsq_webhook_last_attempt_at;
+    }
+    if (existing.lsq_webhook_failed_at) doc.lsq_webhook_failed_at = existing.lsq_webhook_failed_at;
+  } else {
+    delete doc.lsq_webhook_attempts;
+    delete doc.lsq_webhook_last_error;
+    delete doc.lsq_webhook_last_attempt_at;
+    delete doc.lsq_webhook_failed_at;
+  }
+
+  return doc;
+}
+
+async function ensureSessionIndexes() {
+  const coll = sessionsCollection();
+  await coll.createIndex(
+    { status: 1, lsq_webhook_due_at: 1, lsq_webhook_sent_at: 1 },
+    { name: 'lsq_webhook_due_pending' }
+  );
+  await coll.createIndex({ status: 1, lsq_webhook_sent_at: 1 }, { name: 'lsq_webhook_sent' });
+}
+
+async function backfillLsqWebhookDueAt() {
+  const coll = sessionsCollection();
+  const docs = await coll
+    .find({
+      status: 'Completed',
+      $and: [
+        { $or: [{ lsq_webhook_due_at: { $exists: false } }, { lsq_webhook_due_at: null }] },
+        { $or: [{ lsq_webhook_sent_at: { $exists: false } }, { lsq_webhook_sent_at: null }] },
+      ],
+    })
+    .toArray();
+
+  if (!docs.length) return 0;
+
+  const ops = [];
+  for (const doc of docs) {
+    const client = sessionDocToClient(doc);
+    if (!client) continue;
+    const due = lsqWebhookDueAt(client);
+    if (!due) continue;
+    ops.push({
+      updateOne: {
+        filter: { _id: doc._id },
+        update: { $set: { lsq_webhook_due_at: due } },
+      },
+    });
+  }
+  if (ops.length) await coll.bulkWrite(ops, { ordered: false });
+  return ops.length;
+}
+
 async function writePmoSessionsReplaceAll(body) {
   const coll = sessionsCollection();
   const ids = body.map((s) => s.id);
@@ -116,28 +207,46 @@ async function writePmoSessionsReplaceAll(body) {
     await coll.deleteMany({});
     return;
   }
+  const existingDocs = await coll.find({ _id: { $in: ids } }).toArray();
+  const existingById = new Map(existingDocs.map((d) => [String(d._id), d]));
   await coll.deleteMany({ _id: { $nin: ids } });
-  const ops = body.map((item) => ({
-    replaceOne: {
-      filter: { _id: item.id },
-      replacement: toSessionDocument(item),
-      upsert: true,
-    },
-  }));
+  const ops = body.map((item) => {
+    const replacement = attachLsqWebhookFields(
+      toSessionDocument(item),
+      existingById.get(String(item.id))
+    );
+    return {
+      replaceOne: {
+        filter: { _id: item.id },
+        replacement,
+        upsert: true,
+      },
+    };
+  });
   await coll.bulkWrite(ops, { ordered: false });
 }
 
 async function writeSpeakerMergedSessions(mergedList) {
   const coll = sessionsCollection();
+  const ids = mergedList.filter((s) => validateSessionId(s.id)).map((s) => s.id);
+  if (ids.length === 0) return;
+  const existingDocs = await coll.find({ _id: { $in: ids } }).toArray();
+  const existingById = new Map(existingDocs.map((d) => [String(d._id), d]));
   const ops = mergedList
     .filter((s) => validateSessionId(s.id))
-    .map((item) => ({
-      replaceOne: {
-        filter: { _id: item.id },
-        replacement: toSessionDocument(item),
-        upsert: false,
-      },
-    }));
+    .map((item) => {
+      const replacement = preserveLsqWebhookFields(
+        toSessionDocument(item),
+        existingById.get(String(item.id))
+      );
+      return {
+        replaceOne: {
+          filter: { _id: item.id },
+          replacement,
+          upsert: false,
+        },
+      };
+    });
   if (ops.length === 0) return;
   await coll.bulkWrite(ops, { ordered: false });
 }
@@ -148,9 +257,11 @@ async function initMongo() {
     console.log('MONGODB_DISABLED set — GET /api/sessions returns []; PUT is a no-op (204).');
     return;
   }
-  const uri = typeof process.env.MONGODB_URI === 'string' ? process.env.MONGODB_URI.trim() : '';
+  const uri =
+    (typeof process.env.MONGODB_URI === 'string' ? process.env.MONGODB_URI.trim() : '') ||
+    (typeof process.env.MONGO_URI === 'string' ? process.env.MONGO_URI.trim() : '');
   if (!uri) {
-    console.log('MONGODB_URI not set — GET /api/sessions returns []; PUT is a no-op (204).');
+    console.log('MONGO_URI not set — GET /api/sessions returns []; PUT is a no-op (204).');
     return;
   }
   mongo.client = new MongoClient(uri, {
@@ -164,8 +275,13 @@ async function initMongo() {
   console.log(`MongoDB connected (database: ${MONGODB_DB}).`);
   try {
     await migrateLegacySessionsIfNeeded();
+    await ensureSessionIndexes();
+    const backfilled = await backfillLsqWebhookDueAt();
+    if (backfilled > 0) {
+      console.log(`[LSQ webhook] Backfilled lsq_webhook_due_at on ${backfilled} completed session(s).`);
+    }
   } catch (e) {
-    console.error('Session migration from app_state:', e && e.message ? e.message : e);
+    console.error('Session migration/index setup:', e && e.message ? e.message : e);
   }
 }
 

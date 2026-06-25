@@ -6,20 +6,21 @@ node_modules/
 dist/
 dist-ssr/
 build/
+dev-dist/
 
 # ── Environment — NEVER commit secrets ───────────────────
 .env
 .env.local
 .env.production
 .env.staging
-**/.env
-**/.env.local
-**/.env.production
-**/.env.staging
-*.local
+.env.*.local
 .env.wsl.preprod
 .env.wsl-preprod
-.env.example
+*(2).env
+*(2).gitignore
+env-example/
+*.local
+
 # ── Logs ─────────────────────────────────────────────────
 logs/
 *.log
@@ -27,20 +28,20 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+debug-*.log
 
 # ── Test coverage ─────────────────────────────────────────
 coverage/
 .nyc_output/
 
-# ── Uploads (local dev only) ──────────────────────────────
+# ── Uploads / local runtime data ─────────────────────────
 uploads/
+data/
 
-# ── Local dev helpers (not for deploy) ─────────────────────
+# ── Local dev helpers (not for deploy) ───────────────────
 /scripts/
-/env-example/
 test-mongo.js
 desktop.ini
-debug-*.log
 
 # ── OS / Editor ──────────────────────────────────────────
 .DS_Store
@@ -57,3 +58,8 @@ Thumbs.db
 # ── Docker ───────────────────────────────────────────────
 **/.docker/*.pid
 **/.docker/*.sock
+
+# ── PMO local Excel scratch ──────────────────────────────
+backend/parent-orientation/Parent_Orientation_Tracker.xlsx
+backend/parent-orientation/~$*.xlsx
+backend/parent-orientation/excel_info*.txt

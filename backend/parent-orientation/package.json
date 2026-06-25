@@ -13,7 +13,7 @@
     "build:toast": "cross-env NODE_PATH=./node_modules esbuild ../../frontend/parent-orientation/src/client/toast-bridge.jsx --bundle --outfile=../../frontend/parent-orientation/public/react-toastify-bundle.js --format=iife --loader:.jsx=jsx --jsx=automatic --minify",
     "build:react": "cross-env NODE_PATH=./node_modules esbuild ../../frontend/parent-orientation/src/main.jsx --bundle --outfile=../../frontend/parent-orientation/public/react-app.js --format=iife --loader:.jsx=jsx --jsx=automatic --minify",
     "build:client": "npm run build:toast && npm run build:react",
-    "test": "node -e \"console.log('No test suite in repo'); process.exit(0)\"",
+    "test": "node test/lsqWebhookSchedule.test.js",
     "docker:up": "docker compose -f ../../docker-compose.yml up --build -d",
     "clean": "node clean_excel.js"
   },
