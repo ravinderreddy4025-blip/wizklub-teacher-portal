@@ -10,11 +10,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="PO Tracker">
   <title>Parent Orientation Tracker</title>
+  <link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
+  <link rel="icon" type="image/png" href="brand/logo.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="pwa-icon.svg">
+  <link rel="apple-touch-icon" href="brand/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Montserrat:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="react-toastify-bundle.css">
   <style>
     * {
@@ -41,11 +43,12 @@
       --po-gradient-card: linear-gradient(180deg, #ffffff 0%, #fffdfb 100%);
       --po-gradient-btn: linear-gradient(135deg, #ea580c 0%, #f97316 48%, #fb923c 100%);
       --po-gradient-btn-hover: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
-      --po-focus: rgba(234, 88, 12, 0.22)
+      --po-focus: rgba(234, 88, 12, 0.22);
+      --po-font: 'Nunito', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif
     }
 
     body {
-      font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: var(--po-font);
       background: var(--po-gradient-page);
       background-attachment: fixed;
       min-height: 100vh;
@@ -599,7 +602,7 @@
       cursor: pointer;
       background: #fff;
       color: #555;
-      font-family: Arial, sans-serif;
+      font-family: var(--po-font);
       font-weight: 600;
       touch-action: manipulation;
       -webkit-tap-highlight-color: rgba(234, 88, 12, 0.12)
@@ -670,6 +673,201 @@
       width: auto;
       padding: 6px 10px;
       font-size: 12px
+    }
+
+    /* Month calendar picker (PMO + Sales) */
+    .po-month-cal {
+      position: relative;
+      display: inline-block
+    }
+
+    .po-month-cal__trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 11rem;
+      padding: 6px 28px 6px 10px;
+      border: 1px solid rgba(234, 88, 12, 0.2);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      color: #1e1b15;
+      background: #fff;
+      cursor: pointer;
+      text-align: left;
+      position: relative
+    }
+
+    .po-month-cal--sales .po-month-cal__trigger {
+      min-width: 11rem;
+      padding: 9px 36px 9px 17px;
+      font-size: 0.875rem;
+      font-weight: 400;
+      border-color: rgba(255, 228, 204, 0.95);
+      border-radius: 8px
+    }
+
+    .po-month-cal__trigger:hover,
+    .po-month-cal__trigger[aria-expanded="true"] {
+      border-color: rgba(251, 146, 60, 0.85);
+      box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.12)
+    }
+
+    .po-month-cal__chev {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: #ea580c;
+      pointer-events: none
+    }
+
+    .po-month-cal__panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 120;
+      width: min(20rem, 92vw);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 228, 204, 0.9);
+      background: #fff;
+      box-shadow: 0 12px 32px rgba(234, 88, 12, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06)
+    }
+
+    .po-month-cal__panel.is-hidden {
+      display: none
+    }
+
+    .po-month-cal__all {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      border: 1px solid rgba(234, 88, 12, 0.2);
+      border-radius: 8px;
+      background: #fff7ed;
+      color: #9a3412;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center
+    }
+
+    .po-month-cal__all:hover,
+    .po-month-cal__all.is-selected {
+      background: var(--po-gradient-btn);
+      color: #fff;
+      border-color: transparent
+    }
+
+    .po-month-cal__legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 10px;
+      color: #64748b
+    }
+
+    .po-month-cal__legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px
+    }
+
+    .po-month-cal__legend i {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      font-style: normal
+    }
+
+    .po-month-cal__legend i.is-selected {
+      background: #ea580c;
+      box-shadow: 0 0 0 1px #ea580c
+    }
+
+    .po-month-cal__legend i.has-data {
+      background: #fff7ed;
+      border: 1px solid rgba(234, 88, 12, 0.45)
+    }
+
+    .po-month-cal__legend i.is-empty {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0
+    }
+
+    .po-month-cal__years {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px
+    }
+
+    .po-month-cal__year {
+      padding: 5px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      background: #fff;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer
+    }
+
+    .po-month-cal__year:hover {
+      border-color: rgba(234, 88, 12, 0.35);
+      color: #9a3412
+    }
+
+    .po-month-cal__year.is-active {
+      background: #ea580c;
+      border-color: #ea580c;
+      color: #fff
+    }
+
+    .po-month-cal__grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px
+    }
+
+    .po-month-cal__month {
+      padding: 8px 4px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      text-align: center
+    }
+
+    .po-month-cal__month:hover {
+      border-color: rgba(234, 88, 12, 0.45);
+      background: #fff7ed;
+      color: #9a3412
+    }
+
+    .po-month-cal__month.has-data {
+      background: #fff7ed;
+      border-color: rgba(234, 88, 12, 0.35)
+    }
+
+    .po-month-cal__month.is-selected {
+      background: var(--po-gradient-btn);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25)
     }
 
     .flbl {
@@ -867,6 +1065,48 @@
       font-size: 14px;
       background: rgba(255, 255, 255, 0.95);
       transition: border-color 0.2s ease, box-shadow 0.2s ease
+    }
+
+    .login-password-wrap {
+      position: relative;
+      width: 100%
+    }
+
+    .login-password-wrap input {
+      padding-right: 48px
+    }
+
+    .login-toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      color: #64748b;
+      pointer-events: auto
+    }
+
+    .login-toggle-password svg.login-eye-hidden {
+      display: none !important
+    }
+
+    .login-toggle-password:hover {
+      color: #9a3412
+    }
+
+    .login-toggle-password svg {
+      width: 20px;
+      height: 20px
     }
 
     .login-field input:focus {
@@ -1248,6 +1488,28 @@
       font-size: 0.75rem;
       color: #64748b;
       margin-bottom: 8px
+    }
+
+    .sales-meeting-card--pending {
+      border-color: rgba(251, 146, 60, 0.35);
+      background: #fffbf7
+    }
+
+    .sales-meeting-card__status {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      vertical-align: middle
+    }
+
+    .sales-meeting-card__status--pending {
+      background: #ffedd5;
+      color: #9a3412;
+      border: 1px solid rgba(251, 146, 60, 0.45)
     }
 
     .sales-student-ids {
@@ -3030,7 +3292,7 @@
     }
 
     #view-sales-admin {
-      font-family: Montserrat, 'DM Sans', system-ui, sans-serif;
+      font-family: var(--po-font);
       background: linear-gradient(90deg, #fff4e6 0%, #fffbf7 38%, #ffffff 72%, #ffffff 100%);
       background-attachment: local;
       border-radius: 0;
@@ -3120,7 +3382,7 @@
 
     .sales-topnav__title {
       margin: 0;
-      font-family: 'Plus Jakarta Sans', Montserrat, 'DM Sans', sans-serif;
+      font-family: var(--po-font);
       font-size: clamp(1rem, 2.2vw, 1.2rem);
       font-weight: 700;
       color: #0d4f6c;
@@ -3147,7 +3409,7 @@
 
     .sales-topnav__logout {
       font: inherit;
-      font-family: Montserrat, 'DM Sans', sans-serif;
+      font-family: var(--po-font);
       font-size: 0.875rem;
       font-weight: 600;
       color: #9a3412;
@@ -3348,7 +3610,7 @@
     }
 
     .sales-kpi-card__value {
-      font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+      font-family: var(--po-font);
       font-size: 1.875rem;
       font-weight: 800;
       color: #1e1b15;
@@ -3370,6 +3632,30 @@
       display: inline-flex;
       align-items: center;
       gap: 8px
+    }
+
+    .sales-dash-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(234, 88, 12, 0.35);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #9a3412;
+      background: #fff;
+      cursor: pointer
+    }
+
+    .sales-dash-refresh:hover:not(:disabled) {
+      background: #fff7ed;
+      border-color: rgba(234, 88, 12, 0.55)
+    }
+
+    .sales-dash-refresh:disabled {
+      opacity: 0.55;
+      cursor: wait
     }
 
     .sales-dash-export img {
@@ -3406,7 +3692,7 @@
     }
 
     .sales-progress-card .sales-insight-card__title {
-      font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+      font-family: var(--po-font);
       font-size: 1.5rem;
       font-weight: 600;
       text-align: center;
@@ -3510,7 +3796,7 @@
     }
 
     .sales-status-card .sales-insight-card__title {
-      font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+      font-family: var(--po-font);
       font-size: 1.5rem;
       font-weight: 600;
       line-height: 1.33
@@ -3942,7 +4228,7 @@
 
     .sales-targets-card__title {
       margin: 0 0 8px;
-      font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+      font-family: var(--po-font);
       font-size: 1.125rem;
       font-weight: 700;
       color: #ea580c;
@@ -4542,7 +4828,20 @@
         </div>
         <div class="login-field">
           <label for="login-pass">Password</label>
-          <input type="password" id="login-pass" value="" autocomplete="current-password">
+          <div class="login-password-wrap">
+            <input type="password" id="login-pass" value="" autocomplete="current-password">
+            <button type="button" class="login-toggle-password" id="login-pass-toggle" aria-label="Show password" aria-pressed="false">
+              <svg class="login-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="login-eye-closed login-eye-hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="login-actions">
           <button type="submit" class="login-btn">Login</button>
@@ -4560,6 +4859,7 @@
         </div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button type="button" class="btn btn-o btn-sm" id="btn-speaker-refresh" style="display:none" title="Refresh sessions and student IDs" aria-label="Refresh sessions">↻ Refresh</button>
         <button type="button" class="btn btn-green btn-sm" id="btn-export-excel">⬇ Export to Excel</button>
         <div class="role-tabs" id="role-tabs">
           <button type="button" class="role-btn active" id="tab-pmo">PMO <span
@@ -4715,9 +5015,14 @@
               <option value="Rescheduled">Rescheduled</option>
               <option value="Cancelled">Cancelled</option>
             </select>
-            <select id="f-meetings-month" aria-label="Filter by month">
-              <option value="">All months</option>
-            </select>
+            <div class="po-month-cal" data-po-month-cal>
+              <input type="hidden" id="f-meetings-month" value="">
+              <button type="button" class="po-month-cal__trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="f-meetings-month-panel" aria-label="Filter by month">
+                <span class="po-month-cal__label">All months</span>
+                <span class="po-month-cal__chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="po-month-cal__panel is-hidden" id="f-meetings-month-panel" role="dialog" aria-label="Calendar month filter"></div>
+            </div>
             <input type="text" id="f-search" placeholder="Search branch / teacher…">
           </div>
           <div class="slist" id="pmo-list"></div>
@@ -4743,9 +5048,15 @@
       </header>
       <div class="sales-dash-shell">
       <div class="sales-dash-filters-bar">
-        <label class="sales-dash-filter" for="sales-month">
-          <input type="month" id="sales-month" required aria-label="Current month">
-        </label>
+        <div class="po-month-cal po-month-cal--sales sales-dash-filter" data-po-month-cal>
+          <input type="hidden" id="sales-month" value="">
+          <button type="button" class="po-month-cal__trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="sales-month-panel" aria-label="Filter by month">
+            <span class="po-month-cal__label">All months</span>
+            <span class="po-month-cal__chev" aria-hidden="true">▾</span>
+          </button>
+          <div class="po-month-cal__panel is-hidden" id="sales-month-panel" role="dialog" aria-label="Calendar month filter"></div>
+        </div>
+        <button type="button" class="sales-dash-refresh" id="btn-sales-refresh" title="Refresh sessions and student IDs" aria-label="Refresh sessions and student IDs">↻ Refresh</button>
         <button type="button" class="btn btn-p btn-sm sales-dash-export" id="btn-sales-export-report">Export Report</button>
       </div>
 
@@ -4775,7 +5086,7 @@
         <article class="sales-targets-card">
           <header class="sales-targets-card__head">
             <h2 class="sales-targets-card__title">School targets &amp; progress</h2>
-            <p class="sales-targets-card__lead">Set a completion target per school. Expand a school row to see completed meetings. Save only when you change a target.</p>
+            <p class="sales-targets-card__lead">Set a completion target per school. Save only when you change a target.</p>
           </header>
           <div id="sales-regions-root" class="sales-targets-card__body" aria-live="polite"></div>
           <footer class="sales-save-footer">
@@ -4856,7 +5167,7 @@
       });
     });
   </script>
-  <script src="app.js?v=20260615f" defer></script>
+  <script src="app.js?v=20260703j" defer></script>
 </body>
 
 </html>

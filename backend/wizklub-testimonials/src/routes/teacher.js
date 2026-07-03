@@ -1,9 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import {
-  getAssignedSchoolIds,
   getBatchById,
-  getBatchesForSchool,
   getSchoolById,
   getStudentById,
   getStudentsForBatch,
@@ -11,11 +9,13 @@ import {
   getBatchGroupPhoto,
   teacherOwnsStudent,
   getAllUploads,
+  getBatchesForSchool,
 } from '../services/access.js'
-import { fetchBatchesForSchool, extractBatches, filterByInstructorBatchIds } from '../services/batchSync.js'
+import { fetchAllBatchesForSchool, filterByInstructorBatchIds } from '../services/batchSync.js'
 import { syncSchoolsAndBatches } from '../services/schoolSync.js'
+import { resolveSchoolIds, resolveSchoolWithBatches } from '../services/schoolResolve.js'
 import { getSession } from '../services/sessionStore.js'
-import { fetchStudentsForBatch, extractStudents } from '../services/studentSync.js'
+import { fetchAllStudentsForBatch } from '../services/studentSync.js'
 import {
   getBatchCompletion,
   getStudentCompletion,
@@ -27,33 +27,37 @@ export function createTeacherRouter() {
   router.use(requireAuth)
 
   router.get('/dashboard', async (req, res) => {
-    let schoolIds = await getAssignedSchoolIds(req.teacher._id)
+    let schoolIds = await resolveSchoolIds(req.teacher._id, req.schoolIds)
 
     if (schoolIds.length === 0) {
       const session = getSession(req.accessToken)
       if (session?.schoolIds?.length) {
         try {
           await syncSchoolsAndBatches(req.teacher._id, session.schoolIds, session.batchIds ?? [], req.accessToken, session.userId)
-          schoolIds = await getAssignedSchoolIds(req.teacher._id)
+          schoolIds = await resolveSchoolIds(req.teacher._id, session.schoolIds)
         } catch (err) {
           console.error('Lazy school sync failed:', err.message)
+          schoolIds = session.schoolIds
         }
       }
     }
 
     const uploads = await getAllUploads()
+    const instructorUsername = req.teacher.user_id
 
     const schools = []
     const allStudentIds = new Set()
 
     for (const schoolId of schoolIds) {
-      const school = await getSchoolById(schoolId)
+      const { school, batches: schoolBatches } = await resolveSchoolWithBatches(schoolId, {
+        accessToken: req.accessToken,
+        instructorUsername,
+        batchIds: req.batchIds,
+      })
       if (!school) continue
-      const schoolBatches = await getBatchesForSchool(schoolId)
 
       for (const batch of schoolBatches) {
-        const apiPayload = await fetchStudentsForBatch(batch._id, req.accessToken)
-        const students = extractStudents(apiPayload)
+        const students = await fetchAllStudentsForBatch(schoolId, batch._id, req.accessToken)
         students.forEach((s) => allStudentIds.add(s.id))
       }
 
@@ -87,12 +91,15 @@ export function createTeacherRouter() {
   })
 
   router.get('/schools', async (req, res) => {
-    const schoolIds = await getAssignedSchoolIds(req.teacher._id)
+    const schoolIds = await resolveSchoolIds(req.teacher._id, req.schoolIds)
     const schools = []
     for (const schoolId of schoolIds) {
-      const school = await getSchoolById(schoolId)
+      const { school, batches: schoolBatches } = await resolveSchoolWithBatches(schoolId, {
+        accessToken: req.accessToken,
+        instructorUsername: req.teacher.user_id,
+        batchIds: req.batchIds,
+      })
       if (!school) continue
-      const schoolBatches = await getBatchesForSchool(schoolId)
       const studentCountFromBatches = schoolBatches.reduce(
         (sum, b) => sum + (b.student_count ?? 0), 0,
       )
@@ -108,7 +115,7 @@ export function createTeacherRouter() {
 
   router.get('/schools/:schoolId/batches', async (req, res) => {
     const { schoolId } = req.params
-    const schoolIds = await getAssignedSchoolIds(req.teacher._id)
+    const schoolIds = await resolveSchoolIds(req.teacher._id, req.schoolIds)
 
     if (!schoolIds.includes(schoolId)) {
       return res.status(403).json({ forbidden: true })
@@ -121,8 +128,7 @@ export function createTeacherRouter() {
     const instructorBatchIds = session?.batchIds ?? []
     const instructorUsername = session?.userId ?? req.teacher.user_id
 
-    const apiPayload = await fetchBatchesForSchool(schoolId, instructorUsername, req.accessToken)
-    const allBatches = extractBatches(apiPayload)
+    const allBatches = await fetchAllBatchesForSchool(schoolId, instructorUsername, req.accessToken)
     const instructorBatches = filterByInstructorBatchIds(allBatches, instructorBatchIds)
 
     if (instructorBatches.length > 0) {
@@ -130,8 +136,7 @@ export function createTeacherRouter() {
       const batches = []
 
       for (const batch of instructorBatches) {
-        const apiPayloadStudents = await fetchStudentsForBatch(batch.id, req.accessToken)
-        const students = extractStudents(apiPayloadStudents)
+        const students = await fetchAllStudentsForBatch(schoolId, batch.id, req.accessToken)
         const studentIds = students.map((s) => s.id)
         const { completion_avg, health_tag } = getBatchCompletion(uploads, studentIds)
 
@@ -180,51 +185,20 @@ export function createTeacherRouter() {
   router.get('/batches/:batchId/students', async (req, res) => {
     const { batchId } = req.params
     const filter = req.query.filter ?? 'all'
+    const querySchoolId = String(req.query.school_id ?? '').trim()
     const batch = await getBatchById(batchId)
+    const schoolId = querySchoolId || batch?.school_id || ''
 
-    if (!batch) {
-      const apiPayload = await fetchStudentsForBatch(batchId, req.accessToken)
-      const apiStudents = extractStudents(apiPayload)
-
-      if (apiStudents.length > 0) {
-        const uploads = await getAllUploads()
-        const students = apiStudents.map((s) => {
-          const completion = getStudentCompletion(uploads, s.id)
-          return {
-            id: s.id,
-            full_name: s.full_name,
-            roll_number: s.roll_number,
-            image: s.image,
-            completion_pct: completion.completion_pct,
-            status: completion.status,
-            categories_done: completion.categories_done,
-            categories_total: completion.categories_total,
-          }
-        })
-
-        const filtered = students.filter((student) => {
-          if (filter === 'uploaded') return student.completion_pct === 100
-          if (filter === 'pending') return student.completion_pct < 100
-          return true
-        })
-
-        return res.json({
-          batch: { id: batchId, name: batchId, school_id: '' },
-          group_photo: null,
-          students: filtered,
-        })
-      }
-
-      return res.status(404).json({ error: 'Batch not found.' })
+    if (!schoolId) {
+      return res.status(400).json({ error: 'school_id is required to load students.' })
     }
 
-    const schoolIds = await getAssignedSchoolIds(req.teacher._id)
-    if (!schoolIds.includes(batch.school_id)) {
+    const schoolIds = await resolveSchoolIds(req.teacher._id, req.schoolIds)
+    if (!schoolIds.includes(schoolId)) {
       return res.status(403).json({ forbidden: true })
     }
 
-    const apiPayload = await fetchStudentsForBatch(batchId, req.accessToken)
-    const apiStudents = extractStudents(apiPayload)
+    const apiStudents = await fetchAllStudentsForBatch(schoolId, batchId, req.accessToken)
 
     if (apiStudents.length > 0) {
       const uploads = await getAllUploads()
@@ -248,11 +222,21 @@ export function createTeacherRouter() {
         return true
       })
 
+      const batchName = batch?.name ?? apiStudents[0]?.batch_name ?? batchId
+
       return res.json({
-        batch: { id: batch._id, name: batch.name, school_id: batch.school_id },
+        batch: {
+          id: batchId,
+          name: batchName,
+          school_id: schoolId,
+        },
         group_photo: await getBatchGroupPhoto(batchId),
         students: filtered,
       })
+    }
+
+    if (!batch) {
+      return res.status(404).json({ error: 'Batch not found.' })
     }
 
     const uploads = await getAllUploads()

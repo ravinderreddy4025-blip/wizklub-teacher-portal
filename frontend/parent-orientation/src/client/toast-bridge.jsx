@@ -50,7 +50,7 @@ function confirmDialog(message, options = {}) {
           <div
             style={{
               padding: '2px 4px',
-              fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+              fontFamily: "'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif",
               minWidth: 240,
               maxWidth: 400,
             }}

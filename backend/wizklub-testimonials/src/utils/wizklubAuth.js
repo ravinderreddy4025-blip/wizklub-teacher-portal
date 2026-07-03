@@ -6,5 +6,5 @@ export const WIZKLUB_URLS = {
   logout: `${WIZKLUB_BASE}/auth/logout`,
   schoolDetails: `${WIZKLUB_BASE}/school-details`,
   batches: `${WIZKLUB_BASE}/batches`,
-  batchStudents: (batchId) => `${WIZKLUB_BASE}/batches/${batchId}/students`,
+  batchStudents: `${WIZKLUB_BASE}/batches/students`,
 }

@@ -235,7 +235,7 @@ async function writeSpeakerMergedSessions(mergedList) {
   const ops = mergedList
     .filter((s) => validateSessionId(s.id))
     .map((item) => {
-      const replacement = preserveLsqWebhookFields(
+      const replacement = attachLsqWebhookFields(
         toSessionDocument(item),
         existingById.get(String(item.id))
       );

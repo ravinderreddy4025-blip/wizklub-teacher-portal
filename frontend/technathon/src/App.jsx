@@ -193,7 +193,7 @@ function App() {
         theme="light"
         style={{ zIndex: 10050 }}
         toastStyle={{
-          fontFamily: 'Inter, system-ui, sans-serif',
+          fontFamily: "'Nunito', 'Segoe UI', system-ui, sans-serif",
           borderRadius: '12px',
           boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
         }}

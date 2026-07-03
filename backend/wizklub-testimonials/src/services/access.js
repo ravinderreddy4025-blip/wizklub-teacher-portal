@@ -1,19 +1,24 @@
 import { Teacher, School, TeacherSchoolAssignment, Batch, Student, Upload, BatchUpload } from '../db/models.js'
+import { isDatabaseReady } from '../db/state.js'
 
 export async function getAssignedSchoolIds(teacherId) {
+  if (!isDatabaseReady()) return []
   const rows = await TeacherSchoolAssignment.find({ teacher_id: teacherId }).lean()
   return rows.map((r) => r.school_id)
 }
 
 export async function getStudentById(studentId) {
+  if (!isDatabaseReady()) return null
   return Student.findById(studentId).lean()
 }
 
 export async function getBatchById(batchId) {
+  if (!isDatabaseReady()) return null
   return Batch.findById(batchId).lean()
 }
 
 export async function getSchoolById(schoolId) {
+  if (!isDatabaseReady()) return null
   return School.findById(schoolId).lean()
 }
 
@@ -30,14 +35,17 @@ export async function teacherOwnsStudent(teacherId, studentId, batchIds) {
 }
 
 export async function getStudentsForBatch(batchId) {
+  if (!isDatabaseReady()) return []
   return Student.find({ batch_id: batchId }).sort({ full_name: 1 }).lean()
 }
 
 export async function getBatchesForSchool(schoolId) {
+  if (!isDatabaseReady()) return []
   return Batch.find({ school_id: schoolId }).sort({ name: 1 }).lean()
 }
 
 export async function getAssignedStudents(teacherId) {
+  if (!isDatabaseReady()) return []
   const schoolIds = await getAssignedSchoolIds(teacherId)
   if (schoolIds.length === 0) return []
 
@@ -66,11 +74,13 @@ export function mapUploadRow(row) {
 }
 
 export async function getUploadsForStudent(studentId) {
+  if (!isDatabaseReady()) return []
   const rows = await Upload.find({ student_id: studentId }).sort({ created_at: -1 }).lean()
   return rows.map(mapUploadRow)
 }
 
 export async function getUploadById(uploadId) {
+  if (!isDatabaseReady()) return null
   const row = await Upload.findById(uploadId).lean()
   return mapUploadRow(row)
 }
@@ -103,6 +113,7 @@ export function mapBatchUploadRow(row) {
 }
 
 export async function getBatchGroupPhoto(batchId) {
+  if (!isDatabaseReady()) return null
   const row = await BatchUpload.findOne({ batch_id: batchId })
     .sort({ created_at: -1 })
     .lean()
@@ -110,6 +121,7 @@ export async function getBatchGroupPhoto(batchId) {
 }
 
 export async function getBatchGroupPhotos(batchId) {
+  if (!isDatabaseReady()) return []
   const rows = await BatchUpload.find({ batch_id: batchId })
     .sort({ created_at: -1 })
     .lean()
@@ -117,6 +129,7 @@ export async function getBatchGroupPhotos(batchId) {
 }
 
 export async function getAllUploads() {
+  if (!isDatabaseReady()) return []
   const rows = await Upload.find().lean()
   return rows.map(mapUploadRow)
 }

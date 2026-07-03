@@ -1,6 +1,7 @@
 import { WIZKLUB_URLS } from '../utils/wizklubAuth.js'
 import { School, Batch, TeacherSchoolAssignment } from '../db/models.js'
-import { fetchBatchesForSchool, extractBatches } from './batchSync.js'
+import { isDatabaseReady } from '../db/state.js'
+import { fetchAllBatchesForSchool } from './batchSync.js'
 
 export async function fetchSchoolDetails(schoolId, accessToken) {
   const url = `${WIZKLUB_URLS.schoolDetails}?school_id=${encodeURIComponent(schoolId)}`
@@ -25,7 +26,7 @@ export async function fetchSchoolDetails(schoolId, accessToken) {
   }
 }
 
-function extractSchoolName(payload, schoolId) {
+export function extractSchoolName(payload, schoolId) {
   if (!payload) return schoolId
 
   return (
@@ -39,6 +40,7 @@ function extractSchoolName(payload, schoolId) {
 }
 
 export async function syncSchoolsAndBatches(teacherId, schoolIds, batchIds, accessToken, instructorUsername) {
+  if (!isDatabaseReady()) return
 
   await TeacherSchoolAssignment.deleteMany({ teacher_id: teacherId })
   await Batch.deleteMany({ school_id: { $in: schoolIds } })
@@ -65,14 +67,13 @@ export async function syncSchoolsAndBatches(teacherId, schoolIds, batchIds, acce
     const batchIdSet = new Set(batchIds ?? [])
 
     const batchResults = await Promise.allSettled(
-      schoolIds.map((id) => fetchBatchesForSchool(id, instructorUsername, accessToken)),
+      schoolIds.map((id) => fetchAllBatchesForSchool(id, instructorUsername, accessToken)),
     )
 
     for (let i = 0; i < schoolIds.length; i++) {
       const schoolId = schoolIds[i]
       const result = batchResults[i]
-      const payload = result.status === 'fulfilled' ? result.value : null
-      const allBatches = extractBatches(payload)
+      const allBatches = result.status === 'fulfilled' ? (result.value ?? []) : []
 
       const instructorBatches = batchIdSet.size > 0
         ? allBatches.filter((b) => batchIdSet.has(b.id))

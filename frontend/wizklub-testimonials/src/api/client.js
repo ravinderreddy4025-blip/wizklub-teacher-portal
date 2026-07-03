@@ -250,7 +250,7 @@ export const api = {
     return result.data
   },
 
-  async getStudents(batchId, filter = 'all') {
+  async getStudents(batchId, filter = 'all', schoolId = '') {
     if (USE_MOCK) {
       const { mockStore } = await loadMockStore()
       const studentResult = mockStore.getStudents(batchId, filter)
@@ -259,7 +259,9 @@ export const api = {
       return studentResult
     }
 
-    const result = await request(`/api/teacher/batches/${batchId}/students?filter=${filter}`)
+    const params = new URLSearchParams({ filter })
+    if (schoolId) params.set('school_id', schoolId)
+    const result = await request(`/api/teacher/batches/${batchId}/students?${params}`)
     if (result.status === 403) return { forbidden: true }
     if (!result.ok) return null
     return result.data

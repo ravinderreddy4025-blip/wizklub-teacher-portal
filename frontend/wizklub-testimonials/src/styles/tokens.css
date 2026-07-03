@@ -50,7 +50,7 @@
   --tag-success-light: rgba(21, 128, 61, 0.12);
   --tag-warning-light: rgba(217, 119, 6, 0.12);
   --tag-danger-light: rgba(220, 38, 38, 0.12);
-  --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font: 'Nunito', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --focus-ring: 0 0 0 3px rgba(249, 115, 22, 0.22);
 }

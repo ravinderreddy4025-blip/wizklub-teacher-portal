@@ -56,6 +56,9 @@ function CompletionRing({ value }) {
 
 export default function StudentList({ batchId }) {
   const navigate = useNavigate()
+  const [schoolId] = useState(
+    () => new URLSearchParams(window.location.search).get('school_id') ?? '',
+  )
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [data, setData] = useState(null)
@@ -64,8 +67,8 @@ export default function StudentList({ batchId }) {
   const [groupPhotoOpen, setGroupPhotoOpen] = useState(false)
 
   const loadStudents = useCallback(() => {
-    return api.getStudents(batchId, filter).then(setData)
-  }, [batchId, filter])
+    return api.getStudents(batchId, filter, schoolId).then(setData)
+  }, [batchId, filter, schoolId])
 
   useEffect(() => {
     loadStudents()

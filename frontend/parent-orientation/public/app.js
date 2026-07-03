@@ -968,8 +968,8 @@
       hideAllShells();
       const ls = document.getElementById('login-screen');
       if (ls) {
-        ls.style.display = 'flex';
-        ls.style.pointerEvents = 'auto';
+      ls.style.display = 'flex';
+      ls.style.pointerEvents = 'auto';
       }
       const titleEl = document.getElementById('login-portal-title');
       const subEl = document.getElementById('login-portal-sub');
@@ -1029,6 +1029,7 @@
       poClearRole();
       document.getElementById('login-user').value = '';
       document.getElementById('login-pass').value = '';
+      resetLoginPasswordVisibility();
       poReplaceHash('#/');
       showLanding();
       toast('Logged out successfully', 'success');
@@ -1039,8 +1040,9 @@
       _sessionsSyncTimer = setInterval(async () => {
         const role = poGetRole();
         if (!role) return;
+        if (role === 'sales_admin' || role === 'speaker') return;
         if (document.hidden) return;
-        if (editingId) return; // avoid replacing in-memory form state mid-edit
+        if (editingId) return;
         const ok = await pullSessionsFromServer();
         if (ok) renderAll();
       }, 30000);
@@ -1059,6 +1061,8 @@
       document.body.classList.toggle('body--sales-admin', role === 'sales_admin');
       const exportBtn = document.getElementById('btn-export-excel');
       if (exportBtn) exportBtn.style.display = role === 'sales_admin' ? 'none' : '';
+      const spkRefreshBtn = document.getElementById('btn-speaker-refresh');
+      if (spkRefreshBtn) spkRefreshBtn.style.display = role === 'speaker' ? '' : 'none';
       const sub = document.querySelector('.app-sub');
       if (sub && role !== 'sales_admin') {
         sub.textContent = 'Pre-Sales Activity Management';
@@ -1108,6 +1112,7 @@
             return;
           }
           document.getElementById('login-pass').value = '';
+          resetLoginPasswordVisibility();
           showApp();
           const welcome =
             j.role === 'pmo'
@@ -1333,13 +1338,14 @@
         if (editingId) return;
         const role = poGetRole();
         if (!role) return;
+        if (role === 'sales_admin' || role === 'speaker') return;
         const ok = await pullSessionsFromServer();
         if (ok) renderAll();
       });
       const salesMonth = document.getElementById('sales-month');
-      if (salesMonth && !salesMonth.value) {
-        salesMonth.value = currentCalendarMonthKey();
-      }
+      populateSalesMonthOptions();
+      populatePmoMeetingsMonthOptions();
+      initMonthCalendarPickers();
       document.getElementById('sales-nav')?.addEventListener('click', (e) => {
         const b = e.target.closest('[data-sales-nav]');
         if (!b) return;
@@ -1348,13 +1354,15 @@
       salesMonth?.addEventListener('change', () => {
         salesTablePage = 0;
         const m = getSalesSelectedMonth();
-        setSalesHash(parseSalesRoute().section, m);
+        setSalesHash(parseSalesRoute().section, m || null);
         loadSalesFulfillment().then(() => renderSalesAdmin());
       });
       document.getElementById('btn-sales-logout')?.addEventListener('click', () => {
         document.getElementById('btn-logout')?.click();
       });
       document.getElementById('btn-sales-export-report')?.addEventListener('click', () => exportExcel());
+      document.getElementById('btn-sales-refresh')?.addEventListener('click', () => refreshSalesAdminData());
+      document.getElementById('btn-speaker-refresh')?.addEventListener('click', () => refreshSpeakerData());
       document.getElementById('sales-school-table-pager')?.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-sales-page]');
         if (!btn || btn.disabled) return;
@@ -1380,6 +1388,23 @@
           if (detail) {
             const hidden = detail.classList.toggle('is-hidden');
             schoolBtn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+            if (!hidden) {
+              const region = schoolBtn.dataset.salesRegion || '';
+              const branch = schoolBtn.dataset.salesBranch || '';
+              const month = getSalesSelectedMonth();
+              const fulfillHint = {
+                scheduled: Number(schoolBtn.dataset.salesScheduled) || 0,
+                completed: Number(schoolBtn.dataset.salesCompleted) || 0,
+              };
+              const panel = detail.querySelector('.sales-meetings-panel');
+              if (panel) {
+                panel.innerHTML = '<p class="sales-student-empty" style="margin:0">Loading booking details…</p>';
+                void (async () => {
+                  const html = await ensureSchoolMeetingDetails(region, branch, month, fulfillHint);
+                  if (panel.isConnected) panel.innerHTML = html;
+                })();
+              }
+            }
           }
           return;
         }
@@ -1402,9 +1427,44 @@
       });
     }
 
+    function setLoginEyeIcons(btn, showPassword) {
+      const open = btn.querySelector('.login-eye-open');
+      const closed = btn.querySelector('.login-eye-closed');
+      open?.classList.toggle('login-eye-hidden', showPassword);
+      closed?.classList.toggle('login-eye-hidden', !showPassword);
+    }
+
+    function resetLoginPasswordVisibility() {
+      const pass = document.getElementById('login-pass');
+      const btn = document.getElementById('login-pass-toggle');
+      if (!pass) return;
+      pass.type = 'password';
+      if (!btn) return;
+      btn.setAttribute('aria-label', 'Show password');
+      btn.setAttribute('aria-pressed', 'false');
+      setLoginEyeIcons(btn, false);
+    }
+
+    function initLoginPasswordToggle() {
+      const pass = document.getElementById('login-pass');
+      const btn = document.getElementById('login-pass-toggle');
+      if (!pass || !btn || btn.dataset.poBound === '1') return;
+      btn.dataset.poBound = '1';
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const show = pass.type === 'password';
+        pass.type = show ? 'text' : 'password';
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+        setLoginEyeIcons(btn, show);
+      });
+    }
+
     function initLogin() {
       initPoClickDelegation();
       initStaticPageControls();
+      initLoginPasswordToggle();
       document.getElementById('login-form').addEventListener('submit', function (e) {
         e.preventDefault();
         loginUser();
@@ -1648,6 +1708,182 @@
       return new Date(y, mo - 1, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
     }
 
+    const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    /** Every month in each calendar year from earliest session year through next year. */
+    function calendarMonthKeys(sessionList) {
+      const now = new Date();
+      let minYear = now.getFullYear();
+      let maxYear = now.getFullYear() + 1;
+      for (const s of sessionList || []) {
+        const mk = sessionMonthKey(s);
+        if (!mk || mk === '_nodate') continue;
+        const y = Number(mk.slice(0, 4));
+        if (!y) continue;
+        if (y < minYear) minYear = y;
+        if (y > maxYear) maxYear = y;
+      }
+      const keys = [];
+      for (let y = minYear; y <= maxYear; y++) {
+        for (let m = 1; m <= 12; m++) {
+          keys.push(`${y}-${String(m).padStart(2, '0')}`);
+        }
+      }
+      return keys.sort().reverse();
+    }
+
+    function calendarYears(sessionList) {
+      const years = new Set();
+      for (const key of calendarMonthKeys(sessionList)) {
+        years.add(Number(key.slice(0, 4)));
+      }
+      return [...years].sort((a, b) => b - a);
+    }
+
+    function sessionMonthKeySet(sessionList) {
+      const set = new Set();
+      for (const s of sessionList || []) {
+        const mk = sessionMonthKey(s);
+        if (mk && mk !== '_nodate') set.add(mk);
+      }
+      return set;
+    }
+
+    function monthPickerDisplayLabel(value) {
+      if (!value) return 'All months';
+      return formatMonthLabel(value);
+    }
+
+    function syncMonthPickerLabel(wrap) {
+      if (!wrap) return;
+      const inp = wrap.querySelector('input[type="hidden"]');
+      const lbl = wrap.querySelector('.po-month-cal__label');
+      if (lbl && inp) lbl.textContent = monthPickerDisplayLabel(inp.value || '');
+    }
+
+    function monthPickerViewYear(wrap) {
+      const inp = wrap?.querySelector('input[type="hidden"]');
+      const selected = inp?.value || '';
+      const fromData = wrap?.dataset.poViewYear;
+      if (fromData && /^\d{4}$/.test(fromData)) return Number(fromData);
+      if (selected && /^\d{4}-\d{2}$/.test(selected)) return Number(selected.slice(0, 4));
+      return new Date().getFullYear();
+    }
+
+    function renderMonthPickerPanel(wrap) {
+      const panel = wrap?.querySelector('.po-month-cal__panel');
+      const inp = wrap?.querySelector('input[type="hidden"]');
+      if (!panel || !inp) return;
+      const selected = String(inp.value || '').trim();
+      const years = calendarYears(sessions);
+      const viewYear = monthPickerViewYear(wrap);
+      wrap.dataset.poViewYear = String(viewYear);
+      const withData = sessionMonthKeySet(sessions);
+      const yearBtns = years
+        .map(
+          (y) =>
+            `<button type="button" class="po-month-cal__year${y === viewYear ? ' is-active' : ''}" data-po-view-year="${y}">${y}</button>`
+        )
+        .join('');
+      const monthBtns = MONTH_SHORT.map((short, idx) => {
+        const key = `${viewYear}-${String(idx + 1).padStart(2, '0')}`;
+        const cls = [
+          'po-month-cal__month',
+          selected === key ? 'is-selected' : '',
+          withData.has(key) ? 'has-data' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+        return `<button type="button" class="${cls}" data-po-month-value="${escapeAttr(key)}">${short}</button>`;
+      }).join('');
+      panel.innerHTML = `
+        <button type="button" class="po-month-cal__all${selected ? '' : ' is-selected'}" data-po-month-value="">All months</button>
+        <div class="po-month-cal__legend" aria-hidden="true">
+          <span><i class="is-selected"></i> Selected</span>
+          <span><i class="has-data"></i> Has sessions</span>
+          <span><i class="is-empty"></i> No sessions</span>
+        </div>
+        <div class="po-month-cal__years" role="tablist" aria-label="Years">${yearBtns}</div>
+        <div class="po-month-cal__grid" role="grid" aria-label="Months for ${viewYear}">${monthBtns}</div>`;
+    }
+
+    function closeAllMonthPickers() {
+      document.querySelectorAll('.po-month-cal__panel').forEach((p) => p.classList.add('is-hidden'));
+      document.querySelectorAll('.po-month-cal__trigger').forEach((t) => t.setAttribute('aria-expanded', 'false'));
+    }
+
+    function syncMonthPickerByInputId(inputId) {
+      const inp = document.getElementById(inputId);
+      const wrap = inp?.closest('.po-month-cal');
+      if (!wrap || !inp) return;
+      const selected = String(inp.value || '').trim();
+      if (/^\d{4}-\d{2}$/.test(selected)) wrap.dataset.poViewYear = selected.slice(0, 4);
+      syncMonthPickerLabel(wrap);
+      const panel = wrap.querySelector('.po-month-cal__panel');
+      if (panel && !panel.classList.contains('is-hidden')) renderMonthPickerPanel(wrap);
+    }
+
+    function refreshMonthCalendarPickers() {
+      document.querySelectorAll('[data-po-month-cal]').forEach((wrap) => {
+        syncMonthPickerLabel(wrap);
+        const panel = wrap.querySelector('.po-month-cal__panel');
+        if (panel && !panel.classList.contains('is-hidden')) renderMonthPickerPanel(wrap);
+      });
+    }
+
+    function initMonthCalendarPickers() {
+      if (document.body.dataset.poMonthCalBound === '1') return;
+      document.body.dataset.poMonthCalBound = '1';
+      document.querySelectorAll('[data-po-month-cal]').forEach(syncMonthPickerLabel);
+      document.addEventListener('click', (e) => {
+        const trigger = e.target.closest('.po-month-cal__trigger');
+        if (trigger) {
+          e.stopPropagation();
+          const wrap = trigger.closest('.po-month-cal');
+          const panel = wrap?.querySelector('.po-month-cal__panel');
+          const willOpen = panel?.classList.contains('is-hidden');
+          closeAllMonthPickers();
+          if (willOpen && wrap && panel) {
+            renderMonthPickerPanel(wrap);
+            panel.classList.remove('is-hidden');
+            trigger.setAttribute('aria-expanded', 'true');
+          }
+          return;
+        }
+        const monthBtn = e.target.closest('[data-po-month-value]');
+        if (monthBtn) {
+          const wrap = monthBtn.closest('.po-month-cal');
+          const inp = wrap?.querySelector('input[type="hidden"]');
+          if (!inp) return;
+          inp.value = monthBtn.getAttribute('data-po-month-value') || '';
+          syncMonthPickerLabel(wrap);
+          closeAllMonthPickers();
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+          return;
+        }
+        const yearBtn = e.target.closest('[data-po-view-year]');
+        if (yearBtn) {
+          const wrap = yearBtn.closest('.po-month-cal');
+          if (!wrap) return;
+          wrap.dataset.poViewYear = yearBtn.dataset.poViewYear || '';
+          renderMonthPickerPanel(wrap);
+          return;
+        }
+        if (!e.target.closest('.po-month-cal')) closeAllMonthPickers();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllMonthPickers();
+      });
+    }
+
+    function populatePmoMeetingsMonthOptions() {
+      refreshMonthCalendarPickers();
+    }
+
+    function populateSalesMonthOptions() {
+      refreshMonthCalendarPickers();
+    }
+
     function parsePmoHash() {
       const r = parseAppRoute();
       if (r.name === 'pmo') {
@@ -1718,25 +1954,12 @@
         populatePmoMeetingsMonthOptions();
         const sel = document.getElementById('f-meetings-month');
         if (sel) sel.value = month && /^\d{4}-\d{2}$/.test(month) ? month : '';
+        syncMonthPickerByInputId('f-meetings-month');
       }
     }
 
-    function populatePmoMeetingsMonthOptions() {
-      const sel = document.getElementById('f-meetings-month');
-      if (!sel) return;
-      const keep = sel.value;
-      const months = new Set();
-      for (const s of sessions) {
-        const mk = sessionMonthKey(s);
-        if (mk && mk !== '_nodate') months.add(mk);
-      }
-      const sorted = [...months].sort().reverse();
-      sel.innerHTML =
-        '<option value="">All months</option>' +
-        sorted
-          .map((m) => `<option value="${escapeAttr(m)}">${escapeHtml(formatMonthLabel(m))}</option>`)
-          .join('');
-      if (keep && (keep === '' || sorted.includes(keep))) sel.value = keep;
+    function salesMonthDisplayLabel(monthKey) {
+      return monthPickerDisplayLabel(monthKey);
     }
 
     function switchRole(r) {
@@ -2409,7 +2632,8 @@
           await pmoUploadExcelFile();
           cancelEdit();
           toast('Session updated successfully.', 'success');
-          setPmoHash('meetings');
+          const monthKey = /^\d{4}-\d{2}/.test(date) ? date.slice(0, 7) : null;
+          setPmoHash('meetings', monthKey);
           document.getElementById('pmo-section-meetings')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
           renderAll();
         })();
@@ -2442,7 +2666,8 @@
           await pullSessionsFromServer();
           await pmoUploadExcelFile();
           toast('Session planned!', 'success');
-          setPmoHash('meetings');
+          const monthKey = /^\d{4}-\d{2}/.test(date) ? date.slice(0, 7) : null;
+          setPmoHash('meetings', monthKey);
           renderAll();
         })();
       }
@@ -2581,8 +2806,8 @@
         <button type="button" class="gb active" id="act-Completed-${s.id}" data-po-pick-action="1" data-po-sid="${sid}" data-po-act="Completed">Completed</button>
         ${fromRescheduled ? '' : `<button type="button" class="gb" id="act-Rescheduled-${s.id}" data-po-pick-action="1" data-po-sid="${sid}" data-po-act="Rescheduled">Rescheduled</button>`}
         <button type="button" class="gb" id="act-Cancelled-${s.id}" data-po-pick-action="1" data-po-sid="${sid}" data-po-act="Cancelled">Cancelled</button>
-      </div>
-    </div>`;
+        </div>
+      </div>`;
     }
 
     function buildExpandContent(s) {
@@ -2961,7 +3186,7 @@
         { w: (r.cancelled / total) * 100, cls: 'month-card__stack-seg--canc', title: `Cancelled ${r.cancelled}` },
       ].filter((s) => s.w > 0);
       return `<div class="month-card__stack" title="${escapeAttr(segs.map((s) => s.title).join(', '))}">${segs
-        .map(
+            .map(
           (s) =>
             `<span class="month-card__stack-seg ${s.cls}" style="width:${s.w}%"></span>`
         )
@@ -3089,7 +3314,7 @@
             ${pmoTimelineSegHtml(planW, 'plan', 'Planned', r.planned)}
             ${pmoTimelineSegHtml(reschW, 'resch', 'Rescheduled', r.rescheduled)}
             ${pmoTimelineSegHtml(cancW, 'canc', 'Cancelled', r.cancelled)}
-          </div>
+        </div>
         </div>
         <span class="num">${r.scheduled}</span>
       </div>`;
@@ -3256,7 +3481,7 @@
           const n = branchesForRegion(name).length;
           return `<button type="button" class="pmo-map-chip${active ? ' is-active' : ''}${hover ? ' is-hover' : ''}" data-pmo-map-region="${escapeAttr(name)}">${escapeHtml(name)} <span class="pmo-map-chip__n">${n}</span></button>`;
         })
-        .join('');
+            .join('');
       return `<div class="sales-chart-card sales-chart-card--wide pmo-region-map-card">
         <h3 class="sales-chart-title">Regions &amp; school branches</h3>
         <div class="pmo-region-map__body">
@@ -3695,6 +3920,24 @@
     </div>`;
     }
 
+    function pmoMeetingsEmptyHtml(list) {
+      if (list.length) return '';
+      if (!sessions.length) {
+        return '<div class="empty">No sessions yet. Use <strong>New session</strong> to add a plan.</div>';
+      }
+      const monthF = String(document.getElementById('f-meetings-month')?.value || '').trim();
+      const sf = document.getElementById('f-status')?.value || '';
+      const q = (document.getElementById('f-search')?.value || '').trim();
+      const parts = [];
+      if (monthF) parts.push(`<strong>${escapeHtml(formatMonthLabel(monthF))}</strong>`);
+      if (sf) parts.push(`status <strong>${escapeHtml(sf)}</strong>`);
+      if (q) parts.push(`search “${escapeHtml(q)}”`);
+      const hint = parts.length
+        ? `No sessions match ${parts.join(', ')}. Try <strong>All months</strong> or change the filters.`
+        : 'No sessions match the current filters. Try <strong>All months</strong>.';
+      return `<div class="empty">${hint}</div>`;
+    }
+
     function renderPMO() {
       applyPmoRoute();
       renderAnalyticsUI();
@@ -3703,13 +3946,14 @@
       if (section === 'meetings') {
         const sel = document.getElementById('f-meetings-month');
         if (sel) sel.value = month && /^\d{4}-\d{2}$/.test(month) ? month : '';
+        syncMonthPickerByInputId('f-meetings-month');
       }
       const list = getPmoMeetingsFilteredList();
       renderMetrics();
       document.getElementById('count-lbl').textContent = `${list.length} session${list.length !== 1 ? 's' : ''}`;
       document.getElementById('pmo-list').innerHTML = list.length
         ? list.map(s => sessionRowHTML(s, false)).join('')
-        : '<div class="empty">No sessions yet. Use <strong>New session</strong> to add a plan.</div>';
+        : pmoMeetingsEmptyHtml(list);
     }
 
     function getSpeakerRouteMonth() {
@@ -3908,6 +4152,30 @@
       renderSpeakerSessionList(filtered);
     }
 
+    async function refreshSpeakerData() {
+      if (poGetRole() !== 'speaker') return;
+      const btn = document.getElementById('btn-speaker-refresh');
+      if (btn?.disabled) return;
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+      }
+      try {
+        const ok = await pullSessionsFromServer();
+        if (!ok) {
+          toast('Could not refresh sessions. Check your connection.', 'warning');
+          return;
+        }
+        renderSpeaker();
+        toast('Sessions refreshed.', 'success', { autoClose: 2500 });
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+        }
+      }
+    }
+
     function currentCalendarMonthKey() {
       const d = new Date();
       const y = d.getFullYear();
@@ -3945,14 +4213,15 @@
       const v = el ? String(el.value || '').trim() : '';
       if (/^\d{4}-\d{2}$/.test(v)) return v;
       const { month } = parseSalesRoute();
-      if (month) return month;
-      return currentCalendarMonthKey();
+      if (month && /^\d{4}-\d{2}$/.test(month)) return month;
+      return '';
     }
 
     function applySalesRoute() {
       const { section, month } = parseSalesRoute();
       const el = document.getElementById('sales-month');
-      if (el) el.value = month || el.value || currentCalendarMonthKey();
+      if (el) el.value = month && /^\d{4}-\d{2}$/.test(month) ? month : '';
+      syncMonthPickerByInputId('sales-month');
       document.querySelectorAll('.sales-nav-btn').forEach((btn) => {
         btn.classList.toggle('is-active', btn.dataset.salesNav === section);
       });
@@ -4113,7 +4382,7 @@
             ${target > 0 ? ` · <strong>${pct}%</strong> of combined targets` : ''}
           </p>
         </div>`;
-    }
+      }
 
     function renderPmoTargetsKpis(summary, schools) {
       const el = document.getElementById('pmo-targets-kpis');
@@ -4395,8 +4664,86 @@
       renderPmoTargetsByRegion(payload);
     }
 
+    function countSessionsBySchoolForMonth(sessionList, month) {
+      const map = Object.create(null);
+      for (const s of sessionList) {
+        if (month && sessionMonthKey(s) !== month) continue;
+        const region = String(s.region || '').trim();
+        const branch = String(s.branch || '').trim();
+        if (!region || !branch) continue;
+        const key = `${region}\u0001${branch}`;
+        if (!map[key]) map[key] = { region, branch, scheduled: 0, completed: 0 };
+        const status = String(s.status || '').trim();
+        if (status === 'Completed') map[key].completed += 1;
+        else if (status === 'Planned' || status === 'Rescheduled') map[key].scheduled += 1;
+      }
+      return map;
+    }
+
+    function buildClientFulfillmentPayload(month, sessionList, targetRows) {
+      const actualMap = countSessionsBySchoolForMonth(sessionList, month || null);
+      const targetMap = Object.create(null);
+      for (const t of targetRows || []) {
+        const key = `${t.region}\u0001${t.branch}`;
+        targetMap[key] = t;
+      }
+      const keys = new Set([...Object.keys(actualMap), ...Object.keys(targetMap)]);
+      const schools = [];
+      for (const key of keys) {
+        const actual = actualMap[key] || {
+          region: targetMap[key]?.region || key.split('\u0001')[0] || '',
+          branch: targetMap[key]?.branch || key.split('\u0001')[1] || '',
+          scheduled: 0,
+          completed: 0,
+        };
+        const tgt = targetMap[key] || { target_completed: 0 };
+        schools.push({
+          region: actual.region || '',
+          branch: actual.branch || '',
+          target_completed: tgt.target_completed || 0,
+          actual_scheduled: actual.scheduled || 0,
+          actual_completed: actual.completed || 0,
+        });
+      }
+      schools.sort(
+        (a, b) =>
+          a.region.localeCompare(b.region, undefined, { sensitivity: 'base' }) ||
+          a.branch.localeCompare(b.branch, undefined, { sensitivity: 'base' })
+      );
+      const summary = schools.reduce(
+        (acc, row) => {
+          acc.target_completed += row.target_completed;
+          acc.actual_scheduled += row.actual_scheduled;
+          acc.actual_completed += row.actual_completed;
+          if (row.target_completed > 0 && row.actual_completed >= row.target_completed) {
+            acc.schools_met += 1;
+          }
+          if (row.target_completed > 0) acc.schools_with_targets += 1;
+          return acc;
+        },
+        {
+          target_completed: 0,
+          actual_scheduled: 0,
+          actual_completed: 0,
+          schools_met: 0,
+          schools_with_targets: 0,
+        }
+      );
+      summary.completion_pct =
+        summary.target_completed > 0
+          ? Math.min(100, Math.round((summary.actual_completed / summary.target_completed) * 100))
+          : null;
+      summary.target_met =
+        summary.target_completed > 0 && summary.actual_completed >= summary.target_completed;
+      return { month: month || '', summary, schools };
+    }
+
     async function loadSalesFulfillment() {
       const month = getSalesSelectedMonth();
+      if (!month) {
+        salesFulfillmentCache = buildClientFulfillmentPayload('', sessions, []);
+        return true;
+      }
       try {
         const r = await poApiFetch(`api/sales/fulfillment?month=${encodeURIComponent(month)}`);
         if (!r.ok) {
@@ -4452,6 +4799,10 @@
       const btn = document.getElementById('btn-sales-save-targets');
       if (btn?.disabled) return;
       const month = getSalesSelectedMonth();
+      if (!month) {
+        toast('Select a month to edit targets.', 'warning');
+        return;
+      }
       const targets = [];
       document.querySelectorAll('[data-sales-school-target]').forEach((inp) => {
         const region = inp.dataset.region || '';
@@ -4492,7 +4843,7 @@
     }
 
     function schoolLastUpdatedLabel(region, branch, month) {
-      const list = completedSessionsForSchool(region, branch, month);
+      const list = schoolSessionsForSalesPanel(region, branch, month);
       if (!list.length) return '—';
       const latest = list.reduce((a, b) => (sessionSortTimestamp(a) > sessionSortTimestamp(b) ? a : b));
       const ts = sessionSortTimestamp(latest);
@@ -4588,8 +4939,8 @@
         <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#f97316" stroke-width="${stroke}" stroke-linecap="butt"
           stroke-dasharray="${completedLen} ${pendingLen}" transform="rotate(-90 ${cx} ${cy})"/>
         <circle cx="${cx}" cy="${cy}" r="52" fill="#fff" filter="url(#salesDonutInnerShadow)"/>
-        <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="36" font-weight="800" fill="#f97316">${p}%</text>
-        <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="500" fill="#9a3412" letter-spacing="0.6">Completed</text>
+        <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="'Nunito', 'Segoe UI', sans-serif" font-size="36" font-weight="800" fill="#f97316">${p}%</text>
+        <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-family="'Nunito', 'Segoe UI', sans-serif" font-size="12" font-weight="500" fill="#9a3412" letter-spacing="0.6">Completed</text>
         <defs>
           <filter id="salesDonutInnerShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.06"/>
@@ -4739,15 +5090,34 @@
       return '';
     }
 
-    function completedSessionsForSchool(region, branch, month) {
+    function schoolSessionsForSalesPanel(region, branch, month) {
       const r = String(region || '').trim();
       const b = String(branch || '').trim();
       return sessions.filter((s) => {
-        if (sessionMonthKey(s) !== month) return false;
+        if (month && sessionMonthKey(s) !== month) return false;
         if (String(s.region || '').trim() !== r) return false;
         if (String(s.branch || '').trim() !== b) return false;
-        return s.status === 'Completed';
+        const st = String(s.status || '').trim();
+        return st === 'Completed' || st === 'Planned' || st === 'Rescheduled';
       });
+    }
+
+    function captureSalesOpenMeetingDetails() {
+      const open = new Set();
+      document.querySelectorAll('.sales-meetings-detail:not(.is-hidden)').forEach((tr) => {
+        if (tr.id) open.add(tr.id);
+      });
+      return open;
+    }
+
+    function restoreSalesOpenMeetingDetails(open) {
+      if (!open || !open.size) return;
+      for (const id of open) {
+        const detail = document.getElementById(id);
+        const btn = document.querySelector(`[aria-controls="${id}"]`);
+        if (detail) detail.classList.remove('is-hidden');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+      }
     }
 
     function renderSalesStudentIdsHtml(s) {
@@ -4759,23 +5129,53 @@
       return `<div class="sales-student-ids">${chips}</div>`;
     }
 
-    function renderSalesMeetingsPanel(region, branch, month) {
-      const list = completedSessionsForSchool(region, branch, month);
-      if (!list.length) {
-        return '<p class="sales-student-empty" style="margin:0">No completed meetings this month.</p>';
-      }
-      const sorted = [...list].sort((a, b) => sessionSortTimestamp(b) - sessionSortTimestamp(a));
-      return sorted
-        .map((s) => {
-          const attended = parseInt(s.attended, 10) || 0;
-          const idCount = Array.isArray(s.student_ids) ? s.student_ids.length : 0;
-          return `<article class="sales-meeting-card">
-            <div class="sales-meeting-card__head">${escapeHtml(fmtSessionScheduleSummary(s))}</div>
-            <div class="sales-meeting-card__meta">Parents attended (recorded): <strong>${attended}</strong> · Student IDs from join: <strong>${idCount}</strong></div>
+    function salesMeetingCardHtml(s, opts) {
+      const pending = Boolean(opts && opts.pending);
+      const idCount = Array.isArray(s.student_ids) ? s.student_ids.length : 0;
+      const statusLbl = pending
+        ? `<span class="sales-meeting-card__status sales-meeting-card__status--pending">${escapeHtml(s.status)}</span>`
+        : '';
+      const meta = pending
+        ? `Student IDs from join (live): <strong>${idCount}</strong> · Invited: <strong>${escapeHtml(String(s.invited || 0))}</strong>`
+        : `Parents attended (recorded): <strong>${parseInt(s.attended, 10) || 0}</strong> · Student IDs from join: <strong>${idCount}</strong>`;
+      return `<article class="sales-meeting-card${pending ? ' sales-meeting-card--pending' : ''}">
+            <div class="sales-meeting-card__head">${escapeHtml(fmtSessionScheduleSummary(s))} ${statusLbl}</div>
+            <div class="sales-meeting-card__meta">${meta}</div>
             ${renderSalesStudentIdsHtml(s)}
           </article>`;
-        })
-        .join('');
+    }
+
+    function renderSalesMeetingsPanel(region, branch, month, fulfillHint) {
+      const list = schoolSessionsForSalesPanel(region, branch, month);
+      if (!list.length) {
+        const sched = fulfillHint ? Number(fulfillHint.scheduled) || 0 : 0;
+        const done = fulfillHint ? Number(fulfillHint.completed) || 0 : 0;
+        if (sched > 0 || done > 0) {
+          return `<p class="sales-student-empty" style="margin:0">This school has <strong>${sched}</strong> scheduled and <strong>${done}</strong> completed meeting(s). Click <strong>↻ Refresh</strong> above to load booking details and live student IDs.</p>`;
+        }
+        return `<p class="sales-student-empty" style="margin:0">No meetings${month ? ' this month' : ''}.</p>`;
+      }
+      const sorted = [...list].sort((a, b) => sessionSortTimestamp(b) - sessionSortTimestamp(a));
+      const pending = sorted.filter((s) => s.status === 'Planned' || s.status === 'Rescheduled');
+      const completed = sorted.filter((s) => s.status === 'Completed');
+      let html = '';
+      if (pending.length) {
+        html += `<p class="sales-meetings-panel__title">Pending bookings · live student IDs</p>${pending.map((s) => salesMeetingCardHtml(s, { pending: true })).join('')}`;
+      }
+      if (completed.length) {
+        html += `<p class="sales-meetings-panel__title">Completed meetings · student IDs</p>${completed.map((s) => salesMeetingCardHtml(s, { pending: false })).join('')}`;
+      }
+      return html;
+    }
+
+    async function ensureSchoolMeetingDetails(region, branch, month, fulfillHint) {
+      let list = schoolSessionsForSalesPanel(region, branch, month);
+      const sched = fulfillHint ? Number(fulfillHint.scheduled) || 0 : 0;
+      const done = fulfillHint ? Number(fulfillHint.completed) || 0 : 0;
+      if (!list.length && (sched > 0 || done > 0)) {
+        await pullSessionsFromServer();
+      }
+      return renderSalesMeetingsPanel(region, branch, month, fulfillHint);
     }
 
     function salesDonutSvg(pctComplete, segments) {
@@ -5035,6 +5435,14 @@
       const root = document.getElementById('sales-regions-root');
       if (!root) return;
       const month = getSalesSelectedMonth();
+      const monthLocked = !month;
+      if (monthLocked) {
+        root.innerHTML =
+          '<div class="empty">Select a month from the filter above to set school targets.</div>';
+        salesTargetsSavedSnapshot = {};
+        syncSalesSaveTargetsButton();
+        return;
+      }
       const payload = salesFulfillmentCache;
       const fulfillMap = fulfillmentMapFromPayload(payload);
       let regions = Object.keys(regionBranches).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
@@ -5071,9 +5479,10 @@
               tier === 'below' ? ' sales-row--below' : tier === 'met' ? ' sales-row--met' : '';
             const badge = salesStatusBadgeHtml(tier);
             const detailId = `sales-meetings-${detailSeq++}`;
-            const canExpand = ac > 0;
+            const schoolSessions = schoolSessionsForSalesPanel(region, branch, month);
+            const canExpand = as > 0 || ac > 0 || schoolSessions.length > 0;
             const schoolCell = canExpand
-              ? `<button type="button" class="sales-school-toggle" aria-expanded="false" aria-controls="${detailId}">
+              ? `<button type="button" class="sales-school-toggle" aria-expanded="false" aria-controls="${detailId}" data-sales-region="${safeRegion}" data-sales-branch="${safeBranch}" data-sales-scheduled="${as}" data-sales-completed="${ac}">
                   <span class="sales-school-toggle__chev" aria-hidden="true">▶</span>
                   <span>${escapeHtml(branch)}</span>
                 </button> ${badge}`
@@ -5090,8 +5499,7 @@
             <tr id="${detailId}" class="sales-meetings-detail is-hidden">
               <td colspan="5">
                 <div class="sales-meetings-panel">
-                  <p class="sales-meetings-panel__title">Completed meetings · student IDs</p>
-                  ${renderSalesMeetingsPanel(region, branch, month)}
+                  ${renderSalesMeetingsPanel(region, branch, month, { scheduled: as, completed: ac })}
                 </div>
               </td>
             </tr>`;
@@ -5122,31 +5530,65 @@
           </div>
         </section>`;
       }
+      const openMeetingDetails = captureSalesOpenMeetingDetails();
       root.innerHTML = regionsRendered
         ? html
         : '<div class="empty">No schools match the current filters.</div>';
+      restoreSalesOpenMeetingDetails(openMeetingDetails);
       resetSalesTargetsSavedSnapshot();
     }
 
     function renderSalesAdmin() {
       if (poGetRole() !== 'sales_admin') return;
+      populateSalesMonthOptions();
       applySalesRoute();
       const { section } = parseSalesRoute();
       const month = getSalesSelectedMonth();
       const sub = document.querySelector('.app-sub');
-      if (sub) sub.textContent = `Sales Admin · ${salesSectionLabel(section)} · ${formatMonthLabel(month)}`;
+      if (sub) sub.textContent = `Sales Admin · ${salesSectionLabel(section)} · ${salesMonthDisplayLabel(month)}`;
       const monthInp = document.getElementById('sales-month');
       if (monthInp && monthInp.value !== month) monthInp.value = month;
+      syncMonthPickerByInputId('sales-month');
       if (section === 'targets') renderSalesTargets();
       else renderSalesOverview();
     }
 
     async function ensureSalesAdminData() {
       if (poGetRole() !== 'sales_admin') return;
+      populateSalesMonthOptions();
       applySalesRoute();
+      const pulled = await pullSessionsFromServer();
+      if (!pulled) {
+        toast('Could not load sessions. Click ↻ Refresh or sign in again.', 'warning');
+      }
       const ok = await loadSalesFulfillment();
       if (!ok) toast('Could not load fulfillment data. Check database connection.', 'warning');
       renderSalesAdmin();
+    }
+
+    async function refreshSalesAdminData() {
+      if (poGetRole() !== 'sales_admin') return;
+      const btn = document.getElementById('btn-sales-refresh');
+      if (btn?.disabled) return;
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+      }
+      try {
+        const ok = await pullSessionsFromServer();
+        if (!ok) {
+          toast('Could not refresh sessions. Check your connection.', 'warning');
+          return;
+        }
+        await loadSalesFulfillment();
+        renderSalesAdmin();
+        toast('Sessions and student IDs refreshed.', 'success', { autoClose: 2500 });
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+        }
+      }
     }
 
     function renderAll() {

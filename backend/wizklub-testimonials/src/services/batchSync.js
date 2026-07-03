@@ -1,32 +1,71 @@
 import { WIZKLUB_URLS } from '../utils/wizklubAuth.js'
 
-export async function fetchBatchesForSchool(schoolId, instructorUsername, accessToken) {
+const BATCH_PAGE_SIZE = '50'
+const MAX_BATCH_PAGES = 50
+
+async function fetchBatchesPage(schoolId, instructorUsername, accessToken, cursor = null) {
   const params = new URLSearchParams({
     school_id: schoolId,
     instructor_username: instructorUsername,
-    page_size: '50',
+    page_size: BATCH_PAGE_SIZE,
   })
+  if (cursor) {
+    params.set('cursor', cursor)
+  }
 
   const url = `${WIZKLUB_URLS.batches}?${params}`
 
+  const headers = { accept: 'application/json' }
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+
+  const response = await fetch(url, { headers })
+
+  if (!response.ok) {
+    console.error(`[BatchSync] ${schoolId} → status ${response.status}`)
+    return null
+  }
+
+  return response.json()
+}
+
+/** Single-page fetch (legacy shape: raw API JSON). */
+export async function fetchBatchesForSchool(schoolId, instructorUsername, accessToken) {
   try {
-    const headers = { accept: 'application/json' }
-    if (accessToken) {
-      headers.Authorization = `Bearer ${accessToken}`
-    }
-
-    const response = await fetch(url, { headers })
-
-    if (!response.ok) {
-      console.error(`[BatchSync] ${schoolId} → status ${response.status}`)
-      return null
-    }
-
-    return await response.json()
+    return await fetchBatchesPage(schoolId, instructorUsername, accessToken)
   } catch (err) {
     console.error(`[BatchSync] ${schoolId} → fetch error:`, err.message)
     return null
   }
+}
+
+/** Fetch every page using data.page_info.next_cursor until has_next_page is false. */
+export async function fetchAllBatchesForSchool(schoolId, instructorUsername, accessToken) {
+  const merged = []
+  let cursor = null
+  let pages = 0
+
+  try {
+    do {
+      const payload = await fetchBatchesPage(schoolId, instructorUsername, accessToken, cursor)
+      if (!payload) break
+
+      merged.push(...extractBatches(payload))
+
+      const pageInfo = payload?.data?.page_info
+      if (pageInfo?.has_next_page && pageInfo?.next_cursor) {
+        cursor = pageInfo.next_cursor
+      } else {
+        cursor = null
+      }
+      pages += 1
+    } while (cursor && pages < MAX_BATCH_PAGES)
+  } catch (err) {
+    console.error(`[BatchSync] ${schoolId} → paginated fetch error:`, err.message)
+  }
+
+  return merged
 }
 
 export function extractBatches(payload) {
