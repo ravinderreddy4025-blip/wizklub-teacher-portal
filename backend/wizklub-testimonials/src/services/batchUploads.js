@@ -3,6 +3,7 @@ import { ALLOWED_MIME_TYPES, BATCH_GROUP_PHOTO_SEGMENT, MAX_PHOTO_BYTES, MAX_VID
 import { uploadToGCS, deleteFromGCS } from './storage.js'
 import { teacherOwnsBatch, mapBatchUploadRow } from './access.js'
 import { BatchUpload } from '../db/models.js'
+import { isDatabaseReady } from '../db/state.js'
 
 export function validateGroupMediaFile(file) {
   if (!file) return { ok: false, error: 'No file selected.' }
@@ -22,13 +23,17 @@ export function validateGroupMediaFile(file) {
   return { ok: true, mediaType: isVideo ? 'video' : 'photo' }
 }
 
-export async function addBatchGroupMedia({ batchId, teacherId, file, batchIds }) {
+export async function addBatchGroupMedia({ batchId, teacherId, file, batchIds, schoolIds }) {
   const validation = validateGroupMediaFile(file)
   if (!validation.ok) {
     return { ok: false, status: 415, error: validation.error }
   }
 
-  if (!(await teacherOwnsBatch(teacherId, batchId, batchIds))) {
+  if (!isDatabaseReady()) {
+    return { ok: false, status: 503, error: 'Database unavailable. Uploads cannot be saved right now.' }
+  }
+
+  if (!(await teacherOwnsBatch(teacherId, batchId, { batchIds, schoolIds }))) {
     return { ok: false, status: 403, error: 'You do not have access to this batch.' }
   }
 
@@ -63,6 +68,7 @@ export async function addBatchGroupMedia({ batchId, teacherId, file, batchIds })
 }
 
 export async function listBatchGroupMedia(batchId) {
+  if (!isDatabaseReady()) return []
   const rows = await BatchUpload.find({ batch_id: batchId })
     .sort({ created_at: -1 })
     .lean()
@@ -70,6 +76,9 @@ export async function listBatchGroupMedia(batchId) {
 }
 
 export async function deleteBatchGroupMedia(uploadId, teacherId) {
+  if (!isDatabaseReady()) {
+    return { ok: false, status: 503, error: 'Database unavailable.' }
+  }
   const row = await BatchUpload.findById(uploadId).lean()
   if (!row) return { ok: false, status: 404, error: 'Upload not found.' }
   if (row.teacher_id !== teacherId) {

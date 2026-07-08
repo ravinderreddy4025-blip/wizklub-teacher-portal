@@ -17,6 +17,7 @@ function AppRoutes() {
   if (path === '/login') return <Login />
 
   const batchRoute = matchPath(path, '/schools/:schoolId/batches')
+  const schoolStudentsRoute = matchPath(path, '/schools/:schoolId/batches/:batchId/students')
   const studentsRoute = matchPath(path, '/batches/:batchId/students')
   const studentRoute = matchPath(path, '/students/:studentId')
 
@@ -27,6 +28,7 @@ function AppRoutes() {
     path === '/profile' ||
     path === '/' ||
     batchRoute ||
+    schoolStudentsRoute ||
     studentsRoute ||
     studentRoute
 
@@ -36,7 +38,15 @@ function AppRoutes() {
       {(path === '/dashboard' || path === '/home' || path === '/') && <Dashboard />}
       {path === '/schools' && <SchoolsList />}
       {batchRoute && <BatchSelection schoolId={batchRoute.schoolId} />}
-      {studentsRoute && <StudentList batchId={studentsRoute.batchId} />}
+      {schoolStudentsRoute && (
+        <StudentList
+          batchId={schoolStudentsRoute.batchId}
+          schoolId={schoolStudentsRoute.schoolId}
+        />
+      )}
+      {!schoolStudentsRoute && studentsRoute && (
+        <StudentList batchId={studentsRoute.batchId} />
+      )}
       {studentRoute && <StudentProfile studentId={studentRoute.studentId} />}
       {path === '/profile' && <Profile />}
     </RequireAuth>

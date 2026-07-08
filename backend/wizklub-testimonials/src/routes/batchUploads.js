@@ -24,6 +24,7 @@ export function createBatchUploadsRouter() {
           teacherId: req.teacher._id,
           file: req.file,
           batchIds: req.batchIds,
+          schoolIds: req.schoolIds,
         })
 
         if (!result.ok) {
@@ -40,8 +41,13 @@ export function createBatchUploadsRouter() {
 
   router.get('/batches/:batchId/group-photos', async (req, res) => {
     const { batchId } = req.params
-    const uploads = await listBatchGroupMedia(batchId)
-    res.json({ ok: true, uploads })
+    try {
+      const uploads = await listBatchGroupMedia(batchId)
+      res.json({ ok: true, uploads })
+    } catch (err) {
+      console.error('Batch group media list failed:', err)
+      res.json({ ok: true, uploads: [] })
+    }
   })
 
   router.delete('/batch-uploads/:uploadId', async (req, res) => {

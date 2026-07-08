@@ -1,6 +1,12 @@
 import { Teacher, School, TeacherSchoolAssignment, Batch, Student, Upload, BatchUpload } from '../db/models.js'
 import { isDatabaseReady } from '../db/state.js'
 
+async function resolveEffectiveSchoolIds(teacherId, sessionSchoolIds = []) {
+  const assigned = await getAssignedSchoolIds(teacherId)
+  if (assigned.length > 0) return assigned
+  return sessionSchoolIds ?? []
+}
+
 export async function getAssignedSchoolIds(teacherId) {
   if (!isDatabaseReady()) return []
   const rows = await TeacherSchoolAssignment.find({ teacher_id: teacherId }).lean()
@@ -22,15 +28,27 @@ export async function getSchoolById(schoolId) {
   return School.findById(schoolId).lean()
 }
 
-export async function teacherOwnsStudent(teacherId, studentId, batchIds) {
+export async function teacherOwnsStudent(teacherId, studentId, session = {}) {
+  const { batchIds = [], schoolIds: sessionSchoolIds = [] } = session
+  const effectiveSchoolIds = await resolveEffectiveSchoolIds(teacherId, sessionSchoolIds)
+
   const student = await getStudentById(studentId)
-  if (student) {
+  if (student?.batch_id) {
     const batch = await getBatchById(student.batch_id)
-    if (!batch) return false
-    const schoolIds = await getAssignedSchoolIds(teacherId)
-    return schoolIds.includes(batch.school_id)
+    if (batch?.school_id && effectiveSchoolIds.includes(batch.school_id)) {
+      return true
+    }
+    if (batchIds.includes(student.batch_id)) {
+      return true
+    }
   }
-  if (batchIds && batchIds.length > 0) return true
+
+  // Students from the live Wizklub API are often not in Mongo; allow uploads when
+  // the instructor session has assigned schools/batches (same scope as student listing).
+  if (effectiveSchoolIds.length > 0 || batchIds.length > 0) {
+    return true
+  }
+
   return false
 }
 
@@ -85,13 +103,23 @@ export async function getUploadById(uploadId) {
   return mapUploadRow(row)
 }
 
-export async function teacherOwnsBatch(teacherId, batchId, batchIds) {
+export async function teacherOwnsBatch(teacherId, batchId, session = {}) {
+  const { batchIds = [], schoolIds: sessionSchoolIds = [] } = session
+  const effectiveSchoolIds = await resolveEffectiveSchoolIds(teacherId, sessionSchoolIds)
+
   const batch = await getBatchById(batchId)
-  if (batch) {
-    const schoolIds = await getAssignedSchoolIds(teacherId)
-    return schoolIds.includes(batch.school_id)
+  if (batch?.school_id && effectiveSchoolIds.includes(batch.school_id)) {
+    return true
   }
-  if (batchIds && batchIds.includes(batchId)) return true
+  if (batchIds.includes(batchId)) {
+    return true
+  }
+
+  // Batches from the live Wizklub API may not be synced to Mongo yet.
+  if (effectiveSchoolIds.length > 0) {
+    return true
+  }
+
   return false
 }
 

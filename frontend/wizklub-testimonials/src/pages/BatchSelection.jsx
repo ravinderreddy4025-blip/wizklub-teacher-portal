@@ -52,7 +52,7 @@ export default function BatchSelection({ schoolId }) {
               type="button"
               className="batch-card"
               style={{ borderLeftColor: healthBorderColor[batch.health_tag] }}
-              onClick={() => navigate(`/batches/${batch.id}/students?school_id=${encodeURIComponent(schoolId)}`)}
+              onClick={() => navigate(`/schools/${schoolId}/batches/${batch.id}/students`)}
             >
               <div className="batch-card__top">
                 <div>

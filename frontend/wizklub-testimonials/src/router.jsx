@@ -25,9 +25,17 @@ function withAppBase(path) {
   return `${APP_BASE}${path}`
 }
 
+function splitPathAndSearch(route) {
+  const raw = String(route || '/')
+  const q = raw.indexOf('?')
+  if (q === -1) return { pathname: raw, search: '' }
+  return { pathname: raw.slice(0, q) || '/', search: raw.slice(q) }
+}
+
 export function matchPath(path, pattern) {
+  const pathname = String(path || '/').split('?')[0]
   const patternParts = pattern.split('/').filter(Boolean)
-  const pathParts = path.split('/').filter(Boolean)
+  const pathParts = pathname.split('/').filter(Boolean)
   if (patternParts.length !== pathParts.length) return null
 
   const params = {}
@@ -49,11 +57,14 @@ export function Router({ children }) {
   })
 
   const navigate = useCallback((next) => {
-    const resolved = withAppBase(next)
-    if (resolved !== window.location.pathname) {
+    const { pathname, search } = splitPathAndSearch(next)
+    const resolvedPath = withAppBase(pathname)
+    const resolved = `${resolvedPath}${search}`
+    const current = `${window.location.pathname}${window.location.search}`
+    if (resolved !== current) {
       window.history.pushState({}, '', resolved)
     }
-    setPath(stripAppBase(resolved))
+    setPath(stripAppBase(resolvedPath))
   }, [])
 
   const goBack = useCallback(() => {

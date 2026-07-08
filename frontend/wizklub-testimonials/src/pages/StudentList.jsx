@@ -54,20 +54,35 @@ function CompletionRing({ value }) {
   )
 }
 
-export default function StudentList({ batchId }) {
+export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
   const navigate = useNavigate()
-  const [schoolId] = useState(
+  const [schoolIdFromQuery] = useState(
     () => new URLSearchParams(window.location.search).get('school_id') ?? '',
   )
+  const schoolId = schoolIdProp || schoolIdFromQuery
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [data, setData] = useState(null)
+  const [loadError, setLoadError] = useState('')
   const [uploadStudent, setUploadStudent] = useState(null)
   const [fabPickerOpen, setFabPickerOpen] = useState(false)
   const [groupPhotoOpen, setGroupPhotoOpen] = useState(false)
 
   const loadStudents = useCallback(() => {
-    return api.getStudents(batchId, filter, schoolId).then(setData)
+    setLoadError('')
+    return api.getStudents(batchId, filter, schoolId).then((result) => {
+      if (!result) {
+        setLoadError('Unable to load students for this batch.')
+        setData({ batch: { id: batchId, name: batchId }, students: [] })
+        return
+      }
+      if (result.forbidden) {
+        setLoadError('You do not have access to this batch.')
+        setData({ batch: { id: batchId, name: batchId }, students: [] })
+        return
+      }
+      setData(result)
+    })
   }, [batchId, filter, schoolId])
 
   useEffect(() => {
@@ -105,9 +120,13 @@ export default function StudentList({ batchId }) {
             <span className="breadcrumb__active">{data.batch.name}</span>
           </nav>
           <h1 className="page__title">Students</h1>
-          <p className="page__subtitle" style={{ fontSize: 12, marginBottom: 4 }}>
-            Upload group photo / video or tap a student camera for individual media.
-          </p>
+          {loadError ? (
+            <p className="page__subtitle" style={{ color: '#b45309' }}>{loadError}</p>
+          ) : (
+            <p className="page__subtitle" style={{ fontSize: 12, marginBottom: 4 }}>
+              Upload group photo / video or tap a student camera for individual media.
+            </p>
+          )}
         </div>
 
         <section className="group-photo-card" aria-label={BATCH_GROUP_PHOTO_LABEL}>

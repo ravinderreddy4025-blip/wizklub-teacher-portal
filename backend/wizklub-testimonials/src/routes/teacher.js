@@ -11,7 +11,6 @@ import {
   getAllUploads,
   getBatchesForSchool,
 } from '../services/access.js'
-import { fetchAllBatchesForSchool, filterByInstructorBatchIds } from '../services/batchSync.js'
 import { syncSchoolsAndBatches } from '../services/schoolSync.js'
 import { resolveSchoolIds, resolveSchoolWithBatches } from '../services/schoolResolve.js'
 import { getSession } from '../services/sessionStore.js'
@@ -121,54 +120,29 @@ export function createTeacherRouter() {
       return res.status(403).json({ forbidden: true })
     }
 
-    const school = await getSchoolById(schoolId)
-    if (!school) return res.status(404).json({ error: 'School not found.' })
-
-    const session = getSession(req.accessToken)
-    const instructorBatchIds = session?.batchIds ?? []
-    const instructorUsername = session?.userId ?? req.teacher.user_id
-
-    const allBatches = await fetchAllBatchesForSchool(schoolId, instructorUsername, req.accessToken)
-    const instructorBatches = filterByInstructorBatchIds(allBatches, instructorBatchIds)
-
-    if (instructorBatches.length > 0) {
-      const uploads = await getAllUploads()
-      const batches = []
-
-      for (const batch of instructorBatches) {
-        const students = await fetchAllStudentsForBatch(schoolId, batch.id, req.accessToken)
-        const studentIds = students.map((s) => s.id)
-        const { completion_avg, health_tag } = getBatchCompletion(uploads, studentIds)
-
-        batches.push({
-          id: batch.id,
-          name: batch.name,
-          student_count: batch.student_count,
-          student_ids: studentIds,
-          completion_avg,
-          health_tag,
-          health_label: HEALTH_TAG_LABELS[health_tag],
-        })
-      }
-
-      return res.json({
-        school: { id: school._id, name: school.name },
-        batches,
-      })
-    }
+    const instructorUsername = req.teacher.user_id
+    const { school, batches: schoolBatches } = await resolveSchoolWithBatches(schoolId, {
+      accessToken: req.accessToken,
+      instructorUsername,
+      batchIds: req.batchIds,
+    })
 
     const uploads = await getAllUploads()
-    const dbBatches = await getBatchesForSchool(schoolId)
     const batches = []
-    for (const batch of dbBatches) {
-      const batchStudents = await getStudentsForBatch(batch._id)
-      const studentIds = batchStudents.map((student) => student._id)
+
+    const batchSources =
+      schoolBatches.length > 0 ? schoolBatches : await getBatchesForSchool(schoolId)
+
+    for (const batch of batchSources) {
+      const batchId = batch._id
+      const students = await fetchAllStudentsForBatch(schoolId, batchId, req.accessToken)
+      const studentIds = students.map((s) => s.id)
       const { completion_avg, health_tag } = getBatchCompletion(uploads, studentIds)
 
       batches.push({
-        id: batch._id,
+        id: batchId,
         name: batch.name,
-        student_count: batchStudents.length,
+        student_count: students.length > 0 ? students.length : (batch.student_count ?? 0),
         student_ids: studentIds,
         completion_avg,
         health_tag,
@@ -199,29 +173,30 @@ export function createTeacherRouter() {
     }
 
     const apiStudents = await fetchAllStudentsForBatch(schoolId, batchId, req.accessToken)
+    const uploads = await getAllUploads()
+
+    const mapStudents = (rows) =>
+      rows
+        .map((s) => {
+          const completion = getStudentCompletion(uploads, s.id)
+          return {
+            id: s.id,
+            full_name: s.full_name,
+            roll_number: s.roll_number,
+            image: s.image,
+            completion_pct: completion.completion_pct,
+            status: completion.status,
+            categories_done: completion.categories_done,
+            categories_total: completion.categories_total,
+          }
+        })
+        .filter((student) => {
+          if (filter === 'uploaded') return student.completion_pct === 100
+          if (filter === 'pending') return student.completion_pct < 100
+          return true
+        })
 
     if (apiStudents.length > 0) {
-      const uploads = await getAllUploads()
-      const students = apiStudents.map((s) => {
-        const completion = getStudentCompletion(uploads, s.id)
-        return {
-          id: s.id,
-          full_name: s.full_name,
-          roll_number: s.roll_number,
-          image: s.image,
-          completion_pct: completion.completion_pct,
-          status: completion.status,
-          categories_done: completion.categories_done,
-          categories_total: completion.categories_total,
-        }
-      })
-
-      const filtered = students.filter((student) => {
-        if (filter === 'uploaded') return student.completion_pct === 100
-        if (filter === 'pending') return student.completion_pct < 100
-        return true
-      })
-
       const batchName = batch?.name ?? apiStudents[0]?.batch_name ?? batchId
 
       return res.json({
@@ -231,15 +206,25 @@ export function createTeacherRouter() {
           school_id: schoolId,
         },
         group_photo: await getBatchGroupPhoto(batchId),
-        students: filtered,
+        students: mapStudents(apiStudents),
       })
     }
 
+    let batchName = batch?.name ?? batchId
     if (!batch) {
+      const { batches: schoolBatches } = await resolveSchoolWithBatches(schoolId, {
+        accessToken: req.accessToken,
+        instructorUsername: req.teacher.user_id,
+        batchIds: req.batchIds,
+      })
+      const matched = schoolBatches.find((b) => String(b._id) === String(batchId))
+      if (matched) batchName = matched.name
+    }
+
+    if (!batch && !batchName) {
       return res.status(404).json({ error: 'Batch not found.' })
     }
 
-    const uploads = await getAllUploads()
     const batchStudents = await getStudentsForBatch(batchId)
     const studentList = batchStudents.map((student) => {
       const completion = getStudentCompletion(uploads, student._id)
@@ -262,7 +247,11 @@ export function createTeacherRouter() {
     })
 
     res.json({
-      batch: { id: batch._id, name: batch.name, school_id: batch.school_id },
+      batch: {
+        id: batchId,
+        name: batch?.name ?? batchName,
+        school_id: batch?.school_id ?? schoolId,
+      },
       group_photo: await getBatchGroupPhoto(batchId),
       students: filtered,
     })
@@ -273,7 +262,10 @@ export function createTeacherRouter() {
 
     const localStudent = await getStudentById(studentId)
     if (localStudent) {
-      if (!(await teacherOwnsStudent(req.teacher._id, studentId))) {
+      if (!(await teacherOwnsStudent(req.teacher._id, studentId, {
+        batchIds: req.batchIds,
+        schoolIds: req.schoolIds,
+      }))) {
         return res.status(403).json({ forbidden: true })
       }
 

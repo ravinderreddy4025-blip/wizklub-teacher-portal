@@ -20,7 +20,10 @@ export function createUploadsRouter() {
     const { studentId } = req.params
     const { category } = req.body ?? {}
 
-    if (!(await teacherOwnsStudent(req.teacher._id, studentId, req.batchIds))) {
+    if (!(await teacherOwnsStudent(req.teacher._id, studentId, {
+      batchIds: req.batchIds,
+      schoolIds: req.schoolIds,
+    }))) {
       return res.status(403).json({ ok: false, error: 'You do not have access to this student.' })
     }
 
@@ -64,7 +67,10 @@ export function createUploadsRouter() {
   router.post('/students/:studentId/categories/:category/submit', async (req, res) => {
     const { studentId, category } = req.params
 
-    if (!(await teacherOwnsStudent(req.teacher._id, studentId, req.batchIds))) {
+    if (!(await teacherOwnsStudent(req.teacher._id, studentId, {
+      batchIds: req.batchIds,
+      schoolIds: req.schoolIds,
+    }))) {
       return res.status(403).json({ ok: false, error: 'You do not have access to this student.' })
     }
 
