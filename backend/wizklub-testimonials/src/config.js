@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../..', '.env') })
 
 const mongoUri = String(process.env.MONGO_URI || '').trim() || 'mongodb://localhost:27017'
 const mongoDbName =
-  String(process.env.TESTIMONIALS_MONGO_DB_NAME || process.env.MONGO_DB_NAME || '').trim() || 'wizklub'
+  String(process.env.TESTIMONIALS_MONGO_DB_NAME || process.env.MONGO_DB_NAME || '').trim() || 'wizklub_testimonials'
 
 export const config = {
   port: Number(process.env.TESTIMONIALS_PORT) || 3001,

@@ -280,6 +280,8 @@ async function initMongo() {
     if (backfilled > 0) {
       console.log(`[LSQ webhook] Backfilled lsq_webhook_due_at on ${backfilled} completed session(s).`);
     }
+    const { seedSchoolTargets } = require('./seedSchoolTargets');
+    await seedSchoolTargets();
   } catch (e) {
     console.error('Session migration/index setup:', e && e.message ? e.message : e);
   }

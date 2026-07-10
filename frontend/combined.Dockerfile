@@ -1,4 +1,4 @@
-FROM node:20-alpine AS technathon-build
+FROM node:20-bookworm-slim AS technathon-build
 
 WORKDIR /app
 COPY frontend/technathon/package*.json ./
@@ -28,6 +28,7 @@ COPY nginx-combined.conf /etc/nginx/conf.d/default.conf
 
 # Gateway landing page
 COPY frontend/gateway/index.html /usr/share/nginx/html/index.html
+COPY frontend/gateway/brand /usr/share/nginx/html/brand
 
 # PMO static app
 COPY frontend/parent-orientation/public /usr/share/nginx/html/pmo

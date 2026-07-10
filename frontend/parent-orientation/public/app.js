@@ -2324,6 +2324,7 @@
         "Sri Chaitanya-Howrah",
         "Sri Chaitanya-New Town 1",
         "Sri Chaitanya-New Town 2",
+        "Sri Chaitanya-Rishra",
         "Sri Chaitanya-Serampore",
         "Sri Chaitanya-Chinsurah",
         
@@ -4889,7 +4890,7 @@
       return payload && Array.isArray(payload.schools) ? payload.schools : [];
     }
 
-    /** Count targets set vs not set across the full school catalog (209 schools). */
+    /** Count targets set vs not set across the full school catalog (210 schools). */
     function salesCatalogTargetCounts(payload) {
       const fulfillMap = fulfillmentMapFromPayload(payload);
       let targetsSet = 0;
