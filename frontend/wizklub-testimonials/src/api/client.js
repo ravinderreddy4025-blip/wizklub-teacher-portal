@@ -11,6 +11,9 @@ const API_BASE =
 
 let authToken = null
 let refreshToken = null
+let sessionUserId = null
+let sessionSchoolIds = []
+let sessionBatchIds = []
 let isRefreshing = false
 let refreshPromise = null
 
@@ -22,36 +25,57 @@ function setRefreshToken(token) {
   refreshToken = token
 }
 
+function setSessionMeta({ userId, schoolIds, batchIds } = {}) {
+  if (userId !== undefined) sessionUserId = userId
+  if (schoolIds !== undefined) sessionSchoolIds = Array.isArray(schoolIds) ? schoolIds : []
+  if (batchIds !== undefined) sessionBatchIds = Array.isArray(batchIds) ? batchIds : []
+}
+
+function persistTokens(nextAccess, nextRefresh) {
+  const SESSION_KEY = 'teacher_session'
+  for (const store of [localStorage, sessionStorage]) {
+    const saved = store.getItem(SESSION_KEY)
+    if (!saved) continue
+    try {
+      const parsed = JSON.parse(saved)
+      parsed.token = nextAccess
+      parsed.refresh_token = nextRefresh
+      if (sessionUserId) parsed.user_id = sessionUserId
+      if (sessionSchoolIds.length) parsed.school_ids = sessionSchoolIds
+      if (sessionBatchIds.length) parsed.batch_ids = sessionBatchIds
+      store.setItem(SESSION_KEY, JSON.stringify(parsed))
+    } catch { /* ignore */ }
+  }
+}
+
 async function tryRefresh() {
-  if (!authToken || !refreshToken) return false
+  if (!refreshToken || !sessionUserId) return false
   if (isRefreshing) return refreshPromise
 
   isRefreshing = true
   refreshPromise = (async () => {
     try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (authToken) headers.Authorization = `Bearer ${authToken}`
+
       const response = await fetch(`${API_BASE}/api/teacher/refresh`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
+        body: JSON.stringify({
+          user_id: sessionUserId,
+          refresh_token: refreshToken,
+          school_ids: sessionSchoolIds,
+          batch_ids: sessionBatchIds,
+        }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok || !data.token) return false
 
       authToken = data.token
       refreshToken = data.refresh_token ?? refreshToken
-
-      const SESSION_KEY = 'teacher_session'
-      const saved = localStorage.getItem(SESSION_KEY)
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          parsed.token = authToken
-          parsed.refresh_token = refreshToken
-          localStorage.setItem(SESSION_KEY, JSON.stringify(parsed))
-        } catch { /* ignore */ }
-      }
+      if (Array.isArray(data.school_ids)) sessionSchoolIds = data.school_ids
+      if (Array.isArray(data.batch_ids)) sessionBatchIds = data.batch_ids
+      persistTokens(authToken, refreshToken)
 
       return true
     } catch {
@@ -170,11 +194,18 @@ export const api = {
 
     setAuthToken(result.data.token)
     setRefreshToken(result.data.refresh_token ?? null)
+    setSessionMeta({
+      userId: result.data.teacher?.user_id ?? result.data.teacher?.id,
+      schoolIds: result.data.school_ids ?? [],
+      batchIds: result.data.batch_ids ?? [],
+    })
     return {
       ok: true,
       teacher: result.data.teacher,
       token: result.data.token,
       refresh_token: result.data.refresh_token ?? null,
+      school_ids: result.data.school_ids ?? [],
+      batch_ids: result.data.batch_ids ?? [],
     }
   },
 
@@ -186,6 +217,7 @@ export const api = {
       await request('/api/teacher/logout', { method: 'POST' })
       setAuthToken(null)
       setRefreshToken(null)
+      setSessionMeta({ userId: null, schoolIds: [], batchIds: [] })
     }
     return { ok: true }
   },
@@ -209,6 +241,11 @@ export const api = {
     if (session?.token) {
       setAuthToken(session.token)
       setRefreshToken(session?.refresh_token ?? null)
+      setSessionMeta({
+        userId: session.user_id ?? session.id ?? null,
+        schoolIds: session.school_ids ?? [],
+        batchIds: session.batch_ids ?? [],
+      })
       return api.getMe()
     }
 
@@ -345,7 +382,7 @@ export const api = {
     const formData = new FormData()
     formData.append('file', file)
 
-    const result = await request(`/api/teacher/batches/${batchId}/group-photo`, {
+    const result = await request(`/api/teacher/batches/${batchId}/batch-uploads`, {
       method: 'POST',
       body: formData,
     })
@@ -364,7 +401,7 @@ export const api = {
   },
 
   async getBatchGroupPhotos(batchId) {
-    const result = await request(`/api/teacher/batches/${batchId}/group-photos`)
+    const result = await request(`/api/teacher/batches/${batchId}/batch-uploads`)
     if (!result.ok) return []
     return result.data.uploads ?? []
   },

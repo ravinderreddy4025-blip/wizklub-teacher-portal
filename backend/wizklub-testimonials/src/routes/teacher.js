@@ -6,7 +6,7 @@ import {
   getStudentById,
   getStudentsForBatch,
   getUploadsForStudent,
-  getBatchGroupPhoto,
+  getBatchUpload,
   teacherOwnsStudent,
   getAllUploads,
   getBatchesForSchool,
@@ -26,14 +26,14 @@ export function createTeacherRouter() {
   router.use(requireAuth)
 
   router.get('/dashboard', async (req, res) => {
-    let schoolIds = await resolveSchoolIds(req.teacher._id, req.schoolIds)
+    let schoolIds = await resolveSchoolIds(req.teacher.user_id, req.schoolIds)
 
     if (schoolIds.length === 0) {
       const session = getSession(req.accessToken)
       if (session?.schoolIds?.length) {
         try {
-          await syncSchoolsAndBatches(req.teacher._id, session.schoolIds, session.batchIds ?? [], req.accessToken, session.userId)
-          schoolIds = await resolveSchoolIds(req.teacher._id, session.schoolIds)
+          await syncSchoolsAndBatches(req.teacher.user_id, session.schoolIds, session.batchIds ?? [], req.accessToken, session.userId)
+          schoolIds = await resolveSchoolIds(req.teacher.user_id, session.schoolIds)
         } catch (err) {
           console.error('Lazy school sync failed:', err.message)
           schoolIds = session.schoolIds
@@ -90,7 +90,7 @@ export function createTeacherRouter() {
   })
 
   router.get('/schools', async (req, res) => {
-    const schoolIds = await resolveSchoolIds(req.teacher._id, req.schoolIds)
+    const schoolIds = await resolveSchoolIds(req.teacher.user_id, req.schoolIds)
     const schools = []
     for (const schoolId of schoolIds) {
       const { school, batches: schoolBatches } = await resolveSchoolWithBatches(schoolId, {
@@ -114,7 +114,7 @@ export function createTeacherRouter() {
 
   router.get('/schools/:schoolId/batches', async (req, res) => {
     const { schoolId } = req.params
-    const schoolIds = await resolveSchoolIds(req.teacher._id, req.schoolIds)
+    const schoolIds = await resolveSchoolIds(req.teacher.user_id, req.schoolIds)
 
     if (!schoolIds.includes(schoolId)) {
       return res.status(403).json({ forbidden: true })
@@ -131,7 +131,7 @@ export function createTeacherRouter() {
     const batches = []
 
     const batchSources =
-      schoolBatches.length > 0 ? schoolBatches : await getBatchesForSchool(schoolId)
+      schoolBatches.length > 0 ? schoolBatches : await getBatchesForSchool(schoolId, req.teacher.user_id)
 
     for (const batch of batchSources) {
       const batchId = batch._id
@@ -167,7 +167,7 @@ export function createTeacherRouter() {
       return res.status(400).json({ error: 'school_id is required to load students.' })
     }
 
-    const schoolIds = await resolveSchoolIds(req.teacher._id, req.schoolIds)
+    const schoolIds = await resolveSchoolIds(req.teacher.user_id, req.schoolIds)
     if (!schoolIds.includes(schoolId)) {
       return res.status(403).json({ forbidden: true })
     }
@@ -205,7 +205,7 @@ export function createTeacherRouter() {
           name: batchName,
           school_id: schoolId,
         },
-        group_photo: await getBatchGroupPhoto(batchId),
+        batch_upload: await getBatchUpload(batchId),
         students: mapStudents(apiStudents),
       })
     }
@@ -252,7 +252,7 @@ export function createTeacherRouter() {
         name: batch?.name ?? batchName,
         school_id: batch?.school_id ?? schoolId,
       },
-      group_photo: await getBatchGroupPhoto(batchId),
+      batch_upload: await getBatchUpload(batchId),
       students: filtered,
     })
   })
@@ -262,7 +262,7 @@ export function createTeacherRouter() {
 
     const localStudent = await getStudentById(studentId)
     if (localStudent) {
-      if (!(await teacherOwnsStudent(req.teacher._id, studentId, {
+      if (!(await teacherOwnsStudent(req.teacher.user_id, studentId, {
         batchIds: req.batchIds,
         schoolIds: req.schoolIds,
       }))) {

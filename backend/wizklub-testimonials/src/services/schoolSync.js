@@ -43,7 +43,7 @@ export async function syncSchoolsAndBatches(teacherId, schoolIds, batchIds, acce
   if (!isDatabaseReady()) return
 
   await TeacherSchoolAssignment.deleteMany({ teacher_id: teacherId })
-  await Batch.deleteMany({ school_id: { $in: schoolIds } })
+  await Batch.deleteMany({ school_id: { $in: schoolIds }, teacher_id: teacherId })
 
   const schoolDetailResults = await Promise.allSettled(
     schoolIds.map((id) => fetchSchoolDetails(id, accessToken)),
@@ -82,6 +82,7 @@ export async function syncSchoolsAndBatches(teacherId, schoolIds, batchIds, acce
       for (const batch of instructorBatches) {
         await Batch.findByIdAndUpdate(batch.id, {
           school_id: schoolId,
+          teacher_id: teacherId,
           name: batch.name,
           grade: batch.grade,
           student_count: batch.student_count ?? 0,

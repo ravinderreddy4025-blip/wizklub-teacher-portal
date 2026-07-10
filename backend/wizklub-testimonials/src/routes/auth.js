@@ -1,7 +1,6 @@
-import { randomUUID } from 'crypto'
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
-import { Teacher } from '../db/models.js'
+import { TeacherLogin } from '../db/models.js'
 import { syncSchoolsAndBatches } from '../services/schoolSync.js'
 import {
   deleteSession,
@@ -58,40 +57,41 @@ export function createAuthRouter() {
       user?.full_name || user?.name || user?.instructor_name || user_id
     const schoolIds = user?.school_ids ?? []
     const batchIds = user?.batch_ids ?? []
+    const lastLoginAt = new Date().toISOString()
 
     let teacher
 
     if (isDatabaseReady()) {
-      teacher = await Teacher.findOne({ user_id }).lean()
-
-      if (!teacher) {
-        const teacherId = user?.id ?? `teacher-${randomUUID()}`
-        await Teacher.create({
-          _id: teacherId,
+      const existing = await TeacherLogin.findOne({ user_id }).lean()
+      if (existing) {
+        await TeacherLogin.updateOne(
+          { user_id },
+          { full_name: inferredName, last_login_at: lastLoginAt },
+        )
+        teacher = { ...existing, full_name: inferredName, last_login_at: lastLoginAt }
+      } else {
+        teacher = await TeacherLogin.create({
+          _id: user_id,
           user_id,
-          password_hash: '',
           full_name: inferredName,
+          last_login_at: lastLoginAt,
+          password_hash: '',
         })
-        teacher = await Teacher.findOne({ user_id }).lean()
-      } else if (teacher.full_name !== inferredName) {
-        await Teacher.updateOne({ _id: teacher._id }, { full_name: inferredName })
-        teacher = { ...teacher, full_name: inferredName }
+        teacher = teacher.toObject()
       }
     } else {
-      const teacherId = user?.id ?? `teacher-${user_id}`
-      teacher = { _id: teacherId, user_id, full_name: inferredName }
+      teacher = { _id: user_id, user_id, full_name: inferredName, last_login_at: lastLoginAt }
     }
 
     if (schoolIds.length > 0) {
       try {
-        await syncSchoolsAndBatches(teacher._id, schoolIds, batchIds, accessToken, user_id)
+        await syncSchoolsAndBatches(user_id, schoolIds, batchIds, accessToken, user_id)
       } catch (err) {
         console.error('School/batch sync failed (non-blocking):', err.message)
       }
     }
 
     storeSession(accessToken, {
-      teacherId: teacher._id,
       userId: user_id,
       fullName: teacher.full_name,
       refreshToken: refreshToken ?? null,
@@ -104,19 +104,33 @@ export function createAuthRouter() {
       token: accessToken,
       access_token: accessToken,
       refresh_token: refreshToken ?? null,
-      teacher: { id: teacher._id, full_name: teacher.full_name, user_id: teacher.user_id },
+      school_ids: schoolIds,
+      batch_ids: batchIds,
+      teacher: {
+        id: user_id,
+        full_name: teacher.full_name,
+        user_id,
+        last_login_at: teacher.last_login_at,
+      },
     })
   })
 
   router.post('/refresh', async (req, res) => {
     const header = req.headers.authorization
-    if (!header?.startsWith('Bearer ')) {
-      return res.status(401).json({ ok: false, error: 'Authentication required.' })
-    }
+    const oldToken = header?.startsWith('Bearer ') ? header.slice(7) : null
+    const session = oldToken ? getSession(oldToken) : null
+    const body = req.body ?? {}
 
-    const oldToken = header.slice(7)
-    const session = getSession(oldToken)
-    if (!session?.refreshToken || !session?.userId) {
+    const userId = session?.userId ?? body.user_id ?? body.username ?? null
+    const refreshTok = session?.refreshToken ?? body.refresh_token ?? null
+    const schoolIds = session?.schoolIds?.length
+      ? session.schoolIds
+      : (Array.isArray(body.school_ids) ? body.school_ids : [])
+    const batchIds = session?.batchIds?.length
+      ? session.batchIds
+      : (Array.isArray(body.batch_ids) ? body.batch_ids : [])
+
+    if (!userId || !refreshTok) {
       return res.status(401).json({ ok: false, error: 'No refresh token available.' })
     }
 
@@ -129,8 +143,8 @@ export function createAuthRouter() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: session.userId,
-          refresh_token: session.refreshToken,
+          username: userId,
+          refresh_token: refreshTok,
         }),
       })
     } catch {
@@ -139,7 +153,7 @@ export function createAuthRouter() {
 
     const authPayload = await authResponse.json().catch(() => ({}))
     if (!authResponse.ok) {
-      deleteSession(oldToken)
+      if (oldToken) deleteSession(oldToken)
       return res.status(401).json({ ok: false, error: 'Refresh failed. Please log in again.' })
     }
 
@@ -149,15 +163,35 @@ export function createAuthRouter() {
       return res.status(502).json({ ok: false, error: 'Refresh did not return a new token.' })
     }
 
-    replaceSession(oldToken, newAccessToken, {
-      refreshToken: newRefreshToken ?? session.refreshToken,
-    })
+    let fullName = session?.fullName ?? userId
+    if (isDatabaseReady()) {
+      const teacher = await TeacherLogin.findOne({ user_id: userId }).lean()
+      if (teacher?.full_name) fullName = teacher.full_name
+    }
+
+    const nextRefresh = newRefreshToken ?? refreshTok
+    const nextSession = {
+      userId,
+      fullName,
+      refreshToken: nextRefresh,
+      schoolIds,
+      batchIds,
+    }
+
+    if (oldToken && session) {
+      replaceSession(oldToken, newAccessToken, nextSession)
+    } else {
+      if (oldToken) deleteSession(oldToken)
+      storeSession(newAccessToken, nextSession)
+    }
 
     return res.json({
       ok: true,
       token: newAccessToken,
       access_token: newAccessToken,
-      refresh_token: newRefreshToken ?? session.refreshToken,
+      refresh_token: nextRefresh,
+      school_ids: schoolIds,
+      batch_ids: batchIds,
     })
   })
 
@@ -177,9 +211,10 @@ export function createAuthRouter() {
 
   router.get('/me', requireAuth, (req, res) => {
     res.json({
-      id: req.teacher._id,
+      id: req.teacher.user_id,
       full_name: req.teacher.full_name,
       user_id: req.teacher.user_id,
+      last_login_at: req.teacher.last_login_at ?? null,
     })
   })
 

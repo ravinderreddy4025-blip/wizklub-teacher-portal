@@ -88,6 +88,8 @@ export function AuthProvider({ children }) {
         ...result.teacher,
         token: result.token ?? null,
         refresh_token: result.refresh_token ?? null,
+        school_ids: result.school_ids ?? [],
+        batch_ids: result.batch_ids ?? [],
       },
       keepSignedIn,
     )

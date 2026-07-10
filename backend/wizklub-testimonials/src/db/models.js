@@ -1,11 +1,12 @@
 import mongoose from 'mongoose'
 
-const teacherSchema = new mongoose.Schema({
+const teacherLoginSchema = new mongoose.Schema({
   _id: String,
   user_id: { type: String, required: true, unique: true },
   password_hash: { type: String, default: '' },
   full_name: { type: String, required: true },
-}, { collection: 'teachers', timestamps: false })
+  last_login_at: { type: String, default: null },
+}, { collection: 'teacher_login', timestamps: false })
 
 const schoolSchema = new mongoose.Schema({
   _id: String,
@@ -23,6 +24,7 @@ teacherSchoolAssignmentSchema.index({ teacher_id: 1, school_id: 1 }, { unique: t
 const batchSchema = new mongoose.Schema({
   _id: String,
   school_id: { type: String, required: true },
+  teacher_id: { type: String, required: true, index: true },
   name: { type: String, required: true },
   grade: { type: String, default: null },
   section: { type: String, default: null },
@@ -69,11 +71,11 @@ const batchUploadSchema = new mongoose.Schema({
   status: { type: String, enum: ['draft', 'submitted'], required: true },
   created_at: { type: String, required: true },
   submitted_at: { type: String, default: null },
-}, { collection: 'batch_uploads', timestamps: false })
+}, { collection: 'batch_group_uploads', timestamps: false })
 
 batchUploadSchema.index({ batch_id: 1, status: 1 })
 
-export const Teacher = mongoose.model('Teacher', teacherSchema)
+export const TeacherLogin = mongoose.model('TeacherLogin', teacherLoginSchema)
 export const School = mongoose.model('School', schoolSchema)
 export const TeacherSchoolAssignment = mongoose.model('TeacherSchoolAssignment', teacherSchoolAssignmentSchema)
 export const Batch = mongoose.model('Batch', batchSchema)

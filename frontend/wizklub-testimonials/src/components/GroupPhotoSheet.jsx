@@ -151,18 +151,25 @@ export default function GroupPhotoSheet({ open, batchId, batchName, onClose, onS
     setError('')
 
     let failCount = 0
+    let lastError = ''
     for (let i = 0; i < selectedFiles.length; i++) {
       setUploadedCount(i + 1)
       const result = await api.uploadBatchGroupPhoto(selectedFiles[i], batchId)
-      if (!result.ok) failCount++
+      if (!result.ok) {
+        failCount++
+        lastError = result.error || lastError
+      }
     }
 
     setUploading(false)
     setSelectedFiles([])
 
     if (failCount > 0) {
-      setError(`${failCount} file(s) failed to upload.`)
-      toast.error(`${failCount} file(s) failed to upload`)
+      const message = lastError
+        ? `${failCount} file(s) failed to upload. ${lastError}`
+        : `${failCount} file(s) failed to upload.`
+      setError(message)
+      toast.error(message)
     } else {
       toast.success(`${selectedFiles.length} file(s) uploaded successfully`)
     }

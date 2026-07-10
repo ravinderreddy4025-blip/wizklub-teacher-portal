@@ -1,4 +1,4 @@
-import { Teacher, School, TeacherSchoolAssignment, Batch, Student, Upload, BatchUpload } from '../db/models.js'
+import { School, TeacherSchoolAssignment, Batch, Student, Upload, BatchUpload } from '../db/models.js'
 import { isDatabaseReady } from '../db/state.js'
 
 async function resolveEffectiveSchoolIds(teacherId, sessionSchoolIds = []) {
@@ -57,9 +57,11 @@ export async function getStudentsForBatch(batchId) {
   return Student.find({ batch_id: batchId }).sort({ full_name: 1 }).lean()
 }
 
-export async function getBatchesForSchool(schoolId) {
+export async function getBatchesForSchool(schoolId, teacherId) {
   if (!isDatabaseReady()) return []
-  return Batch.find({ school_id: schoolId }).sort({ name: 1 }).lean()
+  const query = { school_id: schoolId }
+  if (teacherId) query.teacher_id = teacherId
+  return Batch.find(query).sort({ name: 1 }).lean()
 }
 
 export async function getAssignedStudents(teacherId) {
@@ -67,7 +69,7 @@ export async function getAssignedStudents(teacherId) {
   const schoolIds = await getAssignedSchoolIds(teacherId)
   if (schoolIds.length === 0) return []
 
-  const batches = await Batch.find({ school_id: { $in: schoolIds } }).lean()
+  const batches = await Batch.find({ school_id: { $in: schoolIds }, teacher_id: teacherId }).lean()
   const batchIds = batches.map((b) => b._id)
   return Student.find({ batch_id: { $in: batchIds } }).sort({ full_name: 1 }).lean()
 }
@@ -140,7 +142,7 @@ export function mapBatchUploadRow(row) {
   }
 }
 
-export async function getBatchGroupPhoto(batchId) {
+export async function getBatchUpload(batchId) {
   if (!isDatabaseReady()) return null
   const row = await BatchUpload.findOne({ batch_id: batchId })
     .sort({ created_at: -1 })
@@ -148,7 +150,7 @@ export async function getBatchGroupPhoto(batchId) {
   return mapBatchUploadRow(row)
 }
 
-export async function getBatchGroupPhotos(batchId) {
+export async function getBatchUploads(batchId) {
   if (!isDatabaseReady()) return []
   const rows = await BatchUpload.find({ batch_id: batchId })
     .sort({ created_at: -1 })

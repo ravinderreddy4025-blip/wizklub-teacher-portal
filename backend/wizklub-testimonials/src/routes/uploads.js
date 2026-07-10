@@ -20,7 +20,7 @@ export function createUploadsRouter() {
     const { studentId } = req.params
     const { category } = req.body ?? {}
 
-    if (!(await teacherOwnsStudent(req.teacher._id, studentId, {
+    if (!(await teacherOwnsStudent(req.teacher.user_id, studentId, {
       batchIds: req.batchIds,
       schoolIds: req.schoolIds,
     }))) {
@@ -34,7 +34,7 @@ export function createUploadsRouter() {
     try {
       const result = await createUpload({
         studentId,
-        teacherId: req.teacher._id,
+        teacherId: req.teacher.user_id,
         category,
         file: req.file,
       })
@@ -53,7 +53,7 @@ export function createUploadsRouter() {
 
   router.delete('/uploads/:uploadId', async (req, res) => {
     try {
-      const result = await deleteUpload(req.params.uploadId, req.teacher._id)
+      const result = await deleteUpload(req.params.uploadId, req.teacher.user_id)
       if (!result.ok) {
         return res.status(result.status).json({ ok: false, error: result.error })
       }
@@ -67,14 +67,14 @@ export function createUploadsRouter() {
   router.post('/students/:studentId/categories/:category/submit', async (req, res) => {
     const { studentId, category } = req.params
 
-    if (!(await teacherOwnsStudent(req.teacher._id, studentId, {
+    if (!(await teacherOwnsStudent(req.teacher.user_id, studentId, {
       batchIds: req.batchIds,
       schoolIds: req.schoolIds,
     }))) {
       return res.status(403).json({ ok: false, error: 'You do not have access to this student.' })
     }
 
-    const result = await submitCategory(studentId, category, req.teacher._id)
+    const result = await submitCategory(studentId, category, req.teacher.user_id)
     if (!result.ok) {
       return res.status(result.status).json({ ok: false, error: result.error })
     }

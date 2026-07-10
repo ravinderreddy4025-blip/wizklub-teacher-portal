@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid'
-import { ALLOWED_MIME_TYPES, BATCH_GROUP_PHOTO_SEGMENT, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, UPLOAD_STATUS } from '../utils/constants.js'
+import { ALLOWED_MIME_TYPES, BATCH_UPLOADS_SEGMENT, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, UPLOAD_STATUS } from '../utils/constants.js'
 import { uploadToGCS, deleteFromGCS } from './storage.js'
 import { teacherOwnsBatch, mapBatchUploadRow } from './access.js'
 import { BatchUpload } from '../db/models.js'
 import { isDatabaseReady } from '../db/state.js'
 
-export function validateGroupMediaFile(file) {
+export function validateBatchUploadFile(file) {
   if (!file) return { ok: false, error: 'No file selected.' }
 
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
@@ -23,8 +23,8 @@ export function validateGroupMediaFile(file) {
   return { ok: true, mediaType: isVideo ? 'video' : 'photo' }
 }
 
-export async function addBatchGroupMedia({ batchId, teacherId, file, batchIds, schoolIds }) {
-  const validation = validateGroupMediaFile(file)
+export async function addBatchUpload({ batchId, teacherId, file, batchIds, schoolIds }) {
+  const validation = validateBatchUploadFile(file)
   if (!validation.ok) {
     return { ok: false, status: 415, error: validation.error }
   }
@@ -40,7 +40,7 @@ export async function addBatchGroupMedia({ batchId, teacherId, file, batchIds, s
   const uploadId = uuidv4()
 
   const gcsResult = await uploadToGCS(file.buffer, {
-    folderParts: [batchId, BATCH_GROUP_PHOTO_SEGMENT],
+    folderParts: [batchId, BATCH_UPLOADS_SEGMENT],
     uploadId,
     mediaType: validation.mediaType,
     mimetype: file.mimetype,
@@ -67,7 +67,7 @@ export async function addBatchGroupMedia({ batchId, teacherId, file, batchIds, s
   return { ok: true, status: 201, upload: mapBatchUploadRow(upload) }
 }
 
-export async function listBatchGroupMedia(batchId) {
+export async function listBatchUploads(batchId) {
   if (!isDatabaseReady()) return []
   const rows = await BatchUpload.find({ batch_id: batchId })
     .sort({ created_at: -1 })
@@ -75,7 +75,7 @@ export async function listBatchGroupMedia(batchId) {
   return rows.map(mapBatchUploadRow)
 }
 
-export async function deleteBatchGroupMedia(uploadId, teacherId) {
+export async function deleteBatchUpload(uploadId, teacherId) {
   if (!isDatabaseReady()) {
     return { ok: false, status: 503, error: 'Database unavailable.' }
   }

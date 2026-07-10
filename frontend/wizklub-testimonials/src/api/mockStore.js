@@ -3,7 +3,7 @@ import { assetUrl } from '../lib/assets.js'
 
 const teachers = [
   {
-    id: 'teacher-1',
+    id: 'demo.teacher',
     user_id: 'demo.teacher',
     password: 'demo',
     full_name: 'Demo Teacher',
@@ -16,14 +16,14 @@ const schools = [
 ]
 
 const teacherSchoolAssignments = [
-  { teacher_id: 'teacher-1', school_id: 'school-1' },
-  { teacher_id: 'teacher-1', school_id: 'school-2' },
+  { teacher_id: 'demo.teacher', school_id: 'school-1' },
+  { teacher_id: 'demo.teacher', school_id: 'school-2' },
 ]
 
 const batches = [
-  { id: 'batch-1', school_id: 'school-1', name: 'Grade 5 · Batch A', grade: '5', section: 'A' },
-  { id: 'batch-2', school_id: 'school-1', name: 'Grade 6 · Batch B', grade: '6', section: 'B' },
-  { id: 'batch-3', school_id: 'school-2', name: 'Grade 7 · Batch A', grade: '7', section: 'A' },
+  { id: 'batch-1', school_id: 'school-1', teacher_id: 'demo.teacher', name: 'Grade 5 · Batch A', grade: '5', section: 'A' },
+  { id: 'batch-2', school_id: 'school-1', teacher_id: 'demo.teacher', name: 'Grade 6 · Batch B', grade: '6', section: 'B' },
+  { id: 'batch-3', school_id: 'school-2', teacher_id: 'demo.teacher', name: 'Grade 7 · Batch A', grade: '7', section: 'A' },
 ]
 
 const studentNames = [
@@ -58,7 +58,7 @@ let uploads = students.flatMap((student, index) => {
   return categories.map((category, categoryIndex) => ({
     id: `upload-${student.id}-${category}`,
     student_id: student.id,
-    teacher_id: 'teacher-1',
+    teacher_id: 'demo.teacher',
     category,
     media_type: categoryIndex % 2 === 0 ? 'video' : 'photo',
     blob_url: assetUrl(`assets/media-${category === 'ptm' ? 'ptm' : category === 'principal_review' ? 'principal' : category === 'parent_review' ? 'parent' : 'video'}.png`),
@@ -75,14 +75,14 @@ let uploads = students.flatMap((student, index) => {
 let sessionTeacherId = null
 let uploadCounter = uploads.length
 
-let batchGroupPhotos = {
+let batchUploads = {
   'batch-1': {
     id: 'batch-photo-1',
     batch_id: 'batch-1',
-    teacher_id: 'teacher-1',
+    teacher_id: 'demo.teacher',
     media_type: 'photo',
     blob_url: assetUrl('assets/school-campus.png'),
-    blob_key: 'batch-1/group-photo/seed',
+    blob_key: 'batch-1/batch_group_uploads/seed',
     file_size_bytes: 1024 * 256,
     upload_source: 'web',
     status: UPLOAD_STATUS.SUBMITTED,
@@ -119,8 +119,8 @@ function teacherOwnsBatch(teacherId, batchId) {
   return getAssignedSchoolIds(teacherId).includes(batch.school_id)
 }
 
-function getBatchGroupPhoto(batchId) {
-  return batchGroupPhotos[batchId] ?? null
+function getBatchUpload(batchId) {
+  return batchUploads[batchId] ?? null
 }
 
 function teacherOwnsStudent(teacherId, studentId) {
@@ -281,7 +281,7 @@ export const mockStore = {
 
     return {
       batch: { id: batch.id, name: batch.name, school_id: batch.school_id },
-      group_photo: getBatchGroupPhoto(batchId),
+      batch_upload: getBatchUpload(batchId),
       students: filtered,
     }
   },
@@ -380,7 +380,7 @@ export const mockStore = {
       teacher_id: teacher.id,
       media_type: 'photo',
       blob_url: previewUrl,
-      blob_key: `${batchId}/group-photo/${Date.now()}`,
+      blob_key: `${batchId}/batch_group_uploads/${Date.now()}`,
       file_size_bytes: file.size,
       upload_source: 'web',
       status: UPLOAD_STATUS.SUBMITTED,
@@ -388,8 +388,8 @@ export const mockStore = {
       submitted_at: submittedAt,
     }
 
-    batchGroupPhotos = { ...batchGroupPhotos, [batchId]: record }
-    return { ok: true, status: 201, group_photo: record }
+    batchUploads = { ...batchUploads, [batchId]: record }
+    return { ok: true, status: 201, upload: record }
   },
 
   deleteUpload(uploadId) {

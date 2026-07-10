@@ -13,7 +13,7 @@ export const UPLOAD_STATUS = {
   SUBMITTED: 'submitted',
 }
 
-export const BATCH_GROUP_PHOTO_SEGMENT = 'group-photo'
+export const BATCH_UPLOADS_SEGMENT = 'batch_group_uploads'
 
 export const ALLOWED_MIME_TYPES = [
   'image/jpeg',
