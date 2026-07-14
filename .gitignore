@@ -40,6 +40,8 @@ data/
 
 # ── Local dev helpers (not for deploy) ───────────────────
 /scripts/
+_local/
+_mongo_relay.cjs
 test-mongo.js
 desktop.ini
 
