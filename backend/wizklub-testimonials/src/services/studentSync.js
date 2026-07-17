@@ -83,3 +83,17 @@ export function extractStudents(payload) {
     school_name: s.school_name ?? null,
   }))
 }
+
+/** Lightweight lookup: first student page usually includes school_name. */
+export async function fetchSchoolNameFromBatch(schoolId, batchId, accessToken) {
+  if (!schoolId || !batchId) return null
+  try {
+    const payload = await fetchStudentsPage(schoolId, batchId, accessToken)
+    const students = extractStudents(payload)
+    const named = students.find((s) => s.school_name)
+    return named?.school_name ?? null
+  } catch (err) {
+    console.error(`[StudentSync] school name lookup failed for ${schoolId}:`, err.message)
+    return null
+  }
+}

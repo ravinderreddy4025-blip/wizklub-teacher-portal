@@ -1,6 +1,7 @@
 import { isDatabaseReady } from '../db/state.js'
+import { School } from '../db/models.js'
 import { getAssignedSchoolIds, getSchoolById } from './access.js'
-import { fetchSchoolDetails, extractSchoolName } from './schoolSync.js'
+import { resolveSchoolDisplayName } from './schoolSync.js'
 import { fetchAllBatchesForSchool, filterByInstructorBatchIds } from './batchSync.js'
 
 export async function resolveSchoolIds(teacherId, sessionSchoolIds = []) {
@@ -10,21 +11,43 @@ export async function resolveSchoolIds(teacherId, sessionSchoolIds = []) {
 }
 
 export async function resolveSchoolWithBatches(schoolId, { accessToken, instructorUsername, batchIds }) {
-  let school = null
-  if (isDatabaseReady()) {
-    school = await getSchoolById(schoolId)
-  }
-  if (!school) {
-    const payload = await fetchSchoolDetails(schoolId, accessToken)
-    school = { _id: schoolId, name: extractSchoolName(payload, schoolId) }
-  }
-
-  const allBatches = await fetchAllBatchesForSchool(schoolId, instructorUsername, accessToken)
-  const batches = filterByInstructorBatchIds(allBatches, batchIds).map((batch) => ({
+  let instructorBatches = await fetchAllBatchesForSchool(schoolId, instructorUsername, accessToken)
+  const batches = filterByInstructorBatchIds(instructorBatches, batchIds).map((batch) => ({
     _id: batch.id,
     name: batch.name,
     student_count: batch.student_count ?? 0,
   }))
 
-  return { school, batches }
+  let school = null
+  if (isDatabaseReady()) {
+    school = await getSchoolById(schoolId)
+  }
+
+  let nameBatchIds = batches.map((b) => b._id)
+  if (!nameBatchIds.length || !school?.name || school.name === schoolId) {
+    if (!nameBatchIds.length) {
+      const anyBatches = await fetchAllBatchesForSchool(schoolId, null, accessToken)
+      nameBatchIds = anyBatches.slice(0, 3).map((b) => b.id)
+    }
+
+    const displayName = await resolveSchoolDisplayName(schoolId, {
+      accessToken,
+      batchIds: nameBatchIds,
+      existingName: school?.name ?? null,
+    })
+
+    if (isDatabaseReady() && displayName && displayName !== school?.name) {
+      await School.findByIdAndUpdate(schoolId, { name: displayName }, { upsert: true })
+    }
+
+    return {
+      school: { _id: schoolId, name: displayName || schoolId },
+      batches,
+    }
+  }
+
+  return {
+    school: { _id: schoolId, name: school.name },
+    batches,
+  }
 }

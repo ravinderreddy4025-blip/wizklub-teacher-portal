@@ -6,9 +6,11 @@ const MAX_BATCH_PAGES = 50
 async function fetchBatchesPage(schoolId, instructorUsername, accessToken, cursor = null) {
   const params = new URLSearchParams({
     school_id: schoolId,
-    instructor_username: instructorUsername,
     page_size: BATCH_PAGE_SIZE,
   })
+  if (instructorUsername) {
+    params.set('instructor_username', instructorUsername)
+  }
   if (cursor) {
     params.set('cursor', cursor)
   }
