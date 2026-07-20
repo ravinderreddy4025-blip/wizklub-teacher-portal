@@ -1,11 +1,10 @@
 # Two-container stack:
-# - `backend`: runs APIs (Technathon :5000, PMO :8080, Testimonials :3001)
-# - `frontend`: serves UIs (/technathon, /pmo, /wizklub-testimonials) and proxies API routes
+# - `backend`: runs APIs (PMO :8080, Testimonials :3001)
+# - `frontend`: serves UIs (/pmo, /wizklub-testimonials) and proxies API routes
 #
 # Requires external Mongo hosts (no Mongo containers here).
 # Set these in repo-root `.env`:
 #   MONGO_URI=...                 (shared Mongo host/cluster URI)
-#   TECH_MONGO_DB_NAME=...        (technathon database)
 #   PMO_MONGO_DB_NAME=...         (PMO database)
 #   TESTIMONIALS_MONGO_DB_NAME=... (testimonials database)
 
@@ -18,30 +17,10 @@ services:
       dockerfile: backend/combined.Dockerfile
     restart: unless-stopped
     environment:
-      # Technathon backend
       NODE_ENV: ${NODE_ENV:-production}
       MONGO_URI: ${MONGO_URI:?Set MONGO_URI in .env}
-      TECH_MONGO_DB_NAME: ${TECH_MONGO_DB_NAME:-}
       PMO_MONGO_DB_NAME: ${PMO_MONGO_DB_NAME:-}
       TESTIMONIALS_MONGO_DB_NAME: ${TESTIMONIALS_MONGO_DB_NAME:-}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}
-      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env}
-      STUDENT_FORM_SECRET: ${STUDENT_FORM_SECRET:?Set STUDENT_FORM_SECRET in .env}
-      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-http://localhost:8080}
-      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-http://localhost:8080/technathon}
-      AWS_REGION: ${AWS_REGION:-}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
-      S3_UPLOAD_PREFIX: ${S3_UPLOAD_PREFIX:-}
-      S3_SIGNED_URL_EXPIRES_SEC: ${S3_SIGNED_URL_EXPIRES_SEC:-}
-      SES_REGION: ${SES_REGION:-}
-      SES_FROM_EMAIL: ${SES_FROM_EMAIL:-}
-      AWS_NOTIF_ACCESS_KEY: ${AWS_NOTIF_ACCESS_KEY:-}
-      AWS_NOTIF_SECRET_KEY: ${AWS_NOTIF_SECRET_KEY:-}
-      SES_STUDENT_SUBMISSION_TEMPLATE_NAME: ${SES_STUDENT_SUBMISSION_TEMPLATE_NAME:-}
-      WIZKLUB_LOGO_PATH: ${WIZKLUB_LOGO_PATH:-./assets/email-logo.png}
 
       # PMO backend
       PMO_NODE_ENV: ${PMO_NODE_ENV:-production}
@@ -67,10 +46,7 @@ services:
       GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
       GCS_FOLDER: ${GCS_FOLDER:-wizklub}
       GCS_CREDENTIALS: ${GCS_CREDENTIALS:-}
-    volumes:
-      - ./backend/technathon/assets:/app/backend/technathon/assets:ro
     expose:
-      - "5000"
       - "8080"
       - "3001"
     healthcheck:
@@ -79,7 +55,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "const http=require('http');const req=(u)=>new Promise((res,rej)=>{http.get(u,r=>{r.resume();res(r.statusCode>=200&&r.statusCode<400)}).on('error',rej)});Promise.all([req('http://127.0.0.1:5000/health'),req('http://127.0.0.1:8080/api/health'),req('http://127.0.0.1:3001/health')]).then(v=>process.exit(v.every(Boolean)?0:1)).catch(()=>process.exit(1));"
+          "const http=require('http');const req=(u)=>new Promise((res,rej)=>{http.get(u,r=>{r.resume();res(r.statusCode>=200&&r.statusCode<400)}).on('error',rej)});Promise.all([req('http://127.0.0.1:8080/api/health'),req('http://127.0.0.1:3001/health')]).then(v=>process.exit(v.every(Boolean)?0:1)).catch(()=>process.exit(1));"
         ]
       interval: 30s
       timeout: 5s
@@ -93,8 +69,6 @@ services:
       context: .
       dockerfile: frontend/combined.Dockerfile
       args:
-        VITE_API_URL: ""
-        TECH_BASE_PATH: /technathon/
         TESTIMONIALS_BASE_PATH: /wizklub-testimonials/
         VITE_USE_MOCK: "false"
     restart: unless-stopped

@@ -1,15 +1,3 @@
-FROM node:20-bookworm-slim AS technathon-build
-
-WORKDIR /app
-COPY frontend/technathon/package*.json ./
-RUN npm ci
-COPY frontend/technathon ./
-ARG TECH_BASE_PATH="/technathon/"
-ARG VITE_API_URL=""
-ENV VITE_API_URL=${VITE_API_URL}
-ENV VITE_APP_BASE_PATH=${TECH_BASE_PATH}
-RUN npm run build
-
 FROM node:20-alpine AS testimonials-build
 
 WORKDIR /app
@@ -32,9 +20,6 @@ COPY frontend/gateway/brand /usr/share/nginx/html/brand
 
 # PMO static app
 COPY frontend/parent-orientation/public /usr/share/nginx/html/pmo
-
-# Technathon SPA build
-COPY --from=technathon-build /app/dist /usr/share/nginx/html/technathon
 
 # Wizklub Testimonials SPA build
 COPY --from=testimonials-build /app/dist /usr/share/nginx/html/wizklub-testimonials
