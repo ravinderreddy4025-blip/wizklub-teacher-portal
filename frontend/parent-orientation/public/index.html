@@ -1535,6 +1535,45 @@
       font-style: italic
     }
 
+    .session-students-link {
+      color: #c2410c;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer
+    }
+
+    .session-students-link:hover {
+      color: #9a3412
+    }
+
+    .session-students-back {
+      margin-bottom: 0.85rem
+    }
+
+    .session-students-title {
+      margin-bottom: 0.35rem
+    }
+
+    .session-students-meta {
+      margin-bottom: 1rem
+    }
+
+    .session-students-list .sales-student-ids {
+      gap: 8px
+    }
+
+    .session-students-list .sales-student-chip {
+      font-size: 0.8rem;
+      padding: 5px 10px
+    }
+
+    .pmo-nav.is-hidden,
+    .sales-nav.is-hidden,
+    .sales-dash-filters-bar.is-hidden {
+      display: none !important
+    }
+
     .sales-badge-status {
       display: inline-block;
       font-size: 0.65rem;
@@ -2660,7 +2699,8 @@
     }
 
     #spk-months-wrap.is-hidden,
-    #spk-detail-wrap.is-hidden {
+    #spk-detail-wrap.is-hidden,
+    #spk-students-wrap.is-hidden {
       display: none
     }
 
@@ -5028,6 +5068,12 @@
           <div class="slist" id="pmo-list"></div>
         </div>
       </section>
+
+      <section id="pmo-section-session-students" class="pmo-section is-hidden" data-pmo-section="session-students" aria-label="Student IDs" hidden>
+        <div class="card card--elevated">
+          <div id="pmo-students-body"></div>
+        </div>
+      </section>
     </div>
 
     <div id="view-sales-admin" style="display:none">
@@ -5094,6 +5140,12 @@
           </footer>
         </article>
       </section>
+
+      <section id="sales-section-session-students" class="sales-section is-hidden" data-sales-section="session-students" aria-label="Student IDs" hidden>
+        <article class="sales-targets-card">
+          <div class="sales-targets-card__body" id="sales-students-body"></div>
+        </article>
+      </section>
       </div>
     </div>
 
@@ -5146,6 +5198,13 @@
           <div id="spk-list" class="spk-session-board"></div>
         </div>
       </div>
+      <div id="spk-students-wrap" class="spk-panel spk-panel--students is-hidden" hidden>
+        <div class="spk-panel__body">
+          <div class="card card--elevated" style="position:relative;z-index:1">
+            <div id="spk-students-body"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div id="toast-root"></div>
@@ -5167,7 +5226,7 @@
       });
     });
   </script>
-  <script src="app.js?v=20260703j" defer></script>
+  <script src="app.js?v=20260720a" defer></script>
 </body>
 
 </html>
