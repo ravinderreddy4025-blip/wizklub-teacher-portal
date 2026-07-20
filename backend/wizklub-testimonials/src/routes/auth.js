@@ -36,7 +36,7 @@ export function createAuthRouter() {
     }
 
     const authPayload = await authResponse.json().catch(() => ({}))
-    if (!authResponse.ok) {
+    if (!authResponse.ok || authPayload?.success === false) {
       const authError =
         authPayload?.message ||
         authPayload?.error ||
@@ -52,27 +52,35 @@ export function createAuthRouter() {
         .json({ ok: false, error: 'Auth API did not return an access token.' })
     }
 
-    const user = authPayload?.user ?? authPayload?.data?.user ?? authPayload
+    const user = extractUser(authPayload)
+    if (!hasInstructorRole(user)) {
+      return res.status(403).json({
+        ok: false,
+        error: 'Only instructors can sign in to Teacher Upload.',
+      })
+    }
+
+    const sessionUserId = user?.username || user?.user_id || user_id
     const inferredName =
-      user?.full_name || user?.name || user?.instructor_name || user_id
-    const schoolIds = user?.school_ids ?? []
-    const batchIds = user?.batch_ids ?? []
+      user?.full_name || user?.name || user?.instructor_name || sessionUserId
+    const schoolIds = Array.isArray(user?.school_ids) ? user.school_ids : []
+    const batchIds = extractBatchIds(user)
     const lastLoginAt = new Date().toISOString()
 
     let teacher
 
     if (isDatabaseReady()) {
-      const existing = await TeacherLogin.findOne({ user_id }).lean()
+      const existing = await TeacherLogin.findOne({ user_id: sessionUserId }).lean()
       if (existing) {
         await TeacherLogin.updateOne(
-          { user_id },
+          { user_id: sessionUserId },
           { full_name: inferredName, last_login_at: lastLoginAt },
         )
         teacher = { ...existing, full_name: inferredName, last_login_at: lastLoginAt }
       } else {
         teacher = await TeacherLogin.create({
-          _id: user_id,
-          user_id,
+          _id: sessionUserId,
+          user_id: sessionUserId,
           full_name: inferredName,
           last_login_at: lastLoginAt,
           password_hash: '',
@@ -80,19 +88,30 @@ export function createAuthRouter() {
         teacher = teacher.toObject()
       }
     } else {
-      teacher = { _id: user_id, user_id, full_name: inferredName, last_login_at: lastLoginAt }
+      teacher = {
+        _id: sessionUserId,
+        user_id: sessionUserId,
+        full_name: inferredName,
+        last_login_at: lastLoginAt,
+      }
     }
 
     if (schoolIds.length > 0) {
       try {
-        await syncSchoolsAndBatches(user_id, schoolIds, batchIds, accessToken, user_id)
+        await syncSchoolsAndBatches(
+          sessionUserId,
+          schoolIds,
+          batchIds,
+          accessToken,
+          sessionUserId,
+        )
       } catch (err) {
         console.error('School/batch sync failed (non-blocking):', err.message)
       }
     }
 
     storeSession(accessToken, {
-      userId: user_id,
+      userId: sessionUserId,
       fullName: teacher.full_name,
       refreshToken: refreshToken ?? null,
       schoolIds,
@@ -107,9 +126,9 @@ export function createAuthRouter() {
       school_ids: schoolIds,
       batch_ids: batchIds,
       teacher: {
-        id: user_id,
+        id: sessionUserId,
         full_name: teacher.full_name,
-        user_id,
+        user_id: sessionUserId,
         last_login_at: teacher.last_login_at,
       },
     })
@@ -152,7 +171,7 @@ export function createAuthRouter() {
     }
 
     const authPayload = await authResponse.json().catch(() => ({}))
-    if (!authResponse.ok) {
+    if (!authResponse.ok || authPayload?.success === false) {
       if (oldToken) deleteSession(oldToken)
       return res.status(401).json({ ok: false, error: 'Refresh failed. Please log in again.' })
     }
@@ -219,6 +238,29 @@ export function createAuthRouter() {
   })
 
   return router
+}
+
+function extractUser(payload) {
+  return (
+    payload?.data?.user_details ||
+    payload?.user_details ||
+    payload?.data?.user ||
+    payload?.user ||
+    payload?.data ||
+    payload
+  )
+}
+
+function hasInstructorRole(user) {
+  const roles = user?.roles
+  if (!Array.isArray(roles)) return false
+  return roles.some((role) => String(role).toLowerCase() === 'instructor')
+}
+
+function extractBatchIds(user) {
+  if (Array.isArray(user?.batch_ids)) return user.batch_ids.filter(Boolean)
+  if (user?.batch_id) return [user.batch_id]
+  return []
 }
 
 function extractTokens(payload) {
