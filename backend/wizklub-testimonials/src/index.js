@@ -7,6 +7,7 @@ import { config } from './config.js'
 import { connectDatabase } from './db/connect.js'
 import { createBatchUploadsRouter } from './routes/batchUploads.js'
 import { createAuthRouter } from './routes/auth.js'
+import { createFeedbackRouter } from './routes/feedback.js'
 import { createTeacherRouter } from './routes/teacher.js'
 import { createUploadsRouter } from './routes/uploads.js'
 import { isStorageConfigured } from './services/storage.js'
@@ -29,6 +30,7 @@ app.use('/api/teacher', createAuthRouter())
 app.use('/api/teacher', createTeacherRouter())
 app.use('/api/teacher', createUploadsRouter())
 app.use('/api/teacher', createBatchUploadsRouter())
+app.use('/api/teacher', createFeedbackRouter())
 
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist, { index: false, maxAge: '1h' }))

@@ -73,6 +73,8 @@ let uploads = students.flatMap((student, index) => {
 })
 
 let sessionTeacherId = null
+let feedbackSeq = 0
+let feedbacks = []
 let uploadCounter = uploads.length
 
 let batchUploads = {
@@ -450,5 +452,109 @@ export const mockStore = {
       return mockStore.getMe()
     }
     return null
+  },
+
+  listFeedback({ school_id, batch_id, status, page = 1, limit = 20 } = {}) {
+    const teacher = getTeacher()
+    if (!teacher) return { ok: false, status: 401, error: 'Not authenticated.' }
+
+    let items = feedbacks.filter((row) => row.teacher_id === teacher.id)
+    if (school_id) items = items.filter((row) => row.school_id === school_id)
+    if (batch_id) items = items.filter((row) => row.batch_id === batch_id)
+    if (status) items = items.filter((row) => row.status === status)
+
+    items = [...items].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    const total = items.length
+    const safePage = Math.max(1, Number(page) || 1)
+    const safeLimit = Math.min(50, Math.max(1, Number(limit) || 20))
+    const start = (safePage - 1) * safeLimit
+    const pageItems = items.slice(start, start + safeLimit)
+
+    return {
+      ok: true,
+      items: pageItems,
+      page: safePage,
+      limit: safeLimit,
+      total,
+      total_pages: Math.ceil(total / safeLimit) || 0,
+    }
+  },
+
+  getFeedback(feedbackId) {
+    const teacher = getTeacher()
+    if (!teacher) return { ok: false, status: 401, error: 'Not authenticated.' }
+    const row = feedbacks.find(
+      (item) => item.feedback_id === feedbackId && item.teacher_id === teacher.id,
+    )
+    if (!row) return { ok: false, status: 404, error: 'Feedback not found.' }
+    return { ok: true, feedback: row }
+  },
+
+  createFeedback({ school_id, batch_id, category, summary, priority, files = [] }) {
+    const teacher = getTeacher()
+    if (!teacher) return { ok: false, status: 401, error: 'Not authenticated.' }
+
+    const trimmed = String(summary ?? '').trim()
+    if (!trimmed) return { ok: false, status: 400, error: 'Summary is required.' }
+
+    const school = school_id ? getSchoolById(school_id) : null
+    const batch = batch_id ? getBatchById(batch_id) : null
+    feedbackSeq += 1
+    const year = new Date().getFullYear()
+    const feedbackId = `FB-${year}-${String(feedbackSeq).padStart(4, '0')}`
+    const now = new Date().toISOString()
+
+    const attachments = files.map((file, index) => ({
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith('video/') ? 'video' : 'image',
+      filename: file.name || `attachment-${index + 1}`,
+      uploaded_at: now,
+    }))
+
+    const row = {
+      feedback_id: feedbackId,
+      school_id: school_id || '',
+      school_name: school?.name || school_id || '',
+      batch_id: batch_id || '',
+      batch_name: batch?.name || batch_id || '',
+      teacher_id: teacher.id,
+      teacher_name: teacher.full_name,
+      category: category || 'other',
+      summary: trimmed,
+      attachments,
+      status: 'open',
+      priority: priority || null,
+      created_at: now,
+      updated_at: now,
+      resolved_at: null,
+      resolution_note: '',
+    }
+
+    feedbacks = [row, ...feedbacks]
+    return { ok: true, status: 201, feedback: row }
+  },
+
+  updateFeedback(feedbackId, { status, resolution_note, priority } = {}) {
+    const teacher = getTeacher()
+    if (!teacher) return { ok: false, status: 401, error: 'Not authenticated.' }
+
+    const index = feedbacks.findIndex(
+      (item) => item.feedback_id === feedbackId && item.teacher_id === teacher.id,
+    )
+    if (index < 0) return { ok: false, status: 404, error: 'Feedback not found.' }
+
+    const now = new Date().toISOString()
+    const current = feedbacks[index]
+    const next = {
+      ...current,
+      updated_at: now,
+      status: status || current.status,
+      resolution_note:
+        resolution_note !== undefined ? String(resolution_note) : current.resolution_note,
+      priority: priority !== undefined ? priority : current.priority,
+      resolved_at: status === 'resolved' ? now : status ? null : current.resolved_at,
+    }
+    feedbacks = feedbacks.map((item, i) => (i === index ? next : item))
+    return { ok: true, feedback: next }
   },
 }

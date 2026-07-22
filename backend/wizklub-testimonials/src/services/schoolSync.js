@@ -1,7 +1,6 @@
 import { WIZKLUB_URLS } from '../utils/wizklubAuth.js'
-import { School, Batch, TeacherSchoolAssignment } from '../db/models.js'
+import { TeacherSchoolAssignment } from '../db/models.js'
 import { isDatabaseReady } from '../db/state.js'
-import { fetchAllBatchesForSchool } from './batchSync.js'
 import { fetchSchoolNameFromBatch } from './studentSync.js'
 
 export async function fetchSchoolDetails(schoolId, accessToken) {
@@ -76,74 +75,20 @@ export async function resolveSchoolDisplayName(schoolId, {
   return existingName || schoolId
 }
 
-export async function syncSchoolsAndBatches(teacherId, schoolIds, batchIds, accessToken, instructorUsername) {
+/**
+ * Persist only teacher↔school assignments.
+ * Do not cache schools/batches/students into Mongo — those stay API-sourced.
+ */
+export async function syncSchoolsAndBatches(teacherId, schoolIds) {
   if (!isDatabaseReady()) return
 
   await TeacherSchoolAssignment.deleteMany({ teacher_id: teacherId })
-  await Batch.deleteMany({ school_id: { $in: schoolIds }, teacher_id: teacherId })
 
-  const schoolDetailResults = await Promise.allSettled(
-    schoolIds.map((id) => fetchSchoolDetails(id, accessToken)),
-  )
-
-  for (let i = 0; i < schoolIds.length; i++) {
-    const schoolId = schoolIds[i]
-    const result = schoolDetailResults[i]
-    const payload = result.status === 'fulfilled' ? result.value : null
-    let name = extractSchoolName(payload, null)
-
-    if (!name || name === schoolId) {
-      // Will refine after batches are loaded below when possible.
-      name = schoolId
-    }
-
-    await School.findByIdAndUpdate(schoolId, { name }, { upsert: true })
+  for (const schoolId of schoolIds) {
     await TeacherSchoolAssignment.findOneAndUpdate(
       { teacher_id: teacherId, school_id: schoolId },
       { teacher_id: teacherId, school_id: schoolId },
       { upsert: true },
     )
   }
-
-  if (instructorUsername && accessToken) {
-    const batchIdSet = new Set(batchIds ?? [])
-
-    const batchResults = await Promise.allSettled(
-      schoolIds.map((id) => fetchAllBatchesForSchool(id, instructorUsername, accessToken)),
-    )
-
-    for (let i = 0; i < schoolIds.length; i++) {
-      const schoolId = schoolIds[i]
-      const result = batchResults[i]
-      const allBatches = result.status === 'fulfilled' ? (result.value ?? []) : []
-
-      const instructorBatches = batchIdSet.size > 0
-        ? allBatches.filter((b) => batchIdSet.has(b.id))
-        : allBatches
-
-      for (const batch of instructorBatches) {
-        await Batch.findByIdAndUpdate(batch.id, {
-          school_id: schoolId,
-          teacher_id: teacherId,
-          name: batch.name,
-          grade: batch.grade,
-          student_count: batch.student_count ?? 0,
-        }, { upsert: true })
-      }
-
-      const existing = await School.findById(schoolId).lean()
-      if (!existing?.name || existing.name === schoolId) {
-        const lookupBatchIds = instructorBatches.map((b) => b.id)
-        const displayName = await resolveSchoolDisplayName(schoolId, {
-          accessToken,
-          batchIds: lookupBatchIds,
-          existingName: existing?.name,
-        })
-        if (displayName && displayName !== schoolId) {
-          await School.findByIdAndUpdate(schoolId, { name: displayName }, { upsert: true })
-        }
-      }
-    }
-  }
-
 }

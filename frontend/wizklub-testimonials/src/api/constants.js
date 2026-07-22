@@ -56,3 +56,23 @@ export const UPLOAD_STATUS = {
 }
 
 export const BATCH_GROUP_PHOTO_LABEL = 'Class group photo / video'
+
+export const FEEDBACK_CATEGORIES = [
+  { value: 'tech_issue', label: 'Tech issue' },
+  { value: 'content_issue', label: 'Content issue' },
+  { value: 'other', label: 'Other' },
+]
+
+export const FEEDBACK_STATUS = {
+  OPEN: 'open',
+  IN_PROGRESS: 'in_progress',
+  RESOLVED: 'resolved',
+}
+
+export const FEEDBACK_STATUS_LABELS = {
+  open: 'Open',
+  in_progress: 'In progress',
+  resolved: 'Resolved',
+}
+
+export const MAX_FEEDBACK_ATTACHMENTS = 5

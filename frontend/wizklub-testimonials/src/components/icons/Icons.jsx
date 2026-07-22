@@ -182,3 +182,17 @@ export function IconBell({ className, size = 16 }) {
     </svg>
   )
 }
+
+export function IconFeedback({ className, size = 18 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path
+        d="M2 2h14v10H6l-4 4V2z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M5.5 6.5h7M5.5 9.5h4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}

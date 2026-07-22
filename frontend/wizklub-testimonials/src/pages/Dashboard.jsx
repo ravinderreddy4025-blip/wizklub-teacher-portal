@@ -4,7 +4,7 @@ import { api } from '../api/client'
 import AppShell from '../components/layout/AppShell'
 import LoadingScreen from '../components/ui/LoadingScreen'
 import StatCard from '../components/ui/StatCard'
-import { IconAlert, IconChevronRight, IconUpload, IconUsers } from '../components/icons/Icons'
+import { IconAlert, IconChevronRight, IconFeedback, IconUpload, IconUsers } from '../components/icons/Icons'
 import { assetUrl } from '../lib/assets.js'
 import { useNavigate } from '../router'
 import '../styles/app.css'
@@ -122,6 +122,31 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="schools-section animate-in-delay-3">
+          <div className="section-header">
+            <h2 className="section-title">Feedback</h2>
+            <button type="button" className="link-btn" onClick={() => navigate('/feedback')}>
+              Open
+            </button>
+          </div>
+          <button
+            type="button"
+            className="school-card card card--interactive"
+            onClick={() => navigate('/feedback')}
+          >
+            <div className="school-thumb" style={{ display: 'grid', placeItems: 'center', color: '#F47A20' }}>
+              <IconFeedback size={22} />
+            </div>
+            <div className="school-card__info">
+              <p className="school-card__name">Report an issue</p>
+              <p className="school-card__meta">Tech or content problems with screenshots / videos</p>
+            </div>
+            <span className="chevron-btn" aria-hidden="true">
+              <IconChevronRight size={12} />
+            </span>
+          </button>
         </section>
       </div>
     </AppShell>

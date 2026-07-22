@@ -46,3 +46,17 @@ export const HEALTH_TAG_LABELS = {
   in_progress: 'In progress',
   need_to_grow: 'Need to grow',
 }
+
+export const FEEDBACK_CATEGORIES = ['tech_issue', 'content_issue', 'other']
+
+export const FEEDBACK_STATUS = {
+  OPEN: 'open',
+  IN_PROGRESS: 'in_progress',
+  RESOLVED: 'resolved',
+}
+
+export const FEEDBACK_PRIORITIES = ['low', 'medium', 'high']
+
+export const FEEDBACK_FOLDER = 'feedback'
+
+export const MAX_FEEDBACK_ATTACHMENTS = 5

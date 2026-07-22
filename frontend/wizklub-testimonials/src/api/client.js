@@ -411,4 +411,90 @@ export const api = {
     if (!result.ok) return { ok: false, status: result.status, error: result.error }
     return { ok: true, status: 204 }
   },
+
+  async listFeedback({ school_id, batch_id, status, page = 1, limit = 20 } = {}) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.listFeedback({ school_id, batch_id, status, page, limit })
+    }
+
+    const params = new URLSearchParams()
+    if (school_id) params.set('school_id', school_id)
+    if (batch_id) params.set('batch_id', batch_id)
+    if (status) params.set('status', status)
+    params.set('page', String(page))
+    params.set('limit', String(limit))
+
+    const result = await request(`/api/teacher/feedback?${params}`)
+    if (!result.ok) return { ok: false, error: result.error, items: [] }
+    return result.data
+  },
+
+  async getFeedback(feedbackId) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.getFeedback(feedbackId)
+    }
+
+    const result = await request(`/api/teacher/feedback/${encodeURIComponent(feedbackId)}`)
+    if (!result.ok) return { ok: false, status: result.status, error: result.error }
+    return { ok: true, feedback: result.data.feedback }
+  },
+
+  async createFeedback({ school_id, batch_id, category, summary, priority, files = [] }) {
+    for (const file of files) {
+      const validation = validateUploadFile(file)
+      if (!validation.ok) return { ok: false, status: 415, error: validation.error }
+    }
+
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.createFeedback({
+        school_id,
+        batch_id,
+        category,
+        summary,
+        priority,
+        files,
+      })
+    }
+
+    const formData = new FormData()
+    formData.append('school_id', school_id)
+    formData.append('batch_id', batch_id)
+    formData.append('category', category)
+    formData.append('summary', summary)
+    if (priority) formData.append('priority', priority)
+    for (const file of files) {
+      formData.append('files', file)
+    }
+
+    const result = await request('/api/teacher/feedback', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!result.ok) return { ok: false, status: result.status, error: result.error }
+    return {
+      ok: true,
+      status: result.status,
+      feedback: result.data.feedback,
+      warning: result.data.warning,
+    }
+  },
+
+  async updateFeedback(feedbackId, payload) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.updateFeedback(feedbackId, payload)
+    }
+
+    const result = await request(`/api/teacher/feedback/${encodeURIComponent(feedbackId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+
+    if (!result.ok) return { ok: false, status: result.status, error: result.error }
+    return { ok: true, feedback: result.data.feedback }
+  },
 }
