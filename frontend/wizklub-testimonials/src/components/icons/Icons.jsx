@@ -196,3 +196,60 @@ export function IconFeedback({ className, size = 18 }) {
     </svg>
   )
 }
+
+export function IconAnalytics({ className, size = 18 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path d="M2 15.5h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M4 15V9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M9 15V4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M14 15V7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function IconDownload({ className, size = 18 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path d="M9 2.5v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M5.5 8.5 9 12l3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 15.5h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function IconVideo({ className, size = 18 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <rect x="1.5" y="4" width="10.5" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 7.5 16.5 5v8L12 10.5V7.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function IconWarning({ className, size = 16 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path
+        d="M7.13 2.4 1.4 12.2A1 1 0 0 0 2.27 13.7h11.46a1 1 0 0 0 .87-1.5L8.87 2.4a1 1 0 0 0-1.74 0z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path d="M8 6.2v3.2M8 11.2h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function IconStar({ className, size = 16, filled = true }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 16 16" fill={filled ? 'currentColor' : 'none'}>
+      <path
+        d="M8 1.5 9.9 5.7l4.6.4-3.5 3.1.9 4.5L8 11.5l-4 2.2.9-4.5-3.5-3.1 4.6-.4L8 1.5z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}

@@ -67,8 +67,10 @@ services:
       GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
       GCS_FOLDER: ${GCS_FOLDER:-wizklub}
       GCS_CREDENTIALS: ${GCS_CREDENTIALS:-}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcs-credentials.json
     volumes:
       - ./backend/technathon/assets:/app/backend/technathon/assets:ro
+      - ./gcs-credentials.json:/run/secrets/gcs-credentials.json:ro
     expose:
       - "5000"
       - "8080"

@@ -3,6 +3,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import Login from './components/Login'
 import PwaInstallBanner from './components/PwaInstallBanner'
 import { RequireAuth } from './context/AuthContext.jsx'
+import Analytics from './pages/Analytics'
 import Dashboard from './pages/Dashboard'
 import BatchSelection from './pages/BatchSelection'
 import FeedbackDetail from './pages/FeedbackDetail'
@@ -29,6 +30,7 @@ function AppRoutes() {
     path === '/dashboard' ||
     path === '/home' ||
     path === '/schools' ||
+    path === '/analytics' ||
     path === '/feedback' ||
     path === '/feedback/new' ||
     path === '/profile' ||
@@ -44,6 +46,7 @@ function AppRoutes() {
       {!isKnownRoute && <Dashboard />}
       {(path === '/dashboard' || path === '/home' || path === '/') && <Dashboard />}
       {path === '/schools' && <SchoolsList />}
+      {path === '/analytics' && <Analytics />}
       {path === '/feedback' && <FeedbackList />}
       {path === '/feedback/new' && <FeedbackForm />}
       {feedbackDetailRoute && feedbackDetailRoute.feedbackId !== 'new' && (

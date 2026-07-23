@@ -17,6 +17,9 @@ dev-dist/
 .env.wsl.preprod
 .env.wsl-preprod
 *(2).env
+gcs-credentials.json
+*-credentials.json
+*-sa.json
 *(2).gitignore
 env-example/
 *.local
