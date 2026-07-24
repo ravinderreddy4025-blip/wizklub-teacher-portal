@@ -5,8 +5,11 @@ const {
   readAllSessionsFromDb,
   writePmoSessionsReplaceAll,
   writeSpeakerMergedSessions,
+  attachLsqWebhookFields,
+  kickLsqWebhookSync,
 } = require('../services/mongo');
 const { addStudentId } = require('../domain/studentIds');
+const { lsqPendingUpdate } = require('../domain/lsqSync');
 
 async function readAllSessions() {
   return readAllSessionsFromDb();
@@ -19,11 +22,18 @@ async function findSessionById(id) {
 }
 
 async function insertSession(item) {
-  return sessionsCollection().insertOne(toSessionDocument(item));
+  const doc = attachLsqWebhookFields(toSessionDocument(item), null);
+  const result = await sessionsCollection().insertOne(doc);
+  kickLsqWebhookSync();
+  return result;
 }
 
 async function upsertSessionById(id, item) {
-  return sessionsCollection().replaceOne({ _id: id }, toSessionDocument(item), { upsert: true });
+  const existing = await sessionsCollection().findOne({ _id: id });
+  const doc = attachLsqWebhookFields(toSessionDocument(item), existing);
+  const result = await sessionsCollection().replaceOne({ _id: id }, doc, { upsert: true });
+  kickLsqWebhookSync();
+  return result;
 }
 
 async function deleteSessionById(id) {
@@ -43,10 +53,22 @@ async function appendStudentIdToSession(id, studentIdRaw) {
   if (!doc) return { ok: false, status: 404, msg: 'Session not found.' };
   const merged = addStudentId(doc.student_ids, studentIdRaw);
   if (!merged.ok) return { ok: false, status: 400, msg: merged.msg };
-  await sessionsCollection().updateOne(
-    { _id: id },
-    { $set: { student_ids: merged.student_ids, updatedAt: new Date() } }
+
+  const pending = lsqPendingUpdate(
+    { ...sessionDocToClient(doc), student_ids: merged.student_ids },
+    doc
   );
+  const update = {
+    $set: {
+      student_ids: merged.student_ids,
+      updatedAt: new Date(),
+      ...(pending?.$set || {}),
+    },
+  };
+  if (pending?.$unset) update.$unset = pending.$unset;
+
+  await sessionsCollection().updateOne({ _id: id }, update);
+  kickLsqWebhookSync();
   return { ok: true, student_ids: merged.student_ids };
 }
 
@@ -60,4 +82,3 @@ module.exports = {
   replaceAllBySpeakerMerged,
   appendStudentIdToSession,
 };
-

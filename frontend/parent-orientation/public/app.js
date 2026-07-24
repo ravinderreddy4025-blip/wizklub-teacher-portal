@@ -794,9 +794,9 @@
       else api.info(msg, opts);
     }
 
-    /** Hash: #/ | #/login/{pmo|speaker|sales-admin} | #/pmo/... | #/speaker | #/sales-admin/{overview|targets}[/YYYY-MM] */
-    const PO_PMO_SECTIONS = new Set(['analytics', 'plan', 'meetings']);
-    const PO_SALES_SECTIONS = new Set(['overview', 'targets']);
+    /** Hash: #/ | #/login/{pmo|speaker|sales-admin} | #/pmo/... | #/speaker | #/sales-admin/{overview|targets}[/YYYY-MM] | #/{role}/session/:id/students */
+    const PO_PMO_SECTIONS = new Set(['analytics', 'plan', 'meetings', 'session-students']);
+    const PO_SALES_SECTIONS = new Set(['overview', 'targets', 'session-students']);
     const PO_LOGIN_PORTALS = {
       pmo: {
         hash: '#/login/pmo',
@@ -837,32 +837,63 @@
         return { name: 'login', params: { portal } };
       }
       if (parts[0] === 'speaker') {
+        if (parts[1] === 'session' && parts[2] && parts[3] === 'students') {
+          return {
+            name: 'speaker',
+            params: {
+              month: null,
+              section: 'session-students',
+              sessionId: decodeURIComponent(parts[2]),
+            },
+          };
+        }
         const month = parts[1] && /^\d{4}-\d{2}$/.test(parts[1]) ? parts[1] : null;
-        return { name: 'speaker', params: { month } };
+        return { name: 'speaker', params: { month, section: null, sessionId: null } };
       }
       if (parts[0] === 'sales-admin') {
         const p1 = parts[1];
         const p2 = parts[2];
-        if (PO_SALES_SECTIONS.has(p1)) {
+        if (p1 === 'session' && p2 && parts[3] === 'students') {
+          return {
+            name: 'sales-admin',
+            params: {
+              section: 'session-students',
+              month: null,
+              sessionId: decodeURIComponent(p2),
+            },
+          };
+        }
+        if (p1 === 'overview' || p1 === 'targets') {
           const month = p2 && /^\d{4}-\d{2}$/.test(p2) ? p2 : null;
-          return { name: 'sales-admin', params: { section: p1, month } };
+          return { name: 'sales-admin', params: { section: p1, month, sessionId: null } };
         }
         if (p1 && /^\d{4}-\d{2}$/.test(p1)) {
-          return { name: 'sales-admin', params: { section: 'overview', month: p1 } };
+          return { name: 'sales-admin', params: { section: 'overview', month: p1, sessionId: null } };
         }
-        return { name: 'sales-admin', params: { section: 'overview', month: null } };
+        return { name: 'sales-admin', params: { section: 'overview', month: null, sessionId: null } };
       }
       if (parts[0] === 'pmo') {
+        if (parts[1] === 'session' && parts[2] && parts[3] === 'students') {
+          return {
+            name: 'pmo',
+            params: {
+              section: 'session-students',
+              month: null,
+              editId: null,
+              sessionId: decodeURIComponent(parts[2]),
+            },
+          };
+        }
         if (parts.length >= 4 && parts[1] === 'plan' && parts[2] === 'edit' && parts[3]) {
           const editId = decodeURIComponent(parts.slice(3).join('/'));
-          return { name: 'pmo', params: { section: 'plan', month: null, editId } };
+          return { name: 'pmo', params: { section: 'plan', month: null, editId, sessionId: null } };
         }
-        const sec = PO_PMO_SECTIONS.has(parts[1]) ? parts[1] : 'analytics';
+        const sec = parts[1] === 'plan' || parts[1] === 'meetings' || parts[1] === 'analytics' ? parts[1] : 'analytics';
         const month =
           (sec === 'analytics' || sec === 'meetings') && parts[2] && /^\d{4}-\d{2}$/.test(parts[2])
             ? parts[2]
             : null;
-        return { name: 'pmo', params: { section: sec, month, editId: null } };
+        return { name: 'pmo', params: { section: sec, month, editId: null, sessionId: null } };
       }
       return { name: 'unknown', params: {} };
     }
@@ -1213,6 +1244,21 @@
           e.stopPropagation();
           e.preventDefault();
           toggleExp(det.dataset.poSid, det.dataset.poMode);
+          return;
+        }
+        const studentsLink = e.target.closest('[data-po-students]');
+        if (studentsLink) {
+          e.preventDefault();
+          e.stopPropagation();
+          openSessionStudents(studentsLink.dataset.poStudents);
+          return;
+        }
+        const studentsBack = e.target.closest('[data-po-students-back]');
+        if (studentsBack) {
+          e.preventDefault();
+          const back = defaultStudentsBackHash();
+          if (location.hash !== back) location.hash = back;
+          else syncRouteFromHash();
           return;
         }
         const row = e.target.closest('.shead[data-po-row]');
@@ -1891,9 +1937,104 @@
           section: r.params.section,
           month: r.params.month,
           editId: r.params.editId != null ? r.params.editId : null,
+          sessionId: r.params.sessionId != null ? r.params.sessionId : null,
         };
       }
-      return { section: 'analytics', month: null, editId: null };
+      return { section: 'analytics', month: null, editId: null, sessionId: null };
+    }
+
+    function buildStudentsHash(sessionId) {
+      const id = encodeURIComponent(String(sessionId || ''));
+      const role = poGetRole();
+      if (role === 'pmo') return `#/pmo/session/${id}/students`;
+      if (role === 'sales_admin') return `#/sales-admin/session/${id}/students`;
+      return `#/speaker/session/${id}/students`;
+    }
+
+    function defaultStudentsBackHash() {
+      const role = poGetRole();
+      if (role === 'pmo') return '#/pmo/meetings';
+      if (role === 'sales_admin') return '#/sales-admin/overview';
+      const route = parseAppRoute();
+      const sid = route.params && route.params.sessionId;
+      if (sid) {
+        const s = sessions.find((x) => String(x.id) === String(sid));
+        const mk = s && s.scheduled_date ? String(s.scheduled_date).slice(0, 7) : '';
+        if (/^\d{4}-\d{2}$/.test(mk)) return `#/speaker/${mk}`;
+      }
+      return '#/speaker';
+    }
+
+    function openSessionStudents(sessionId) {
+      if (!sessionId) return;
+      const next = buildStudentsHash(sessionId);
+      if (location.hash !== next) location.hash = next;
+      else syncRouteFromHash();
+    }
+
+    function formatStudentIdsLinkCell(s) {
+      const ids = s && Array.isArray(s.student_ids) ? s.student_ids : [];
+      if (!ids.length) return '—';
+      const n = ids.length;
+      const label = n === 1 ? 'View 1 student ID' : `View ${n} student IDs`;
+      return `<a href="${escapeAttr(buildStudentsHash(s.id))}" class="session-students-link" data-po-students="${escapeAttr(s.id)}">${escapeHtml(label)}</a>`;
+    }
+
+    function renderStudentIdsChipsHtml(s) {
+      const ids = s && Array.isArray(s.student_ids) ? s.student_ids : [];
+      if (!ids.length) {
+        return '<span class="sales-student-empty">No student IDs recorded yet (students join via share link).</span>';
+      }
+      const chips = ids.map((id) => `<span class="sales-student-chip">${escapeHtml(id)}</span>`).join('');
+      return `<div class="sales-student-ids">${chips}</div>`;
+    }
+
+    function sessionStudentsBodyEl() {
+      const role = poGetRole();
+      if (role === 'pmo') return document.getElementById('pmo-students-body');
+      if (role === 'sales_admin') return document.getElementById('sales-students-body');
+      return document.getElementById('spk-students-body');
+    }
+
+    function renderSessionStudentsPage() {
+      const route = parseAppRoute();
+      const sessionId = route.params && route.params.sessionId ? String(route.params.sessionId) : '';
+      const body = sessionStudentsBodyEl();
+      if (!body) return;
+      if (!sessionId) {
+        body.innerHTML = `<p class="sales-student-empty">Missing session id.</p>`;
+        return;
+      }
+      const s = sessions.find((x) => String(x.id) === sessionId);
+      if (!s) {
+        body.innerHTML = `<p class="sales-student-empty">Loading student IDs…</p>`;
+        pullSessionsFromServer().then(() => {
+          const again = sessions.find((x) => String(x.id) === sessionId);
+          const el = sessionStudentsBodyEl();
+          if (!el) return;
+          if (!again) {
+            el.innerHTML = `<p class="sales-student-empty">Session not found.</p>`;
+            return;
+          }
+          el.innerHTML = sessionStudentsPageHtml(again);
+        });
+        return;
+      }
+      body.innerHTML = sessionStudentsPageHtml(s);
+    }
+
+    function sessionStudentsPageHtml(s) {
+      const ids = Array.isArray(s.student_ids) ? s.student_ids : [];
+      const countLbl = ids.length === 1 ? '1 student ID' : `${ids.length} student IDs`;
+      return `
+        <button type="button" class="btn btn-o btn-sm session-students-back" data-po-students-back>← Back</button>
+        <h2 class="card-title session-students-title">${s.branch ? escapeHtml(s.branch) : 'Student IDs'}</h2>
+        <p class="card-lead session-students-meta">
+          ${escapeHtml(fmtSessionScheduleSummary(s))}
+          · <span title="Meeting ID"><code style="user-select:all;word-break:break-all;font-size:12px">${escapeHtml(s.id)}</code></span>
+          · ${escapeHtml(countLbl)}
+        </p>
+        <div class="session-students-list">${renderStudentIdsChipsHtml(s)}</div>`;
     }
 
     function buildPmoHash(section, monthKey, editSessionId) {
@@ -1926,6 +2067,8 @@
       document.querySelectorAll('.pmo-nav-btn').forEach((btn) => {
         btn.classList.toggle('is-active', btn.dataset.pmoNav === section);
       });
+      const pmoNav = document.getElementById('pmo-nav');
+      if (pmoNav) pmoNav.classList.toggle('is-hidden', section === 'session-students');
       document.querySelectorAll('#view-pmo .pmo-section').forEach((el) => {
         const on = el.dataset.pmoSection === section;
         el.classList.toggle('is-hidden', !on);
@@ -1955,6 +2098,9 @@
         const sel = document.getElementById('f-meetings-month');
         if (sel) sel.value = month && /^\d{4}-\d{2}$/.test(month) ? month : '';
         syncMonthPickerByInputId('f-meetings-month');
+      }
+      if (section === 'session-students') {
+        renderSessionStudentsPage();
       }
     }
 
@@ -2823,7 +2969,7 @@
       <div class="ii"><label>End time</label><p>${escapeHtml(String(s.scheduled_end_time || '').trim() || '—')}</p></div>
       <div class="ii"><label>Grade</label><p>${s.grade ? escapeHtml(s.grade) : '—'}</p></div>
       <div class="ii"><label>Link or location</label><p>${locationLinkHtml(s.location, { sessionId: s.id, venue: s.venue })}</p></div>
-      <div class="ii"><label>Student IDs</label><p>${formatStudentIdsCell(s)}</p></div>
+      <div class="ii"><label>Student IDs</label><p>${formatStudentIdsLinkCell(s)}</p></div>
       <div class="ii"><label>Branch</label><p>${s.branch ? escapeHtml(s.branch) : '—'}</p></div>
       <div class="ii"><label>Region</label><p>${s.region ? escapeHtml(s.region) : '—'}</p></div>
       <div class="ii"><label>Venue / Medium</label><p>${s.venue ? escapeHtml(s.venue) : '—'}</p></div>
@@ -3963,6 +4109,12 @@
       return route.params.month || null;
     }
 
+    function getSpeakerStudentsSessionId() {
+      const route = parseAppRoute();
+      if (route.name !== 'speaker' || route.params.section !== 'session-students') return null;
+      return route.params.sessionId || null;
+    }
+
     function spkTriggerPanelAnimation(wrap) {
       if (!wrap || wrap.classList.contains('is-hidden')) return;
       wrap.classList.remove('spk-animate-in');
@@ -3972,17 +4124,30 @@
 
     function applySpeakerRoute() {
       const month = getSpeakerRouteMonth();
+      const studentsId = getSpeakerStudentsSessionId();
       const monthsWrap = document.getElementById('spk-months-wrap');
       const detailWrap = document.getElementById('spk-detail-wrap');
+      const studentsWrap = document.getElementById('spk-students-wrap');
       if (!monthsWrap || !detailWrap) return;
-      const showDetail = Boolean(month);
-      monthsWrap.classList.toggle('is-hidden', showDetail);
+      const showStudents = Boolean(studentsId);
+      const showDetail = Boolean(month) && !showStudents;
+      monthsWrap.classList.toggle('is-hidden', showDetail || showStudents);
       detailWrap.classList.toggle('is-hidden', !showDetail);
+      if (studentsWrap) {
+        studentsWrap.classList.toggle('is-hidden', !showStudents);
+        if (showStudents) studentsWrap.removeAttribute('hidden');
+        else studentsWrap.setAttribute('hidden', '');
+      }
       const lbl = document.getElementById('spk-breadcrumb-label');
       if (lbl) lbl.textContent = month ? 'This month' : '';
       const h = document.getElementById('spk-detail-heading');
       if (h && month) h.textContent = formatMonthLabel(month);
-      spkTriggerPanelAnimation(showDetail ? detailWrap : monthsWrap);
+      if (showStudents) {
+        renderSessionStudentsPage();
+        spkTriggerPanelAnimation(studentsWrap);
+      } else {
+        spkTriggerPanelAnimation(showDetail ? detailWrap : monthsWrap);
+      }
     }
 
     function speakerMonthStackHtml(r) {
@@ -4187,14 +4352,17 @@
     function parseSalesRoute() {
       const r = parseAppRoute();
       if (r.name === 'sales-admin') {
-        const section = PO_SALES_SECTIONS.has(r.params.section) ? r.params.section : 'overview';
-        return { section, month: r.params.month || null };
+        if (r.params.section === 'session-students') {
+          return { section: 'session-students', month: null, sessionId: r.params.sessionId || null };
+        }
+        const section = r.params.section === 'targets' ? 'targets' : 'overview';
+        return { section, month: r.params.month || null, sessionId: null };
       }
-      return { section: 'overview', month: null };
+      return { section: 'overview', month: null, sessionId: null };
     }
 
     function buildSalesHash(section, monthKey) {
-      const sec = PO_SALES_SECTIONS.has(section) ? section : 'overview';
+      const sec = section === 'targets' ? 'targets' : 'overview';
       let path = `/sales-admin/${sec}`;
       if (monthKey && /^\d{4}-\d{2}$/.test(monthKey)) path += `/${monthKey}`;
       return `#${path}`;
@@ -4226,12 +4394,20 @@
       document.querySelectorAll('.sales-nav-btn').forEach((btn) => {
         btn.classList.toggle('is-active', btn.dataset.salesNav === section);
       });
+      const filtersBar = document.querySelector('#view-sales-admin .sales-dash-filters-bar');
+      const salesNav = document.getElementById('sales-nav');
+      const hideChrome = section === 'session-students';
+      if (filtersBar) filtersBar.classList.toggle('is-hidden', hideChrome);
+      if (salesNav) salesNav.classList.toggle('is-hidden', hideChrome);
       document.querySelectorAll('#view-sales-admin .sales-section').forEach((secEl) => {
         const on = secEl.dataset.salesSection === section;
         secEl.classList.toggle('is-hidden', !on);
         if (on) secEl.removeAttribute('hidden');
         else secEl.setAttribute('hidden', '');
       });
+      if (section === 'session-students') {
+        renderSessionStudentsPage();
+      }
     }
 
     function salesSectionLabel(section) {
@@ -5122,12 +5298,7 @@
     }
 
     function renderSalesStudentIdsHtml(s) {
-      const ids = s && Array.isArray(s.student_ids) ? s.student_ids : [];
-      if (!ids.length) {
-        return '<span class="sales-student-empty">No student IDs recorded yet (students join via share link).</span>';
-      }
-      const chips = ids.map((id) => `<span class="sales-student-chip">${escapeHtml(id)}</span>`).join('');
-      return `<div class="sales-student-ids">${chips}</div>`;
+      return renderStudentIdsChipsHtml(s);
     }
 
     function salesMeetingCardHtml(s, opts) {
@@ -5136,9 +5307,14 @@
       const statusLbl = pending
         ? `<span class="sales-meeting-card__status sales-meeting-card__status--pending">${escapeHtml(s.status)}</span>`
         : '';
+      const viewLink = idCount
+        ? ` · <a href="${escapeAttr(buildStudentsHash(s.id))}" class="session-students-link" data-po-students="${escapeAttr(s.id)}">${
+            idCount === 1 ? 'View 1 student ID' : `View ${idCount} student IDs`
+          }</a>`
+        : '';
       const meta = pending
-        ? `Student IDs from join (live): <strong>${idCount}</strong> · Invited: <strong>${escapeHtml(String(s.invited || 0))}</strong>`
-        : `Parents attended (recorded): <strong>${parseInt(s.attended, 10) || 0}</strong> · Student IDs from join: <strong>${idCount}</strong>`;
+        ? `Student IDs from join (live): <strong>${idCount}</strong> · Invited: <strong>${escapeHtml(String(s.invited || 0))}</strong>${viewLink}`
+        : `Parents attended (recorded): <strong>${parseInt(s.attended, 10) || 0}</strong> · Student IDs from join: <strong>${idCount}</strong>${viewLink}`;
       return `<article class="sales-meeting-card${pending ? ' sales-meeting-card--pending' : ''}">
             <div class="sales-meeting-card__head">${escapeHtml(fmtSessionScheduleSummary(s))} ${statusLbl}</div>
             <div class="sales-meeting-card__meta">${meta}</div>

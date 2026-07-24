@@ -3,18 +3,16 @@ const { MONGODB_DB } = require('../config/env');
 const { STATE_DOC_ID, SESSIONS_COLLECTION } = require('../config/constants');
 const { validateSessionId } = require('../domain/sessions');
 const { migrateLegacyToCanonical } = require('../domain/sessionKeys');
-const { lsqWebhookDueAt } = require('../domain/lsqWebhookSchedule');
 const { normalizeStudentIds } = require('../domain/studentIds');
+const { LSQ_INTERNAL_FIELDS, attachLsqWebhookFields } = require('../domain/lsqSync');
 
-const LSQ_INTERNAL_FIELDS = [
-  'lsq_webhook_sent_at',
-  'lsq_webhook_due_at',
-  'lsq_webhook_claimed_at',
-  'lsq_webhook_attempts',
-  'lsq_webhook_last_error',
-  'lsq_webhook_last_attempt_at',
-  'lsq_webhook_failed_at',
-];
+function kickLsqWebhookSync() {
+  try {
+    require('./lsqWebhook').kickLsqWebhookSync();
+  } catch (_) {
+    /* scheduler optional during early boot */
+  }
+}
 
 const mongo = {
   client: null,
@@ -123,81 +121,37 @@ async function readAllSessionsFromDb() {
   }
 }
 
-function attachLsqWebhookFields(doc, existing) {
-  const status = String(doc.status || '');
-  if (status !== 'Completed') {
-    for (const key of LSQ_INTERNAL_FIELDS) delete doc[key];
-    return doc;
-  }
-
-  const due = lsqWebhookDueAt(doc);
-  if (due) doc.lsq_webhook_due_at = due;
-  else delete doc.lsq_webhook_due_at;
-
-  if (existing?.lsq_webhook_sent_at) {
-    doc.lsq_webhook_sent_at = existing.lsq_webhook_sent_at;
-  } else {
-    delete doc.lsq_webhook_sent_at;
-  }
-
-  delete doc.lsq_webhook_claimed_at;
-
-  const wasCompleted = existing && String(existing.status || '') === 'Completed';
-  if (wasCompleted) {
-    if (existing.lsq_webhook_attempts != null) doc.lsq_webhook_attempts = existing.lsq_webhook_attempts;
-    if (existing.lsq_webhook_last_error) doc.lsq_webhook_last_error = existing.lsq_webhook_last_error;
-    if (existing.lsq_webhook_last_attempt_at) {
-      doc.lsq_webhook_last_attempt_at = existing.lsq_webhook_last_attempt_at;
-    }
-    if (existing.lsq_webhook_failed_at) doc.lsq_webhook_failed_at = existing.lsq_webhook_failed_at;
-  } else {
-    delete doc.lsq_webhook_attempts;
-    delete doc.lsq_webhook_last_error;
-    delete doc.lsq_webhook_last_attempt_at;
-    delete doc.lsq_webhook_failed_at;
-  }
-
-  return doc;
-}
-
 async function ensureSessionIndexes() {
   const coll = sessionsCollection();
+  for (const name of ['lsq_webhook_due_pending', 'lsq_webhook_sent']) {
+    try {
+      await coll.dropIndex(name);
+    } catch (_) {
+      /* missing or in use — recreate below */
+    }
+  }
   await coll.createIndex(
-    { status: 1, lsq_webhook_due_at: 1, lsq_webhook_sent_at: 1 },
+    { 'student_ids.0': 1, lsq_webhook_due_at: 1, lsq_webhook_sent_at: 1 },
     { name: 'lsq_webhook_due_pending' }
   );
-  await coll.createIndex({ status: 1, lsq_webhook_sent_at: 1 }, { name: 'lsq_webhook_sent' });
+  await coll.createIndex({ lsq_webhook_sent_at: 1 }, { name: 'lsq_webhook_sent' });
 }
 
-async function backfillLsqWebhookDueAt() {
-  const coll = sessionsCollection();
-  const docs = await coll
-    .find({
-      status: 'Completed',
+/** Mark unsynced sessions that already have student_ids as immediately due. */
+async function backfillLsqWebhookPending() {
+  const now = new Date();
+  const result = await sessionsCollection().updateMany(
+    {
+      'student_ids.0': { $exists: true },
       $and: [
         { $or: [{ lsq_webhook_due_at: { $exists: false } }, { lsq_webhook_due_at: null }] },
         { $or: [{ lsq_webhook_sent_at: { $exists: false } }, { lsq_webhook_sent_at: null }] },
+        { $or: [{ lsq_webhook_failed_at: { $exists: false } }, { lsq_webhook_failed_at: null }] },
       ],
-    })
-    .toArray();
-
-  if (!docs.length) return 0;
-
-  const ops = [];
-  for (const doc of docs) {
-    const client = sessionDocToClient(doc);
-    if (!client) continue;
-    const due = lsqWebhookDueAt(client);
-    if (!due) continue;
-    ops.push({
-      updateOne: {
-        filter: { _id: doc._id },
-        update: { $set: { lsq_webhook_due_at: due } },
-      },
-    });
-  }
-  if (ops.length) await coll.bulkWrite(ops, { ordered: false });
-  return ops.length;
+    },
+    { $set: { lsq_webhook_due_at: now } }
+  );
+  return result.modifiedCount || 0;
 }
 
 async function writePmoSessionsReplaceAll(body) {
@@ -224,6 +178,7 @@ async function writePmoSessionsReplaceAll(body) {
     };
   });
   await coll.bulkWrite(ops, { ordered: false });
+  kickLsqWebhookSync();
 }
 
 async function writeSpeakerMergedSessions(mergedList) {
@@ -249,6 +204,7 @@ async function writeSpeakerMergedSessions(mergedList) {
     });
   if (ops.length === 0) return;
   await coll.bulkWrite(ops, { ordered: false });
+  kickLsqWebhookSync();
 }
 
 async function initMongo() {
@@ -276,9 +232,9 @@ async function initMongo() {
   try {
     await migrateLegacySessionsIfNeeded();
     await ensureSessionIndexes();
-    const backfilled = await backfillLsqWebhookDueAt();
+    const backfilled = await backfillLsqWebhookPending();
     if (backfilled > 0) {
-      console.log(`[LSQ webhook] Backfilled lsq_webhook_due_at on ${backfilled} completed session(s).`);
+      console.log(`[LSQ webhook] Backfilled pending sync on ${backfilled} session(s) with student_ids.`);
     }
     const { seedSchoolTargets } = require('./seedSchoolTargets');
     await seedSchoolTargets();
@@ -312,4 +268,6 @@ module.exports = {
   readAllSessionsFromDb,
   writePmoSessionsReplaceAll,
   writeSpeakerMergedSessions,
+  attachLsqWebhookFields,
+  kickLsqWebhookSync,
 };

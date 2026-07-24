@@ -39,7 +39,7 @@ const lsqWebhookConfig = {
 function assertLsqWebhookProductionConfig() {
   if (!isProd) return;
   if (!lsqWebhookConfig.enabled) {
-    console.warn('[WARN] Production: LSQ_WEBHOOK_DISABLED=1 — completed sessions will not sync to LSQ.');
+    console.warn('[WARN] Production: LSQ_WEBHOOK_DISABLED=1 — sessions with student_ids will not sync to LSQ.');
     return;
   }
   if (!lsqWebhookConfig.url) {
