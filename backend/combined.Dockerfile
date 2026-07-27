@@ -7,11 +7,9 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies for all backend apps.
-COPY backend/technathon/package.json backend/technathon/package-lock.json ./backend/technathon/
 COPY backend/parent-orientation/package.json backend/parent-orientation/package-lock.json ./backend/parent-orientation/
 COPY backend/wizklub-testimonials/package.json backend/wizklub-testimonials/package-lock.json ./backend/wizklub-testimonials/
-RUN npm ci --omit=dev --prefix ./backend/technathon \
-  && npm ci --omit=dev --prefix ./backend/parent-orientation \
+RUN npm ci --omit=dev --prefix ./backend/parent-orientation \
   && npm ci --omit=dev --prefix ./backend/wizklub-testimonials
 
 # Copy backend source trees and boot script.
@@ -22,7 +20,7 @@ COPY backend/start-backends.sh /usr/local/bin/start-backends.sh
 RUN sed -i 's/\r$//' /usr/local/bin/start-backends.sh \
   && chmod +x /usr/local/bin/start-backends.sh
 
-EXPOSE 5000 8080 3001
+EXPOSE 8080 3001
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["/usr/local/bin/start-backends.sh"]
