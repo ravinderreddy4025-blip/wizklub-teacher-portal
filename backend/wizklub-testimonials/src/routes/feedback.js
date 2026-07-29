@@ -4,6 +4,7 @@ import { parseMultipartMultiple } from '../middleware/parseMultipart.js'
 import {
   createFeedback,
   getFeedback,
+  getFeedbackIssueSummary,
   listFeedback,
   updateFeedback,
 } from '../services/feedback.js'
@@ -70,6 +71,21 @@ export function createFeedbackRouter() {
     } catch (err) {
       console.error('Feedback list failed:', err)
       return res.status(500).json({ ok: false, error: 'Failed to load feedback.' })
+    }
+  })
+
+  router.get('/feedback/summary', async (req, res) => {
+    try {
+      const { school_id, batch_id } = req.query ?? {}
+      const result = await getFeedbackIssueSummary({
+        teacherId: req.teacher.user_id,
+        schoolId: school_id || undefined,
+        batchId: batch_id || undefined,
+      })
+      return res.json(result)
+    } catch (err) {
+      console.error('Feedback summary failed:', err)
+      return res.status(500).json({ ok: false, error: 'Failed to load feedback summary.' })
     }
   })
 

@@ -18,4 +18,9 @@ export const config = {
     folder: process.env.GCS_FOLDER ?? 'wizklub',
     credentials: process.env.GCS_CREDENTIALS ?? '',
   },
+  lms: {
+    baseUrl: String(process.env.LMS_BASE_URL || '').trim().replace(/\/$/, ''),
+    apiKey: String(process.env.LMS_API_KEY || '').trim(),
+    apiSecret: String(process.env.LMS_API_SECRET || '').trim(),
+  },
 }

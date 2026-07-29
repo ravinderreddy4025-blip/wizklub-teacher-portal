@@ -227,6 +227,48 @@ export async function getFeedback(feedbackId, teacherId) {
   return { ok: true, feedback: mapFeedback(row) }
 }
 
+/**
+ * Counts Support issues for Analytics "Tech Issues Raised".
+ * Maps resolved → closed to match the Analytics card labels.
+ */
+export async function getFeedbackIssueSummary({
+  teacherId,
+  schoolId,
+  batchId,
+}) {
+  if (!isDatabaseReady()) {
+    return {
+      ok: true,
+      total: 0,
+      open: 0,
+      in_progress: 0,
+      closed: 0,
+    }
+  }
+
+  const filter = { teacher_id: teacherId }
+  if (schoolId) filter.school_id = schoolId
+  if (batchId) filter.batch_id = batchId
+
+  const rows = await Feedback.aggregate([
+    { $match: filter },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ])
+
+  const byStatus = Object.fromEntries(rows.map((row) => [row._id, row.count]))
+  const open = Number(byStatus[FEEDBACK_STATUS.OPEN]) || 0
+  const inProgress = Number(byStatus[FEEDBACK_STATUS.IN_PROGRESS]) || 0
+  const closed = Number(byStatus[FEEDBACK_STATUS.RESOLVED]) || 0
+
+  return {
+    ok: true,
+    total: open + inProgress + closed,
+    open,
+    in_progress: inProgress,
+    closed,
+  }
+}
+
 export async function updateFeedback(feedbackId, teacherId, { status, resolution_note, priority }) {
   if (!isDatabaseReady()) {
     return { ok: false, status: 503, error: 'Database unavailable.' }

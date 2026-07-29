@@ -319,6 +319,113 @@ export const api = {
     return result.data
   },
 
+  async getProgressOverview(batchId, { periodType = 'MONTHLY', limit = 10 } = {}) {
+    if (USE_MOCK) {
+      return {
+        session_summary: {
+          total: 42,
+          done: 28,
+          missed: 10,
+          cancelled: 4,
+          period_type: periodType,
+        },
+        completion_tracker: {
+          items: [
+            { label: 'Practical Lab Sessions', delivery: 85, completion: 72 },
+            { label: 'Theory & Lectures', delivery: 78, completion: 64 },
+            { label: 'Monthly Assessments', delivery: 92, completion: 81 },
+          ],
+        },
+        students_needing_improvement: {
+          items: [
+            { rank: 1, name: 'Alex Johnson', score: 42, critical: true },
+            { rank: 2, name: 'Sarah Miller', score: 45, critical: true },
+            { rank: 3, name: 'Chris Evans', score: 51, critical: false },
+            { rank: 4, name: 'Emma Watson', score: 53, critical: false },
+          ],
+        },
+      }
+    }
+
+    const params = new URLSearchParams({
+      period_type: periodType,
+      limit: String(limit),
+    })
+    const result = await request(
+      `/api/teacher/batches/${encodeURIComponent(batchId)}/progress-overview?${params}`,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) return null
+    return result.data
+  },
+
+  async getLmsTime() {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.getLmsTime?.() ?? {
+        configured: true,
+        hours: 48,
+        minutes: 2880,
+        period_days: 14,
+        display: '48h',
+        weekly_bars: [38, 42, 35, 70],
+        label: 'Your LMS time (14 days)',
+      }
+    }
+
+    const result = await request('/api/teacher/lms-time')
+    if (!result.ok) return null
+    return result.data
+  },
+
+  async getFeedbackSummary(batchId) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.getFeedbackSummary?.(batchId) ?? {
+        overall: 4.8,
+        forms: 134,
+        grades: [
+          { grade: 'Grade 8', value: 4.9, tag: 'Highest', tone: 'high' },
+          { grade: 'Grade 7', value: 4.7, tag: null, tone: 'mid' },
+          { grade: 'Grade 9', value: 4.2, tag: 'Lowest', tone: 'low' },
+        ],
+      }
+    }
+
+    const result = await request(
+      `/api/teacher/batches/${encodeURIComponent(batchId)}/feedback-summary`,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) return null
+    return result.data
+  },
+
+  async getUploadStats(batchId, schoolId = '') {
+    if (USE_MOCK) {
+      return {
+        total_uploads: 24,
+        student_uploads: 24,
+        batch_uploads: 0,
+        recent: [
+          { initials: 'AS', label: 'Alex' },
+          { initials: 'MM', label: 'Mia' },
+          { initials: 'JD', label: 'Jordan' },
+        ],
+        extra: 3,
+      }
+    }
+
+    const params = new URLSearchParams()
+    if (schoolId) params.set('school_id', schoolId)
+    const qs = params.toString()
+    const result = await request(
+      `/api/teacher/batches/${encodeURIComponent(batchId)}/upload-stats${qs ? `?${qs}` : ''}`,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) return null
+    return result.data
+  },
+
   async uploadMedia(studentId, category, file) {
     const validation = validateUploadFile(file)
     if (!validation.ok) return { ok: false, status: 415, error: validation.error }
@@ -427,6 +534,21 @@ export const api = {
 
     const result = await request(`/api/teacher/feedback?${params}`)
     if (!result.ok) return { ok: false, error: result.error, items: [] }
+    return result.data
+  },
+
+  async getTechIssueSummary({ school_id, batch_id } = {}) {
+    if (USE_MOCK) {
+      return { total: 12, open: 3, in_progress: 4, closed: 5 }
+    }
+
+    const params = new URLSearchParams()
+    if (school_id) params.set('school_id', school_id)
+    if (batch_id) params.set('batch_id', batch_id)
+
+    const qs = params.toString()
+    const result = await request(`/api/teacher/feedback/summary${qs ? `?${qs}` : ''}`)
+    if (!result.ok) return null
     return result.data
   },
 

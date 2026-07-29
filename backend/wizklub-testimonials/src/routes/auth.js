@@ -63,6 +63,7 @@ export function createAuthRouter() {
     const sessionUserId = user?.username || user?.user_id || user_id
     const inferredName =
       user?.full_name || user?.name || user?.instructor_name || sessionUserId
+    const email = String(user?.email || '').trim() || null
     const schoolIds = Array.isArray(user?.school_ids) ? user.school_ids : []
     const batchIds = extractBatchIds(user)
     const lastLoginAt = new Date().toISOString()
@@ -113,6 +114,7 @@ export function createAuthRouter() {
     storeSession(accessToken, {
       userId: sessionUserId,
       fullName: teacher.full_name,
+      email,
       refreshToken: refreshToken ?? null,
       schoolIds,
       batchIds,
@@ -192,6 +194,7 @@ export function createAuthRouter() {
     const nextSession = {
       userId,
       fullName,
+      email: session?.email ?? null,
       refreshToken: nextRefresh,
       schoolIds,
       batchIds,

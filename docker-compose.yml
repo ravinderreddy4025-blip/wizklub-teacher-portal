@@ -43,12 +43,18 @@ services:
       # Wizklub Testimonials backend
       TESTIMONIALS_NODE_ENV: ${TESTIMONIALS_NODE_ENV:-production}
       TESTIMONIALS_PORT: ${TESTIMONIALS_PORT:-3001}
+      WIZKLUB_API_BASE_URL: ${WIZKLUB_API_BASE_URL:-https://api.wizklub.com/v1}
+      LMS_BASE_URL: ${LMS_BASE_URL:-}
+      LMS_API_KEY: ${LMS_API_KEY:-}
+      LMS_API_SECRET: ${LMS_API_SECRET:-}
       GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
       GCS_FOLDER: ${GCS_FOLDER:-wizklub}
       GCS_CREDENTIALS: ${GCS_CREDENTIALS:-}
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcs-credentials.json
     volumes:
       - ./gcs-credentials.json:/run/secrets/gcs-credentials.json:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose:
       - "8080"
       - "3001"

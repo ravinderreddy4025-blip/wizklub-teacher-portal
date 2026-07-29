@@ -8,17 +8,22 @@ import {
   getUploadsForStudent,
   getBatchUpload,
   teacherOwnsStudent,
+  teacherOwnsBatch,
   getAllUploads,
   getBatchesForSchool,
 } from '../services/access.js'
 import { syncSchoolsAndBatches } from '../services/schoolSync.js'
 import { resolveSchoolIds, resolveSchoolWithBatches } from '../services/schoolResolve.js'
 import { getSession } from '../services/sessionStore.js'
+import { fetchTeacherLmsTime } from '../services/lmsTime.js'
+import { fetchBatchProgressOverview } from '../services/completionAnalytics.js'
+import { fetchBatchFeedbackSummary } from '../services/feedbackSummary.js'
 import { fetchAllStudentsForBatch } from '../services/studentSync.js'
 import {
   getBatchCompletion,
   getStudentCompletion,
 } from '../services/uploads.js'
+import { listBatchUploads } from '../services/batchUploads.js'
 import { HEALTH_TAG_LABELS, UPLOAD_STATUS } from '../utils/constants.js'
 
 export function createTeacherRouter() {
@@ -153,6 +158,114 @@ export function createTeacherRouter() {
     res.json({
       school: { id: school._id, name: school.name },
       batches,
+    })
+  })
+
+  router.get('/batches/:batchId/progress-overview', async (req, res) => {
+    const { batchId } = req.params
+    const periodType = String(req.query.period_type || 'MONTHLY').toUpperCase()
+    const limit = Number(req.query.limit) || 10
+    const owns = await teacherOwnsBatch(req.teacher.user_id, batchId, {
+      batchIds: req.batchIds,
+      schoolIds: req.schoolIds,
+    })
+    if (!owns) {
+      return res.status(403).json({ forbidden: true })
+    }
+
+    try {
+      const summary = await fetchBatchProgressOverview(batchId, req.accessToken, {
+        periodType,
+        limit,
+      })
+      return res.json(summary)
+    } catch (err) {
+      console.error(`[ProgressOverview] ${batchId}:`, err.message)
+      return res.status(err.status && err.status >= 400 ? err.status : 502).json({
+        error: err.message || 'Failed to load progress overview from WizKlub.',
+      })
+    }
+  })
+
+  router.get('/lms-time', async (req, res) => {
+    try {
+      const summary = await fetchTeacherLmsTime(req.teacherEmail)
+      return res.json(summary)
+    } catch (err) {
+      console.error('[LmsTime]', err.message)
+      return res.status(err.status && err.status >= 400 ? err.status : 502).json({
+        error: err.message || 'Failed to load LMS time tracking.',
+        configured: true,
+      })
+    }
+  })
+
+  router.get('/batches/:batchId/feedback-summary', async (req, res) => {
+    const { batchId } = req.params
+    const owns = await teacherOwnsBatch(req.teacher.user_id, batchId, {
+      batchIds: req.batchIds,
+      schoolIds: req.schoolIds,
+    })
+    if (!owns) {
+      return res.status(403).json({ forbidden: true })
+    }
+
+    try {
+      const summary = await fetchBatchFeedbackSummary(batchId, req.accessToken)
+      return res.json(summary)
+    } catch (err) {
+      console.error(`[FeedbackSummary] ${batchId}:`, err.message)
+      return res.status(err.status && err.status >= 400 ? err.status : 502).json({
+        error: err.message || 'Failed to load feedback summary from WizKlub.',
+      })
+    }
+  })
+
+  /** Total upload file records for a batch (student uploads + batch group uploads). */
+  router.get('/batches/:batchId/upload-stats', async (req, res) => {
+    const { batchId } = req.params
+    const owns = await teacherOwnsBatch(req.teacher.user_id, batchId, {
+      batchIds: req.batchIds,
+      schoolIds: req.schoolIds,
+    })
+    if (!owns) {
+      return res.status(403).json({ forbidden: true })
+    }
+
+    const batch = await getBatchById(batchId)
+    const schoolId = batch?.school_id || String(req.query.school_id ?? '').trim()
+    if (!schoolId) {
+      return res.status(400).json({ error: 'school_id is required to load upload stats.' })
+    }
+
+    const students = await fetchAllStudentsForBatch(schoolId, batchId, req.accessToken)
+    const studentIds = new Set(students.map((s) => s.id))
+    const studentNameById = new Map(students.map((s) => [s.id, s.full_name || s.id]))
+
+    const uploads = await getAllUploads()
+    const studentUploads = uploads.filter((u) => studentIds.has(u.student_id))
+    const batchGroupUploads = await listBatchUploads(batchId)
+    const totalUploads = studentUploads.length + batchGroupUploads.length
+
+    const recent = studentUploads
+      .slice()
+      .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+      .slice(0, 4)
+      .map((u) => {
+        const name = studentNameById.get(u.student_id) || u.student_id || '?'
+        const parts = String(name).trim().split(/\s+/).filter(Boolean)
+        const initials = parts.length >= 2
+          ? `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase()
+          : String(name).slice(0, 2).toUpperCase()
+        return { initials, label: name }
+      })
+
+    return res.json({
+      total_uploads: totalUploads,
+      student_uploads: studentUploads.length,
+      batch_uploads: batchGroupUploads.length,
+      recent,
+      extra: Math.max(totalUploads - recent.length, 0),
     })
   })
 

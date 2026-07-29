@@ -144,6 +144,53 @@ function getBatchesForSchool(schoolId) {
 export const mockStore = {
   getSessionTeacherId: () => sessionTeacherId,
 
+  getSessionSummary(batchId) {
+    const byBatch = {
+      g8a: { total: 42, done: 28, missed: 10, cancelled: 4 },
+      g8b: { total: 38, done: 26, missed: 8, cancelled: 4 },
+      g7a: { total: 36, done: 24, missed: 9, cancelled: 3 },
+      g9a: { total: 45, done: 31, missed: 11, cancelled: 3 },
+    }
+    const sessions = byBatch[batchId] || byBatch.g8a
+    return { ...sessions, period_type: 'MONTHLY' }
+  },
+
+  getLmsTime() {
+    return {
+      configured: true,
+      hours: 48,
+      minutes: 2880,
+      period_days: 14,
+      display: '48h',
+      weekly_bars: [38, 42, 35, 70],
+      label: 'Your LMS time (14 days)',
+    }
+  },
+
+  getFeedbackSummary(batchId) {
+    const byBatch = {
+      g8a: {
+        overall: 4.8,
+        forms: 134,
+        grades: [
+          { grade: 'Grade 8', value: 4.9, tag: 'Highest', tone: 'high' },
+          { grade: 'Grade 7', value: 4.7, tag: null, tone: 'mid' },
+          { grade: 'Grade 9', value: 4.2, tag: 'Lowest', tone: 'low' },
+        ],
+      },
+      g8b: {
+        overall: 4.6,
+        forms: 98,
+        grades: [
+          { grade: 'Grade 8', value: 4.7, tag: 'Highest', tone: 'high' },
+          { grade: 'Grade 7', value: 4.5, tag: null, tone: 'mid' },
+          { grade: 'Grade 9', value: 4.1, tag: 'Lowest', tone: 'low' },
+        ],
+      },
+    }
+    return byBatch[batchId] || byBatch.g8a
+  },
+
   login(user_id, password) {
     const teacher = teachers.find((row) => row.user_id === user_id && row.password === password)
     if (!teacher) return { ok: false, error: 'Invalid user ID or password.' }

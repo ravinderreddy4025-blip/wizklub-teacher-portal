@@ -31,6 +31,7 @@ export async function requireAuth(req, res, next) {
   }
 
   req.teacher = teacher
+  req.teacherEmail = session.email ?? null
   req.accessToken = token
   req.refreshToken = session.refreshToken ?? null
   req.schoolIds = session.schoolIds ?? []
