@@ -341,7 +341,7 @@ export default function Analytics() {
             : EMPTY_COMPLETION,
         )
 
-        const studentsSummary = summary.students_needing_improvement || {}
+        const studentsSummary = summary.assessment_analysis || {}
         setStudents(
           Array.isArray(studentsSummary.items)
             ? studentsSummary.items.map((item) => ({
