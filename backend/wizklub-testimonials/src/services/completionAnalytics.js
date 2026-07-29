@@ -2,7 +2,7 @@ import { WIZKLUB_URLS } from '../utils/wizklubAuth.js'
 
 /**
  * Batch progress overview from WizKlub:
- * session summary + completion tracker + students needing improvement.
+ * session summary + completion tracker + assessment analysis.
  */
 export async function fetchBatchProgressOverview(
   batchId,
@@ -30,7 +30,7 @@ export async function fetchBatchProgressOverview(
   const data = payload?.data ?? payload
   const session = data.session_summary || {}
   const completion = data.completion_tracker || {}
-  const students = data.students_needing_improvement || {}
+  const assessment = data.assessment_analysis || {}
 
   return {
     batch_id: data.batch_id || batchId,
@@ -42,7 +42,6 @@ export async function fetchBatchProgressOverview(
       period_type: session.period_type || periodType,
     },
     completion_tracker: {
-      batch_id: completion.batch_id || batchId,
       student_count: Number(completion.student_count) || 0,
       items: Array.isArray(completion.items)
         ? completion.items.map((item) => ({
@@ -55,11 +54,10 @@ export async function fetchBatchProgressOverview(
           }))
         : [],
     },
-    students_needing_improvement: {
-      batch_id: students.batch_id || batchId,
-      score_source: students.score_source || 'none',
-      items: Array.isArray(students.items)
-        ? students.items.map((item) => ({
+    assessment_analysis: {
+      score_source: assessment.score_source || 'none',
+      items: Array.isArray(assessment.items)
+        ? assessment.items.map((item) => ({
             rank: Number(item.rank) || 0,
             student_id: item.student_id || '',
             name: item.name || item.student_id || '',

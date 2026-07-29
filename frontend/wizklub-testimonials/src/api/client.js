@@ -336,7 +336,7 @@ export const api = {
             { label: 'Monthly Assessments', delivery: 92, completion: 81 },
           ],
         },
-        students_needing_improvement: {
+        assessment_analysis: {
           items: [
             { rank: 1, name: 'Alex Johnson', score: 42, critical: true },
             { rank: 2, name: 'Sarah Miller', score: 45, critical: true },
