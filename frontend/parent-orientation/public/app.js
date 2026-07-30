@@ -2330,6 +2330,7 @@
         "Sri Chaitanya-Samalkha",
         "Sri Chaitanya-Fatehabad 2",
         "Sri Chaitanya-Rohtak",
+        "Sri Chaitanya-Sirsa",
       ],
       "Maharashtra": [
         "Sri Chaitanya-Aurangabad 1",
