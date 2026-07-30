@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log*
+*.log
+
+# Local environment / data
+.env
+Parent_Orientation_Tracker.xlsx
+excel_info*.txt
+
+# Local editor / git
+.vscode
+.git
