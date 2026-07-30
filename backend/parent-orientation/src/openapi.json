@@ -1,0 +1,349 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Parent Orientation Tracker API",
+    "description": "REST API for PMO and Speaker roles. Most routes require a signed session cookie after POST /api/login. If both PMO and Speaker cookies exist, send header X-PO-Role: pmo or X-PO-Role: speaker on each request.",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "/", "description": "Same origin as the web app" }],
+  "tags": [
+    { "name": "Health", "description": "Public checks" },
+    { "name": "Auth", "description": "Login and logout" },
+    { "name": "Sessions", "description": "Session records (MongoDB)" },
+    { "name": "Files", "description": "Excel workbook" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookiePmo": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "po_auth_pmo",
+        "description": "Signed PMO session cookie (set by POST /api/login)."
+      },
+      "cookieSpeaker": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "po_auth_speaker",
+        "description": "Signed Speaker session cookie (set by POST /api/login)."
+      },
+      "roleHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-PO-Role",
+        "description": "Required when both role cookies are present: value pmo or speaker."
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["user", "pass"],
+        "properties": {
+          "user": { "type": "string" },
+          "pass": { "type": "string" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "role": { "type": "string", "enum": ["pmo", "speaker"] }
+        }
+      },
+      "LogoutRequest": {
+        "type": "object",
+        "properties": {
+          "role": { "type": "string", "enum": ["pmo", "speaker"], "description": "If omitted, clears all auth cookies." }
+        }
+      },
+      "MeResponse": {
+        "type": "object",
+        "properties": {
+          "role": { "type": "string", "enum": ["pmo", "speaker"] }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "mongo": { "type": "boolean" },
+          "mongoConfigured": { "type": "boolean" }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "description": "Session row. PMO create/update must satisfy validatePmoSessionRecord (date, start/end time, grades, region, branch, venue Online|Offline, teacher, location rules, invited, status).",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID (preferred) or legacy alphanumeric id (see server SESSION_ID_RE)."
+          },
+          "scheduled_date": { "type": "string", "example": "2026-04-18" },
+          "scheduled_start_time": { "type": "string", "example": "15:30" },
+          "scheduled_end_time": { "type": "string", "example": "17:00" },
+          "grade": { "type": "string", "example": "G3, G4" },
+          "location": { "type": "string" },
+          "region": { "type": "string" },
+          "branch": { "type": "string" },
+          "venue": { "type": "string", "enum": ["Online", "Offline"] },
+          "teacher": { "type": "string" },
+          "co_host": { "type": "string" },
+          "invited": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+          "status": { "type": "string", "enum": ["Planned", "Completed", "Rescheduled", "Cancelled"] },
+          "attended": { "description": "String or number in practice", "oneOf": [{ "type": "string" }, { "type": "integer" }] },
+          "engagement": { "type": "string" },
+          "follow_up": { "type": "string" },
+          "follow_up_date": { "type": "string" },
+          "follow_up_notes": { "type": "string" },
+          "session_status": { "type": "string" },
+          "remarks": { "type": "string" },
+          "update_action": { "type": "string" }
+        },
+        "additionalProperties": true
+      },
+      "ErrorJson": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "role": { "type": "string", "nullable": true }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "No authentication. Used for uptime and Mongo connectivity.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Sign in",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sets signed cookie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Sign out",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LogoutRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cookies cleared",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "ok": { "type": "boolean" } } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Current role",
+        "security": [[{ "cookiePmo": [] }], [{ "cookieSpeaker": [] }]],
+        "responses": {
+          "200": {
+            "description": "Authenticated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MeResponse" }
+              }
+            }
+          },
+          "401": { "description": "Not signed in" }
+        }
+      }
+    },
+    "/api/sessions": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "List all sessions",
+        "security": [[{ "cookiePmo": [] }], [{ "cookieSpeaker": [] }]],
+        "responses": {
+          "200": {
+            "description": "Array of sessions",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Session" } }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "503": { "description": "Mongo unavailable" }
+        }
+      },
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Create one session (PMO)",
+        "security": [[{ "cookiePmo": [] }], [{ "cookiePmo": [] }, { "roleHeader": [] }]],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Session" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created" },
+          "400": { "description": "Validation or schedule conflict" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Not PMO" },
+          "409": { "description": "Session id already exists" },
+          "503": { "description": "Database unavailable" }
+        }
+      },
+      "put": {
+        "tags": ["Sessions"],
+        "summary": "PMO: replace all sessions OR Speaker: merge updates",
+        "description": "PMO: body is a JSON array — full replace of stored sessions (validated). Speaker: body is a JSON array of partial objects with id — merges only allowed post-activity fields.",
+        "security": [[{ "cookiePmo": [] }], [{ "cookieSpeaker": [] }]],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/Session" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Success, no body" },
+          "400": { "description": "Invalid body or business rules" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "503": { "description": "Database unavailable" }
+        }
+      }
+    },
+    "/api/sessions/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" },
+          "description": "Session id (URL-encoded if needed)"
+        }
+      ],
+      "put": {
+        "tags": ["Sessions"],
+        "summary": "Replace one session by id (PMO)",
+        "security": [[{ "cookiePmo": [] }], [{ "cookiePmo": [] }, { "roleHeader": [] }]],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Session" }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Updated" },
+          "400": { "description": "Validation or id mismatch" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Not PMO" },
+          "503": { "description": "Database unavailable" }
+        }
+      },
+      "delete": {
+        "tags": ["Sessions"],
+        "summary": "Delete one session (PMO)",
+        "security": [[{ "cookiePmo": [] }], [{ "cookiePmo": [] }, { "roleHeader": [] }]],
+        "responses": {
+          "204": { "description": "Deleted" },
+          "400": { "description": "Invalid id" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Not PMO" },
+          "404": { "description": "Not found" },
+          "503": { "description": "Database unavailable" }
+        }
+      }
+    },
+    "/api/uploadExcel": {
+      "post": {
+        "tags": ["Files"],
+        "summary": "Upload workbook bytes (PMO)",
+        "description": "Raw .xlsx body. Content-Type must be application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "security": [[{ "cookiePmo": [] }], [{ "cookiePmo": [] }, { "roleHeader": [] }]],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+              "schema": { "type": "string", "format": "binary" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Saved" },
+          "400": { "description": "Empty body" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Not PMO" },
+          "409": { "description": "File locked (e.g. open in Excel)" },
+          "500": { "description": "Save error" }
+        }
+      }
+    },
+    "/Parent_Orientation_Tracker.xlsx": {
+      "get": {
+        "tags": ["Files"],
+        "summary": "Download Excel template / workbook",
+        "security": [[{ "cookiePmo": [] }], [{ "cookieSpeaker": [] }]],
+        "responses": {
+          "200": {
+            "description": "XLSX binary",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Template missing on server" }
+        }
+      }
+    }
+  }
+}

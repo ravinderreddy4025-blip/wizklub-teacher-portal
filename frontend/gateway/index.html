@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F97316">
+  <title>WizKlub Apps</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/brand/logo.png">
+  <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg">
+  <link rel="shortcut icon" href="/brand/favicon.svg">
+  <link rel="apple-touch-icon" href="/brand/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #1c1917;
+      background: linear-gradient(165deg, #fff7ed 0%, #ffffff 42%, #ffedd5 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .hub {
+      width: min(100%, 920px);
+    }
+
+    .hub__header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .hub__logo {
+      width: min(280px, 85vw);
+      height: auto;
+      object-fit: contain;
+      margin-bottom: 16px;
+      display: block;
+      margin-inline: auto;
+    }
+
+    .hub__title {
+      font-size: clamp(1.75rem, 4vw, 2.25rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #431407;
+    }
+
+    .hub__subtitle {
+      margin-top: 8px;
+      font-size: 1rem;
+      color: #78716c;
+      max-width: 36rem;
+      margin-inline: auto;
+      line-height: 1.5;
+    }
+
+    .hub__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+    }
+
+    .hub-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 22px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid rgba(234, 88, 12, 0.14);
+      box-shadow: 0 1px 3px rgba(234, 88, 12, 0.07), 0 12px 32px rgba(251, 146, 60, 0.08);
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .hub-card:hover,
+    .hub-card:focus-visible {
+      transform: translateY(-3px);
+      border-color: rgba(234, 88, 12, 0.28);
+      box-shadow: 0 8px 36px rgba(234, 88, 12, 0.14);
+      outline: none;
+    }
+
+    .hub-card__badge {
+      display: inline-flex;
+      align-self: flex-start;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: #ffedd5;
+      color: #c2410c;
+    }
+
+    .hub-card__title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #431407;
+    }
+
+    .hub-card__text {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: #78716c;
+      flex: 1;
+    }
+
+    .hub-card__cta {
+      margin-top: 4px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #ea580c;
+    }
+
+    .hub__footer {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: #a8a29e;
+    }
+  </style>
+</head>
+<body>
+  <main class="hub">
+    <header class="hub__header">
+      <img class="hub__logo" src="/brand/logo.png" alt="WIZKLUB Futurz">
+      <h1 class="hub__title">WizKlub Apps</h1>
+      <p class="hub__subtitle">Choose an application to continue. All apps run on this same gateway.</p>
+    </header>
+
+    <section class="hub__grid" aria-label="Applications">
+      <a class="hub-card" href="/pmo/">
+        <span class="hub-card__badge">PMO</span>
+        <h2 class="hub-card__title">Parent Orientation</h2>
+        <p class="hub-card__text">Plan sessions, track speaker updates, and manage parent orientation analytics.</p>
+        <span class="hub-card__cta">Open PMO →</span>
+      </a>
+
+      <a class="hub-card" href="/wizklub-testimonials/">
+        <span class="hub-card__badge">Teachers</span>
+        <h2 class="hub-card__title">Wizklub Testimonials</h2>
+        <p class="hub-card__text">Teacher upload dashboard for student review media and testimonial categories.</p>
+        <span class="hub-card__cta">Open Testimonials →</span>
+      </a>
+    </section>
+
+    <p class="hub__footer">WizKlub internal tools gateway</p>
+  </main>
+</body>
+</html>
