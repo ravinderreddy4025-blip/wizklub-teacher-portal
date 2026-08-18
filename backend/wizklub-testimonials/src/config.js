@@ -13,6 +13,8 @@ export const config = {
   port: Number(process.env.TESTIMONIALS_PORT) || 3001,
   mongoUri,
   mongoDbName,
+  inventoryApiBaseUrl: String(process.env.INVENTORY_API_BASE_URL || 'http://127.0.0.1:5002/api').replace(/\/$/, ''),
+  internalBridgeSecret: String(process.env.INTERNAL_BRIDGE_SECRET || '').trim(),
   gcs: {
     bucketName: process.env.GCS_BUCKET_NAME ?? '',
     folder: process.env.GCS_FOLDER ?? 'wizklub',

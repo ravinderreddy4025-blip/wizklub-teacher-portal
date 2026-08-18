@@ -42,7 +42,7 @@ export default function Login() {
       <aside className="login__aside">
         <div className="login__aside-content">
           <img src={assetUrl('assets/logo.png')} alt="" className="login__aside-logo" />
-          <h1 className="login__aside-title">Wizklub Teacher Upload</h1>
+          <h1 className="login__aside-title">WizKlub Teachers Portal</h1>
           <p className="login__aside-text">
             Manage student review media across schools, batches, and five review categories — from any browser.
           </p>
@@ -61,7 +61,7 @@ export default function Login() {
               <div className="login__brand login__brand--mobile">
                 <div className="login__logo-wrap">
                   <div className="login__logo">
-                    <img src={assetUrl('assets/logo.png')} alt="Wizklub Teacher Upload" className="login__logo-img" />
+                    <img src={assetUrl('assets/logo.png')} alt="WizKlub Teachers Portal" className="login__logo-img" />
                   </div>
                 </div>
                 <h2 className="login__title">Sign in</h2>
@@ -168,7 +168,7 @@ export default function Login() {
         </main>
 
         <footer className="login__footer">
-          <p className="login__copyright">© 2026 Wizklub Teacher Upload</p>
+          <p className="login__copyright">© 2026 WizKlub Teachers Portal</p>
         </footer>
       </div>
     </div>

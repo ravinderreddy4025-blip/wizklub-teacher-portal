@@ -38,6 +38,7 @@
       --po-radius: 16px;
       --po-radius-sm: 12px;
       --po-shadow: 0 1px 3px rgba(234, 88, 12, 0.07), 0 12px 32px rgba(251, 146, 60, 0.08);
+      --po-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.82);
       --po-shadow-hover: 0 8px 36px rgba(234, 88, 12, 0.14);
       --po-gradient-page: linear-gradient(165deg, #fff7ed 0%, #ffffff 40%, #ffedd5 100%);
       --po-gradient-card: linear-gradient(180deg, #ffffff 0%, #fffdfb 100%);
@@ -123,9 +124,67 @@
 
     .app-sub {
       font-size: 0.8125rem;
-      color: #a8a29e;
+      color: var(--po-muted);
       margin-top: 4px;
       font-weight: 500
+    }
+
+    .app-greeting {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #ea580c;
+      margin-bottom: 4px;
+      line-height: 1.2
+    }
+
+    .audit-actors-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid rgba(120, 113, 108, 0.12)
+    }
+
+    .audit-actors-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #78716c;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-right: 4px
+    }
+
+    .audit-actor-chip {
+      border: 1px solid rgba(234, 88, 12, 0.22);
+      background: #fff;
+      color: #44403c;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer
+    }
+
+    .audit-actor-chip.is-active {
+      background: #ea580c;
+      border-color: #ea580c;
+      color: #fff
+    }
+
+    .audit-actor-count {
+      opacity: 0.85;
+      font-weight: 700
+    }
+
+    .superadmin-user-greeting {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #ea580c;
+      letter-spacing: 0.04em;
+      margin-top: 2px
     }
 
     .role-tabs {
@@ -273,9 +332,15 @@
     input:focus,
     select:focus,
     textarea:focus {
-      outline: none;
       border-color: rgba(251, 146, 60, 0.85);
       box-shadow: 0 0 0 3px var(--po-focus), 0 4px 14px rgba(234, 88, 12, 0.06)
+    }
+
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid #ea580c;
+      outline-offset: 1px
     }
 
     .btn {
@@ -289,6 +354,41 @@
       touch-action: manipulation;
       -webkit-tap-highlight-color: rgba(234, 88, 12, 0.15);
       transition: transform 0.2s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.2s ease, filter 0.2s ease
+    }
+
+    /* Accessibility: consistent keyboard focus ring for interactive elements */
+    .btn:focus-visible,
+    .role-btn:focus-visible,
+    .pmo-nav-btn:focus-visible,
+    .sales-nav-btn:focus-visible,
+    .landing-portal:focus-visible,
+    .gb:focus-visible,
+    .eb:focus-visible,
+    .audit-actor-chip:focus-visible,
+    .po-month-cal__trigger:focus-visible,
+    .po-month-cal__all:focus-visible,
+    .po-month-cal__year:focus-visible,
+    .po-month-cal__month:focus-visible,
+    .login-back:focus-visible,
+    .login-toggle-password:focus-visible,
+    .login-btn:focus-visible,
+    .spk-back-btn:focus-visible,
+    .spk-month-tile:focus-visible,
+    .sales-dash-refresh:focus-visible,
+    .sales-dash-export:focus-visible,
+    .sales-region-hd:focus-visible,
+    .pmo-map-chip:focus-visible,
+    a:focus-visible {
+      outline: 2px solid #ea580c;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.18)
+    }
+
+    .btn:disabled,
+    .login-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none
     }
 
     .btn-p {
@@ -342,7 +442,7 @@
 
     .metrics {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 12px;
       margin-bottom: 1rem
     }
@@ -487,7 +587,8 @@
     }
 
     .smeta {
-      flex: 1
+      flex: 1;
+      min-width: 0
     }
 
     .strow {
@@ -556,7 +657,7 @@
 
     .ig {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 1rem
     }
@@ -1212,7 +1313,7 @@
 
     .landing-portals {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
       gap: 14px
     }
 
@@ -1260,6 +1361,11 @@
     .landing-portal--sales .landing-portal__badge {
       background: #f0fdf4;
       color: #15803d
+    }
+
+    .landing-portal--superadmin .landing-portal__badge {
+      background: #fff7ed;
+      color: #c2410c
     }
 
     .landing-portal__title {
@@ -1531,7 +1637,7 @@
 
     .sales-student-empty {
       font-size: 0.75rem;
-      color: #94a3b8;
+      color: #57534e;
       font-style: italic
     }
 
@@ -1681,7 +1787,7 @@
       background: transparent;
       font-size: 0.8125rem;
       font-weight: 600;
-      color: #a8a29e;
+      color: #57534e;
       cursor: pointer;
       font-family: inherit;
       transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease
@@ -1742,7 +1848,7 @@
 
     .analytics-overview-charts {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
       gap: 14px
     }
 
@@ -2365,6 +2471,11 @@
       font-size: 0.8125rem
     }
 
+    .pmo-mo-att-row__label {
+      font-weight: 700;
+      color: #9a3412
+    }
+
     .pmo-mo-att-row__bar {
       height: 14px;
       background: #e5e7eb;
@@ -2636,7 +2747,7 @@
       display: block;
       font-size: 0.6875rem;
       font-weight: 500;
-      color: #94a3b8;
+      color: #57534e;
       margin-top: 2px
     }
 
@@ -2999,7 +3110,7 @@
 
     .spk-detail-hero__titles {
       flex: 1;
-      min-width: 12rem
+      min-width: min(12rem, 100%)
     }
 
     .spk-back-btn {
@@ -3348,6 +3459,197 @@
       width: 100%
     }
 
+    .app.app--superadmin {
+      max-width: 1440px;
+      padding: 0;
+      background: linear-gradient(90deg, #fff4e6 0%, #fffbf7 38%, #ffffff 72%, #ffffff 100%);
+      background-attachment: fixed
+    }
+
+    .app.app--superadmin > .top-bar {
+      display: none
+    }
+
+    #view-superadmin {
+      font-family: var(--po-font);
+      background: linear-gradient(90deg, #fff4e6 0%, #fffbf7 38%, #ffffff 72%, #ffffff 100%);
+      background-attachment: local;
+      border-radius: 0;
+      padding: 0;
+      margin: 0 -1.25rem;
+      width: calc(100% + 2.5rem);
+      max-width: none;
+      min-height: 100vh
+    }
+
+    .app.app--superadmin #view-superadmin {
+      margin: 0;
+      width: 100%
+    }
+
+    #view-superadmin .card-title,
+    #view-superadmin .sales-table-card__title,
+    #view-superadmin .sales-targets-card__title {
+      color: var(--po-blue)
+    }
+
+    .superadmin-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+      gap: 16px 20px;
+      align-items: end;
+      padding: 20px 28px 24px;
+      border-top: 1px solid rgba(255, 228, 204, 0.55)
+    }
+
+    .superadmin-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #9a3412
+    }
+
+    .superadmin-form input,
+    .superadmin-form select {
+      min-height: 40px;
+      padding: 9px 12px;
+      border: 1px solid rgba(255, 228, 204, 0.95);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 0.875rem;
+      color: #1e1b15;
+      background: #fff
+    }
+
+    .superadmin-form .btn-p {
+      justify-self: start;
+      min-height: 40px;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600
+    }
+
+    .superadmin-password-wrap input {
+      width: 100%;
+      padding-right: 48px
+    }
+
+    .superadmin-row-pass {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      min-width: 240px
+    }
+
+    .superadmin-row-pass .login-password-wrap {
+      flex: 1 1 160px;
+      min-width: 140px
+    }
+
+    .superadmin-row-pass input {
+      width: 100%;
+      min-height: 36px;
+      padding: 8px 44px 8px 10px;
+      border: 1px solid rgba(255, 228, 204, 0.95);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 0.8125rem
+    }
+
+    .superadmin-cred-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(28, 25, 23, 0.45)
+    }
+
+    .superadmin-cred-overlay[hidden] {
+      display: none !important
+    }
+
+    .superadmin-cred-dialog {
+      width: min(440px, 100%);
+      max-height: min(90vh, 560px);
+      overflow: auto;
+      background: #fff;
+      border-radius: 16px;
+      border-top: 4px solid #fb923c;
+      box-shadow: 0 16px 48px rgba(234, 88, 12, 0.18);
+      padding: 22px 22px 18px
+    }
+
+    .superadmin-cred-dialog h2 {
+      margin: 0 0 8px;
+      font-size: 1.125rem;
+      color: #ea580c
+    }
+
+    .superadmin-cred-dialog p {
+      margin: 0 0 14px;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: #57534e
+    }
+
+    .superadmin-cred-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 10px
+    }
+
+    .superadmin-cred-row span {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #9a3412
+    }
+
+    .superadmin-cred-value {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0
+    }
+
+    .superadmin-cred-value code {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #fff7ed;
+      border: 1px solid rgba(234, 88, 12, 0.16);
+      font-size: 0.875rem;
+      word-break: break-all
+    }
+
+    .superadmin-cred-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 16px
+    }
+
+    .superadmin-actions-cell {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end
+    }
+
+    .superadmin-section-gap {
+      display: flex;
+      flex-direction: column;
+      gap: 32px
+    }
+
     /* Sales Admin top bar */
     .sales-topnav {
       display: flex;
@@ -3632,7 +3934,7 @@
 
     .sales-kpi-card__badge--static {
       background: #fff9f2;
-      color: #a8a29e
+      color: #57534e
     }
 
     .sales-kpi-card__badge--hot {
@@ -3706,7 +4008,7 @@
 
     .sales-insights-grid {
       display: grid;
-      grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
+      grid-template-columns: minmax(min(280px, 100%), 1fr) minmax(0, 2fr);
       gap: 24px;
       align-items: stretch
     }
@@ -3849,7 +4151,7 @@
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.6px;
-      color: #a8a29e
+      color: #57534e
     }
 
     .sales-status-legend span {
@@ -3901,7 +4203,7 @@
 
     .sales-status-item__count {
       font-size: 0.875rem;
-      color: #a8a29e;
+      color: #57534e;
       white-space: nowrap;
       line-height: 1.25
     }
@@ -4089,7 +4391,7 @@
     .sales-dash-footer {
       text-align: center;
       font-size: 0.75rem;
-      color: #a8a29e;
+      color: var(--po-muted);
       padding: 1.5rem 0 0.5rem;
       margin-top: 0.5rem
     }
@@ -4823,14 +5125,168 @@
     .pmo-targets-by-region .sales-row--below td:first-child { border-left: 3px solid #ef4444 }
     .pmo-targets-by-region .sales-row--met td:first-child { border-left: 3px solid #16a34a }
 
+    .skip-link {
+      position: absolute;
+      left: 12px;
+      top: -56px;
+      z-index: 10000;
+      padding: 8px 14px;
+      background: #ea580c;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      text-decoration: none
+    }
+
+    .skip-link:focus,
+    .skip-link:focus-visible {
+      top: 12px
+    }
+
+    #po-main:focus {
+      outline: none
+    }
+
+    .card,
+    .sales-table-card,
+    .sales-targets-card,
+    .sales-kpi-card,
+    .plan-form__section {
+      min-width: 0
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        padding: 0.85rem 0.75rem 2rem
+      }
+
+      .top-bar {
+        padding: 0.85rem 0.9rem 0.95rem
+      }
+
+      .app-title {
+        font-size: 1.125rem
+      }
+
+      .po-brand-logo {
+        height: 44px
+      }
+
+      .login-card,
+      .landing-card {
+        padding: 1.35rem 1.1rem 1.25rem
+      }
+
+      .pmo-nav,
+      .sales-nav {
+        width: 100%;
+        border-radius: 16px
+      }
+
+      .pmo-nav-btn,
+      .sales-nav-btn {
+        flex: 1 1 auto;
+        text-align: center;
+        padding: 10px 12px
+      }
+
+      .ig {
+        grid-template-columns: 1fr
+      }
+
+      .pmo-mo-timeline-row,
+      .pmo-mo-att-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px
+      }
+
+      .pmo-mo-timeline-row__label,
+      .pmo-mo-att-row__label {
+        grid-column: 1 / -1
+      }
+
+      .sales-dash-shell {
+        padding: 16px 14px 24px;
+        gap: 20px
+      }
+
+      .sales-targets-card__head,
+      .sales-targets-card__body,
+      .superadmin-form {
+        padding-left: 16px;
+        padding-right: 16px
+      }
+
+      .sales-kpi-card {
+        min-height: 0;
+        padding: 16px
+      }
+
+      .sales-progress-card {
+        min-height: 0;
+        padding: 1.1rem
+      }
+
+      .fb select,
+      .fb input[type=text],
+      .po-month-cal,
+      .po-month-cal__trigger {
+        min-width: 0;
+        width: 100%;
+        max-width: 100%
+      }
+
+      .spk-toolbar select {
+        min-width: 0;
+        flex: 1 1 10rem
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sales-kpi-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+
+      .plan-form__actions,
+      .login-actions {
+        flex-direction: column;
+        align-items: stretch
+      }
+
+      .plan-form__actions .btn,
+      .login-actions .btn,
+      .login-btn {
+        width: 100%
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important
+      }
+    }
+
   </style>
 </head>
 
 <body>
+  <a class="skip-link" href="#po-main">Skip to main content</a>
+  <main id="po-main" tabindex="-1">
  <div id="landing-screen" class="landing-screen" style="display:none">
     <div class="landing-card">
       <div class="login-brand" aria-label="WIZKLUB Futurz">
-        <img class="po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="" width="280" height="80" decoding="async" fetchpriority="high">
+        <img class="po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="WIZKLUB Futurz" width="280" height="80" decoding="async" fetchpriority="high">
       </div>
       <h1 class="landing-title">Parent Orientation Tracker</h1>
       <p class="landing-lead">Choose your portal to sign in. Each role has its own workspace.</p>
@@ -4838,17 +5294,22 @@
         <button type="button" class="landing-portal landing-portal--pmo" data-po-portal="pmo">
           <span class="landing-portal__badge">PMO</span>
           <span class="landing-portal__title">Planning &amp; analytics</span>
-          <span class="landing-portal__desc">Schedule sessions, track meetings, and view school targets by month.</span>
+          <span class="landing-portal__desc">Sign in with your WizKlub username and password (PMO role required).</span>
         </button>
         <button type="button" class="landing-portal landing-portal--speaker" data-po-portal="speaker">
           <span class="landing-portal__badge">Speaker</span>
           <span class="landing-portal__title">Post-activity updates</span>
-          <span class="landing-portal__desc">Record attendance and outcomes for planned orientation sessions.</span>
+          <span class="landing-portal__desc">Use credentials created by Super Admin for post-activity session updates.</span>
         </button>
         <button type="button" class="landing-portal landing-portal--sales" data-po-portal="sales-admin">
           <span class="landing-portal__badge">Sales Admin</span>
           <span class="landing-portal__title">Targets &amp; fulfillment</span>
-          <span class="landing-portal__desc">Set per-school completion targets and monitor progress.</span>
+          <span class="landing-portal__desc">Use credentials created by Super Admin for school targets and fulfillment.</span>
+        </button>
+        <button type="button" class="landing-portal landing-portal--superadmin" data-po-portal="superadmin">
+          <span class="landing-portal__badge">Super Admin</span>
+          <span class="landing-portal__title">Users &amp; schools</span>
+          <span class="landing-portal__desc">Create PMO, Speaker, and Sales Admin accounts; manage schools and audit logs. Sign in with server env credentials only.</span>
         </button>
       </div>
     </div>
@@ -4856,20 +5317,20 @@
   <div id="login-screen" class="login-screen" style="display:none">
     <div class="login-card">
       <div class="login-brand" aria-label="WIZKLUB Futurz">
-        <img class="po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="" width="280" height="80" decoding="async" fetchpriority="high">
+        <img class="po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="WIZKLUB Futurz" width="280" height="80" decoding="async" fetchpriority="high">
       </div>
       <button type="button" class="login-back" id="login-back-home">← Back to home</button>
-      <div class="login-title" id="login-portal-title">Please sign in</div>
+      <h1 class="login-title" id="login-portal-title">Please sign in</h1>
       <p class="login-sub" id="login-portal-sub"></p>
       <form id="login-form">
         <div class="login-field">
           <label for="login-user">Username</label>
-          <input type="text" id="login-user" value="" autocomplete="off">
+          <input type="text" id="login-user" name="username" value="" autocomplete="username" required>
         </div>
         <div class="login-field">
           <label for="login-pass">Password</label>
           <div class="login-password-wrap">
-            <input type="password" id="login-pass" value="" autocomplete="current-password">
+            <input type="password" id="login-pass" name="password" value="" autocomplete="current-password" required>
             <button type="button" class="login-toggle-password" id="login-pass-toggle" aria-label="Show password" aria-pressed="false">
               <svg class="login-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -4892,10 +5353,11 @@
   <div class="app" style="display:none">
     <div class="top-bar">
       <div class="brand-lockup" aria-label="WIZKLUB Futurz">
-        <img class="po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="" width="220" height="64" decoding="async">
+        <img class="po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="WIZKLUB Futurz" width="220" height="64" decoding="async" loading="lazy">
         <div>
-          <div class="app-title">Parent Orientation Tracker</div>
-          <div class="app-sub">Pre-Sales Activity Management</div>
+          <div class="app-greeting" id="app-user-greeting" hidden></div>
+          <h1 class="app-title">Parent Orientation Tracker</h1>
+          <p class="app-sub">Pre-Sales Activity Management</p>
         </div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -4964,13 +5426,13 @@
             <section class="plan-form__section" aria-labelledby="plan-sec-schedule">
               <h3 class="plan-form__section-title" id="plan-sec-schedule">Schedule</h3>
               <div class="plan-form__grid plan-form__grid--3">
-                <div class="fg"><label for="p-date">Session date</label><input type="date" id="p-date" name="session_date" required></div>
-                <div class="fg"><label for="p-time">Start time</label><input type="time" id="p-time" name="session_time" required></div>
-                <div class="fg"><label for="p-end-time">End time <span class="field-hint">Next plan may start at this time</span></label><input type="time" id="p-end-time" name="session_end_time" required></div>
+                <div class="fg"><label for="p-date">Session date</label><input type="date" id="p-date" name="session_date" required autocomplete="off"></div>
+                <div class="fg"><label for="p-time">Start time</label><input type="time" id="p-time" name="session_time" required autocomplete="off"></div>
+                <div class="fg"><label for="p-end-time">End time <span class="field-hint">Next plan may start at this time</span></label><input type="time" id="p-end-time" name="session_end_time" required autocomplete="off"></div>
               </div>
-              <div class="fg plan-form__field--full">
-                <label>Grade <span class="field-hint">Select one or more</span></label>
-                <div class="grade-bar plan-form__grade-bar" id="p-grade-bar">
+              <fieldset class="fg plan-form__field--full">
+                <legend class="plan-form__legend">Grade <span class="field-hint">Select one or more</span></legend>
+                <div class="grade-bar plan-form__grade-bar" id="p-grade-bar" role="group">
                   <button type="button" class="gb" id="grade-G1">G1</button>
                   <button type="button" class="gb" id="grade-G2">G2</button>
                   <button type="button" class="gb" id="grade-G3">G3</button>
@@ -4981,27 +5443,27 @@
                   <button type="button" class="gb" id="grade-G8">G8</button>
                   <button type="button" class="gb" id="grade-G9">G9</button>
                 </div>
-              </div>
+              </fieldset>
             </section>
 
             <section class="plan-form__section" aria-labelledby="plan-sec-school">
               <h3 class="plan-form__section-title" id="plan-sec-school">School &amp; venue</h3>
               <div class="plan-form__grid plan-form__grid--2">
                 <div class="fg"><label for="p-region">Region</label>
-                  <select id="p-region" name="region" required>
+                  <select id="p-region" name="region" required autocomplete="off">
                     <option value="">Select region</option>
                   </select>
                 </div>
                 <div class="fg" id="branch-container"><label for="p-branch">Branch name</label><input type="text" id="p-branch" name="branch"
-                    placeholder="e.g. Koramangala Branch" required></div>
+                    placeholder="e.g. Koramangala Branch" required autocomplete="organization"></div>
               </div>
-              <div class="fg plan-form__field--full">
-                <label>Venue / medium</label>
-                <div class="grade-bar plan-form__venue-bar" id="p-venue-bar">
+              <fieldset class="fg plan-form__field--full">
+                <legend class="plan-form__legend">Venue / medium</legend>
+                <div class="grade-bar plan-form__venue-bar" id="p-venue-bar" role="group">
                   <button type="button" class="gb" id="venue-Online">Online</button>
                   <button type="button" class="gb" id="venue-Offline">Offline</button>
                 </div>
-              </div>
+              </fieldset>
               <div class="fg plan-form__field--full plan-form__location-block">
                 <label for="p-location" id="p-location-label">Meeting link or venue</label>
                 <input type="text" id="p-location" name="location_detail" autocomplete="off" aria-describedby="p-location-hint">
@@ -5027,7 +5489,7 @@
               <h3 class="plan-form__section-title" id="plan-sec-audience">Audience</h3>
               <div class="plan-form__grid plan-form__grid--2">
                 <div class="fg"><label for="p-invited">Parents invited</label><input type="number" id="p-invited" name="invited" placeholder="0"
-                    min="0" step="1" required inputmode="numeric"></div>
+                    min="0" step="1" required inputmode="numeric" autocomplete="off"></div>
               </div>
             </section>
 
@@ -5048,7 +5510,7 @@
           <div class="metrics" id="metrics"></div>
           <div class="fb">
             <span class="flbl">Filter:</span>
-            <select id="f-status">
+            <select id="f-status" aria-label="Filter by status" autocomplete="off">
               <option value="">All Status</option>
               <option value="Planned">Planned</option>
               <option value="Completed">Completed</option>
@@ -5056,14 +5518,14 @@
               <option value="Cancelled">Cancelled</option>
             </select>
             <div class="po-month-cal" data-po-month-cal>
-              <input type="hidden" id="f-meetings-month" value="">
+              <input type="hidden" id="f-meetings-month" value="" aria-label="Selected month filter" autocomplete="off">
               <button type="button" class="po-month-cal__trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="f-meetings-month-panel" aria-label="Filter by month">
                 <span class="po-month-cal__label">All months</span>
                 <span class="po-month-cal__chev" aria-hidden="true">▾</span>
               </button>
               <div class="po-month-cal__panel is-hidden" id="f-meetings-month-panel" role="dialog" aria-label="Calendar month filter"></div>
             </div>
-            <input type="text" id="f-search" placeholder="Search branch / teacher…">
+            <input type="text" id="f-search" placeholder="Search branch / teacher…" aria-label="Search branch or teacher" autocomplete="off">
           </div>
           <div class="slist" id="pmo-list"></div>
         </div>
@@ -5080,7 +5542,7 @@
       <header class="sales-topnav" role="banner">
         <a class="sales-topnav__brand" href="#/sales-admin/overview" id="sales-topnav-home" aria-label="WIZKLUB — Parent Orientation Tracker overview">
           <span class="sales-topnav__logo-wrap">
-            <img class="sales-topnav__logo po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="WIZKLUB Futurz" width="148" height="40" decoding="async">
+            <img class="sales-topnav__logo po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="WIZKLUB Futurz" width="148" height="40" decoding="async" loading="lazy">
           </span>
           <span class="sales-topnav__divider" aria-hidden="true"></span>
           <span class="sales-topnav__titles">
@@ -5095,7 +5557,7 @@
       <div class="sales-dash-shell">
       <div class="sales-dash-filters-bar">
         <div class="po-month-cal po-month-cal--sales sales-dash-filter" data-po-month-cal>
-          <input type="hidden" id="sales-month" value="">
+          <input type="hidden" id="sales-month" value="" aria-label="Selected sales month" autocomplete="off">
           <button type="button" class="po-month-cal__trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="sales-month-panel" aria-label="Filter by month">
             <span class="po-month-cal__label">All months</span>
             <span class="po-month-cal__chev" aria-hidden="true">▾</span>
@@ -5125,7 +5587,7 @@
           <div id="sales-school-table-root" class="sales-school-table-wrap" aria-live="polite"></div>
           <footer id="sales-school-table-pager" class="sales-table-pager" aria-live="polite"></footer>
         </article>
-        <p class="sales-dash-footer">© 2024 Parent Orientation Tracker Enterprise Edition · Powered by Sales Admin Core</p>
+          <p class="sales-dash-footer">© 2026 Parent Orientation Tracker · Sales Admin</p>
       </section>
 
       <section id="sales-section-targets" class="sales-section is-hidden" data-sales-section="targets" aria-label="Sales targets and schools" hidden>
@@ -5182,7 +5644,7 @@
           <p class="spk-sessions-lead">Tap a card to expand · record Completed or Cancelled · Rescheduled sessions can be updated again</p>
           <div class="spk-toolbar spk-toolbar--glass" id="spk-toolbar" hidden>
             <span class="spk-toolbar__label">Sort by</span>
-            <select id="spk-sort-by" aria-label="Sort sessions by">
+            <select id="spk-sort-by" aria-label="Sort sessions by" autocomplete="off">
               <option value="date">Session date &amp; time</option>
               <option value="branch">Branch (A–Z)</option>
               <option value="region">Region (A–Z)</option>
@@ -5190,7 +5652,7 @@
               <option value="attended">Parents attended</option>
             </select>
             <span class="spk-toolbar__label">Order</span>
-            <select id="spk-sort-dir" aria-label="Sort order">
+            <select id="spk-sort-dir" aria-label="Sort order" autocomplete="off">
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
             </select>
@@ -5204,6 +5666,143 @@
             <div id="spk-students-body"></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div id="view-superadmin" style="display:none">
+      <header class="sales-topnav" role="banner">
+        <a class="sales-topnav__brand" href="#/superadmin/users" id="superadmin-topnav-home" aria-label="WIZKLUB — Super Admin dashboard">
+          <span class="sales-topnav__logo-wrap">
+            <img class="sales-topnav__logo po-brand-logo" src="brand/logo.png" data-fallback="brand/logo.jpg" alt="WIZKLUB Futurz" width="148" height="40" decoding="async" loading="lazy">
+          </span>
+          <span class="sales-topnav__divider" aria-hidden="true"></span>
+          <span class="sales-topnav__titles">
+            <span class="sales-topnav__title">Parent Orientation Tracker</span>
+            <span class="sales-topnav__sub">Super Admin Dashboard</span>
+            <span class="superadmin-user-greeting" id="superadmin-user-greeting"></span>
+          </span>
+        </a>
+        <div class="sales-topnav__actions">
+          <button type="button" class="sales-topnav__logout" id="btn-superadmin-logout" title="Logout" aria-label="Log out of Super Admin">Logout</button>
+        </div>
+      </header>
+      <div class="sales-dash-shell">
+        <nav class="sales-nav" id="superadmin-nav" aria-label="Super Admin sections">
+          <button type="button" class="sales-nav-btn is-active" data-superadmin-nav="users">Users</button>
+          <button type="button" class="sales-nav-btn" data-superadmin-nav="schools">Schools</button>
+          <button type="button" class="sales-nav-btn" data-superadmin-nav="audit">Audit logs</button>
+        </nav>
+
+        <section data-superadmin-section="users" class="sales-section sales-dash superadmin-section-gap" aria-label="User management">
+          <article class="sales-targets-card">
+            <header class="sales-targets-card__head">
+              <h2 class="sales-targets-card__title">Create user</h2>
+              <p class="sales-targets-card__lead">Choose the role carefully. Sales Admin accounts sign in only on the Sales Admin portal (not PMO or Speaker). PMO staff normally use WizKlub; a local PMO account is optional. Super Admin is env-only and cannot be created here.</p>
+            </header>
+            <form id="superadmin-user-form" class="superadmin-form">
+              <label for="superadmin-new-user">Username</label>
+              <input type="text" id="superadmin-new-user" required autocomplete="username" placeholder="e.g. pmo.ops">
+              <label for="superadmin-new-pass">Password</label>
+              <div class="login-password-wrap superadmin-password-wrap">
+                <input type="password" id="superadmin-new-pass" required autocomplete="new-password" minlength="8" placeholder="Min. 8 characters (12 in production)">
+                <button type="button" class="login-toggle-password" id="superadmin-new-pass-toggle" data-po-pass-toggle aria-label="Show password" aria-pressed="false">
+                  <svg class="login-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg class="login-eye-closed login-eye-hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <label for="superadmin-new-role">Role</label>
+              <select id="superadmin-new-role" required autocomplete="off">
+                <option value="" disabled selected>Select role</option>
+                <option value="pmo">PMO (local fallback)</option>
+                <option value="speaker">Speaker</option>
+                <option value="sales_admin">Sales Admin</option>
+              </select>
+              <button type="submit" class="btn btn-p">Create user</button>
+            </form>
+          </article>
+          <article class="sales-table-card">
+            <header class="sales-table-card__head">
+              <div>
+                <h3 class="sales-table-card__title">Managed users</h3>
+                <p class="sales-table-card__sub">Stored passwords are hashed and cannot be retrieved. Set a new password, then use View to show and copy it in this session.</p>
+              </div>
+            </header>
+            <div id="superadmin-users-root" class="sales-school-table-wrap" aria-live="polite"></div>
+          </article>
+          <p class="sales-dash-footer">© 2026 Parent Orientation Tracker · Super Admin</p>
+        </section>
+
+        <section data-superadmin-section="schools" class="sales-section sales-dash superadmin-section-gap is-hidden" hidden aria-label="School catalog">
+          <article class="sales-targets-card">
+            <header class="sales-targets-card__head">
+              <h2 class="sales-targets-card__title">Add school branch</h2>
+              <p class="sales-targets-card__lead">New branches appear in PMO region/branch dropdowns after save.</p>
+            </header>
+            <form id="superadmin-school-form" class="superadmin-form">
+              <label for="superadmin-school-region">Region</label>
+              <input type="text" id="superadmin-school-region" required placeholder="Haryana" autocomplete="address-level1">
+              <label for="superadmin-school-branch">Branch</label>
+              <input type="text" id="superadmin-school-branch" required placeholder="Sri Chaitanya-Sirsa" autocomplete="organization">
+              <button type="submit" class="btn btn-p">Add school</button>
+            </form>
+          </article>
+          <article class="sales-table-card">
+            <header class="sales-table-card__head">
+              <div>
+                <h3 class="sales-table-card__title">School catalog</h3>
+                <p class="sales-table-card__sub">Regions and branches available in PMO planning</p>
+              </div>
+            </header>
+            <div id="superadmin-schools-root" class="sales-school-table-wrap" aria-live="polite"></div>
+          </article>
+          <p class="sales-dash-footer">© 2026 Parent Orientation Tracker · Super Admin</p>
+        </section>
+
+        <section data-superadmin-section="audit" class="sales-section sales-dash superadmin-section-gap is-hidden" hidden aria-label="Audit logs">
+          <article class="sales-table-card">
+            <header class="sales-table-card__head">
+              <div>
+                <h3 class="sales-table-card__title">Audit logs</h3>
+                <p class="sales-table-card__sub">Recent sign-ins, user changes, school updates, and session activity — filter by username below</p>
+              </div>
+            </header>
+            <div id="superadmin-audit-root" class="sales-school-table-wrap" aria-live="polite"></div>
+          </article>
+          <p class="sales-dash-footer">© 2026 Parent Orientation Tracker · Super Admin</p>
+        </section>
+      </div>
+    </div>
+  </div>
+  </main>
+  <div id="superadmin-cred-overlay" class="superadmin-cred-overlay" hidden>
+    <div class="superadmin-cred-dialog" role="dialog" aria-modal="true" aria-labelledby="superadmin-cred-title">
+      <h2 id="superadmin-cred-title">Saved credentials</h2>
+      <p id="superadmin-cred-lead">Copy these now. The stored password cannot be looked up later.</p>
+      <div class="superadmin-cred-row">
+        <span>Username</span>
+        <div class="superadmin-cred-value"><code id="superadmin-cred-user"></code></div>
+      </div>
+      <div class="superadmin-cred-row">
+        <span>Role</span>
+        <div class="superadmin-cred-value"><code id="superadmin-cred-role"></code></div>
+      </div>
+      <div class="superadmin-cred-row">
+        <span>Password</span>
+        <div class="superadmin-cred-value">
+          <code id="superadmin-cred-pass"></code>
+          <button type="button" class="btn btn-o btn-sm" id="superadmin-cred-toggle">Show</button>
+        </div>
+      </div>
+      <div class="superadmin-cred-actions">
+        <button type="button" class="btn btn-o" id="superadmin-cred-copy">Copy password</button>
+        <button type="button" class="btn btn-p" id="superadmin-cred-close">Done</button>
       </div>
     </div>
   </div>
@@ -5226,7 +5825,7 @@
       });
     });
   </script>
-  <script src="app.js?v=20260720a" defer></script>
+  <script src="app.js?v=20260817d" defer></script>
 </body>
 
 </html>

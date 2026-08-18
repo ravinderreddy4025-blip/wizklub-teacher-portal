@@ -56,7 +56,7 @@ export function createAuthRouter() {
     if (!hasInstructorRole(user)) {
       return res.status(403).json({
         ok: false,
-        error: 'Only instructors can sign in to Teacher Upload.',
+        error: 'Only instructors can sign in to the Teachers Portal.',
       })
     }
 

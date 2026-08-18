@@ -63,6 +63,16 @@ export function IconSchools({ className, size = 18 }) {
   )
 }
 
+export function IconInventory({ className, size = 18 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <path d="M3.3 7.7 12 12.5l8.7-4.8" />
+      <path d="M12 22.5V12.5" />
+    </svg>
+  )
+}
+
 export function IconUpload({ className, size = 16 }) {
   return (
     <svg className={className} width={size * 1.38} height={size} viewBox="0 0 22 16" fill="none">

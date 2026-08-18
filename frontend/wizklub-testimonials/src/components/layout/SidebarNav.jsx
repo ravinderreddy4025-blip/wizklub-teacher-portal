@@ -13,8 +13,8 @@ export default function SidebarNav({ active }) {
       <div className="sidebar-nav__brand">
         <img src={assetUrl('assets/logo.png')} alt="" className="sidebar-nav__logo" />
         <div>
-          <p className="sidebar-nav__title">Wizklub</p>
-          <p className="sidebar-nav__subtitle">Teacher Upload</p>
+          <p className="sidebar-nav__title">WizKlub</p>
+          <p className="sidebar-nav__subtitle">Teachers Portal</p>
         </div>
       </div>
 

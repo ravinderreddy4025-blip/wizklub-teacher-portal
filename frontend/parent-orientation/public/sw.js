@@ -1,5 +1,5 @@
 /* Parent Orientation Tracker — installable PWA shell + offline-friendly static assets */
-const CACHE_VERSION = 'po-pwa-v19';
+const CACHE_VERSION = 'po-pwa-v24';
 
 function getScopePath() {
   try {
@@ -85,7 +85,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   const appJsPath = absUrl('app.js');
-  if (url.pathname === appJsPath || url.pathname === '/app.js') {
+  if (url.pathname === appJsPath || url.pathname.endsWith('/app.js')) {
     event.respondWith(
       fetch(req)
         .then((res) => {

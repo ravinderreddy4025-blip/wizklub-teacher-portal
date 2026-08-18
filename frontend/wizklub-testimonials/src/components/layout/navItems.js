@@ -16,6 +16,6 @@ export function resolveActiveTab(path, active) {
   }
   if (path.startsWith('/analytics')) return 'analytics'
   if (path.startsWith('/feedback')) return 'feedback'
-  if (path.startsWith('/profile')) return 'profile'
+  if (path.startsWith('/profile') || path.startsWith('/inventory')) return 'profile'
   return undefined
 }

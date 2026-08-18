@@ -4,6 +4,7 @@ const {
   mongoPingOk,
   readAllSessionsFromDb,
 } = require('../services/mongo');
+const { recordAudit } = require('../services/auditLog');
 const {
   MONTH_RE,
   readTargetsForMonth,
@@ -195,6 +196,13 @@ async function putTargets(req, res) {
     }));
     await upsertTargetsForMonth(month, normalized);
     const saved = await readTargetsForMonth(month);
+    await recordAudit(req, {
+      action: 'target.updated',
+      resourceType: 'school_targets',
+      resourceId: month,
+      summary: `Updated ${normalized.length} school target(s) for ${month}`,
+      after: { count: normalized.length, month },
+    });
     return res.json({ month, targets: filterSchoolTargets(saved) });
   } catch (err) {
     mongo.ready = false;
@@ -223,4 +231,11 @@ async function getFulfillment(req, res) {
   }
 }
 
-module.exports = { getTargets, putTargets, getFulfillment, isOverallTargetRow };
+module.exports = {
+  getTargets,
+  putTargets,
+  getFulfillment,
+  isOverallTargetRow,
+  buildFulfillmentPayload,
+  parseMonthQuery,
+};

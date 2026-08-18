@@ -1,7 +1,19 @@
 import path from 'path'
+import { createRequire } from 'module'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+
+const require = createRequire(import.meta.url)
+const repoRoot = path.resolve(import.meta.dirname, '../..')
+const inventoryFrontendRoot = path.join(repoRoot, 'frontend/inventory')
+const schoolPortalRoot = path.join(repoRoot, 'school-portal/frontend/src')
+const inventoryPkg = require(path.join(inventoryFrontendRoot, 'package.json'))
+
+const inventoryDependencyAliases = Object.keys(inventoryPkg.dependencies || {}).reduce((acc, dep) => {
+  acc[dep] = path.join(inventoryFrontendRoot, 'node_modules', dep)
+  return acc
+}, {})
 
 function normalizeAppBase(raw) {
   const s = String(raw || '/').trim() || '/'
@@ -10,7 +22,7 @@ function normalizeAppBase(raw) {
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, path.resolve(__dirname, '../..'), '')
+  const env = loadEnv(mode, repoRoot, '')
   const base = normalizeAppBase(env.VITE_APP_BASE_PATH || '/')
   const baseNoSlash = base.replace(/\/+$/, '') || ''
 
@@ -21,21 +33,47 @@ export default defineConfig(({ mode }) => {
       changeOrigin: true,
       rewrite: (p) => (p.startsWith(baseNoSlash) ? p.slice(baseNoSlash.length) : p),
     }
+    proxy[`${baseNoSlash}/inventory-api`] = {
+      target: 'http://127.0.0.1:5002',
+      changeOrigin: true,
+      rewrite: (p) => {
+        const stripped = p.startsWith(baseNoSlash) ? p.slice(baseNoSlash.length) : p
+        return stripped.replace(/^\/inventory-api/, '/api')
+      },
+    }
     proxy[`${baseNoSlash}/uploads`] = {
-      target: 'http://127.0.0.1:3001',
+      target: 'http://127.0.0.1:5002',
       changeOrigin: true,
       rewrite: (p) => (p.startsWith(baseNoSlash) ? p.slice(baseNoSlash.length) : p),
     }
   } else {
     proxy['/api'] = { target: 'http://127.0.0.1:3001', changeOrigin: true }
-    proxy['/uploads'] = { target: 'http://127.0.0.1:3001', changeOrigin: true }
+    proxy['/inventory-api'] = {
+      target: 'http://127.0.0.1:5002',
+      changeOrigin: true,
+      rewrite: (p) => p.replace(/^\/inventory-api/, '/api'),
+    }
+    proxy['/uploads'] = { target: 'http://127.0.0.1:5002', changeOrigin: true }
   }
 
   return {
     base,
-    envDir: path.resolve(__dirname, '../..'),
+    envDir: repoRoot,
+    resolve: {
+      alias: {
+        // More specific alias must come before `@inventory` prefix match.
+        '@inventory/utils/api': path.resolve(import.meta.dirname, 'src/inventory/inventoryApi.js'),
+        '@inventory': path.join(inventoryFrontendRoot, 'src'),
+        '@school-portal': schoolPortalRoot,
+        ...inventoryDependencyAliases,
+      },
+      dedupe: ['react', 'react-dom', 'react-router-dom'],
+    },
     server: {
       host: true,
+      fs: {
+        allow: [repoRoot],
+      },
       allowedHosts: ['.ngrok-free.app', '.ngrok.io', '.ngrok.app'],
       proxy,
     },
@@ -52,9 +90,9 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon.svg', 'icons.svg'],
         manifest: {
           id: base,
-          name: 'Wizklub Teacher Upload',
-          short_name: 'WizKlub',
-          description: 'Teacher media upload dashboard for school review categories',
+          name: 'WizKlub Teachers Portal',
+          short_name: 'Teachers Portal',
+          description: 'Teacher portal for school review media, analytics, and inventory',
           theme_color: '#F97316',
           background_color: '#fcf9f8',
           display: 'standalone',
@@ -75,7 +113,7 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
           navigateFallback: `${base}index.html`,
-          navigateFallbackDenylist: [/\/api\//, /\/uploads\//, /\/health(?:\/|$)/],
+          navigateFallbackDenylist: [/\/api\//, /\/inventory-api\//, /\/uploads\//, /\/health(?:\/|$)/],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: false,
@@ -111,6 +149,10 @@ export default defineConfig(({ mode }) => {
             },
             {
               urlPattern: /\/api\//,
+              handler: 'NetworkOnly',
+            },
+            {
+              urlPattern: /\/inventory-api\//,
               handler: 'NetworkOnly',
             },
           ],

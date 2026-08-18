@@ -1,5 +1,6 @@
 ﻿    const STORE_KEY = 'po_sessions_v8';
     const ROLE_KEY = 'po_logged_in';
+    const USER_KEY = 'po_username';
     const PO_ROLE_HEADER = 'X-PO-Role';
 
     function poGetRole() {
@@ -8,11 +9,77 @@
 
     function poSetRole(role) {
       if (!role) return;
+      const prev = poGetRole();
+      if (prev && prev !== role) poClearUsername();
       sessionStorage.setItem(ROLE_KEY, role);
     }
 
     function poClearRole() {
       sessionStorage.removeItem(ROLE_KEY);
+    }
+
+    function poGetUsername() {
+      return sessionStorage.getItem(USER_KEY) || '';
+    }
+
+    function poSetUsername(username) {
+      const name = String(username || '').trim();
+      if (name) sessionStorage.setItem(USER_KEY, name);
+    }
+
+    function poClearUsername() {
+      sessionStorage.removeItem(USER_KEY);
+    }
+
+    async function poEnsureUsername() {
+      const cached = poGetUsername();
+      if (cached) return cached;
+      try {
+        const r = await poApiFetch('api/me');
+        if (!r.ok) return '';
+        const me = await r.json().catch(() => ({}));
+        if (me.username) {
+          poSetUsername(me.username);
+          return me.username;
+        }
+      } catch (_) { /* offline */ }
+      return '';
+    }
+
+    function formatPoDisplayName(username, role) {
+      const name = String(username || '').trim();
+      if (!name || name === role) return '';
+      return name;
+    }
+
+    function updateAppUserGreeting() {
+      const el = document.getElementById('app-user-greeting');
+      if (!el) return;
+      const role = poGetRole();
+      if (role !== 'pmo' && role !== 'speaker' && role !== 'sales_admin') {
+        el.hidden = true;
+        el.textContent = '';
+        return;
+      }
+      poEnsureUsername().then((username) => {
+        const display = formatPoDisplayName(username, role);
+        if (display) {
+          el.textContent = `Hello, ${display}`;
+          el.hidden = false;
+        } else {
+          el.hidden = true;
+          el.textContent = '';
+        }
+      });
+    }
+
+    function updateSuperAdminGreeting() {
+      const el = document.getElementById('superadmin-user-greeting');
+      if (!el) return;
+      poEnsureUsername().then((username) => {
+        const display = formatPoDisplayName(username, 'superadmin') || poGetUsername() || 'Admin';
+        el.textContent = `Hello, ${display}`;
+      });
     }
 
     // Local-only guard: if PMO opens on http://localhost/pmo without port, force :8080.
@@ -22,6 +89,24 @@
       const underPmo = pathname === '/pmo' || pathname.startsWith('/pmo/');
       if (protocol === 'http:' && isLocal && !port && underPmo) {
         window.location.replace(`${protocol}//${hostname}:8080${pathname}${search}${hash}`);
+      }
+    })();
+
+    /** Drop stale PWA caches on local dev — old SW served app.js without Super Admin portal. */
+    (function unregisterServiceWorkerOnLocalHttp() {
+      if (!('serviceWorker' in navigator)) return;
+      const { protocol, hostname } = window.location;
+      const local =
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '[::1]' ||
+        hostname.endsWith('.localhost');
+      if (protocol !== 'http:' || !local) return;
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => reg.unregister());
+      }).catch(() => {});
+      if ('caches' in window) {
+        caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('po-pwa-')).map((k) => caches.delete(k)))).catch(() => {});
       }
     })();
 
@@ -160,7 +245,7 @@
     function poApiFetch(url, init = {}) {
       const role = poGetRole();
       const headers = new Headers(init.headers || {});
-      if (role === 'pmo' || role === 'speaker' || role === 'sales_admin') {
+      if (role === 'pmo' || role === 'speaker' || role === 'sales_admin' || role === 'superadmin') {
         headers.set(PO_ROLE_HEADER, role);
       }
       const resolved = poResolveUrl(url);
@@ -494,11 +579,13 @@
     }
 
     async function loadData() {
+      await ensureSchoolCatalog();
       let payload = null;
       try {
         const r = await poApiFetch('api/sessions');
         if (r.status === 401) {
           poClearRole();
+          poClearUsername();
           showLogin();
           toast('Sign in again to load sessions from the server.', 'warning');
           return;
@@ -802,21 +889,28 @@
         hash: '#/login/pmo',
         role: 'pmo',
         title: 'PMO sign in',
-        sub: 'Planning, analytics, and session management.',
+        sub: 'Sign in with your WizKlub username and password (PMO role required).',
       },
       speaker: {
         hash: '#/login/speaker',
         role: 'speaker',
         title: 'Speaker sign in',
-        sub: 'Post-activity updates for orientation sessions.',
+        sub: 'Use the username and password created for you by Super Admin.',
       },
       'sales-admin': {
         hash: '#/login/sales-admin',
         role: 'sales_admin',
         title: 'Sales Admin sign in',
-        sub: 'School targets and fulfillment tracking.',
+        sub: 'Use the username and password created for you by Super Admin.',
+      },
+      superadmin: {
+        hash: '#/login/superadmin',
+        role: 'superadmin',
+        title: 'Super Admin sign in',
+        sub: 'Server-configured credentials only (not stored in the user database).',
       },
     };
+    const PO_SUPERADMIN_SECTIONS = new Set(['users', 'schools', 'audit']);
     let salesFulfillmentCache = null;
     let salesTablePage = 0;
     const SALES_TABLE_PAGE_SIZE = 10;
@@ -872,6 +966,10 @@
         }
         return { name: 'sales-admin', params: { section: 'overview', month: null, sessionId: null } };
       }
+      if (parts[0] === 'superadmin') {
+        const sec = parts[1] === 'schools' || parts[1] === 'audit' ? parts[1] : 'users';
+        return { name: 'superadmin', params: { section: sec } };
+      }
       if (parts[0] === 'pmo') {
         if (parts[1] === 'session' && parts[2] && parts[3] === 'students') {
           return {
@@ -923,7 +1021,13 @@
         let def = '#/speaker';
         if (role === 'pmo') def = '#/pmo/analytics';
         else if (role === 'sales_admin') def = '#/sales-admin/overview';
-        if (poReplaceHash(def)) syncRouteFromHash(opts);
+        else if (role === 'superadmin') def = '#/superadmin/users';
+        if (location.hash !== def) {
+          poReplaceHash(def);
+          syncRouteFromHash(opts);
+        } else if (role === 'superadmin') {
+          showSuperAdminApp();
+        }
         return;
       }
 
@@ -960,23 +1064,79 @@
           if (salesFulfillmentCache) renderSalesAdmin();
           else ensureSalesAdminData();
         }
+        return;
+      }
+
+      if (role === 'superadmin') {
+        if (route.name !== 'superadmin') {
+          if (poReplaceHash('#/superadmin/users')) syncRouteFromHash(opts);
+          else showSuperAdminApp();
+          return;
+        }
+        if (render) showSuperAdminApp();
+        else {
+          switchRole('superadmin');
+          applySuperAdminRoute();
+        }
+        return;
       }
     }
 
-    function hideAllShells() {
+    function hideLoginAndLanding() {
       const landing = document.getElementById('landing-screen');
       const ls = document.getElementById('login-screen');
-      const app = document.querySelector('.app');
       if (landing) {
         landing.style.display = 'none';
+        landing.hidden = true;
         landing.style.pointerEvents = 'none';
       }
       if (ls) {
         ls.style.display = 'none';
+        ls.hidden = true;
         ls.style.pointerEvents = 'none';
       }
-      if (app) app.style.display = 'none';
-      document.body.classList.remove('body--sales-admin');
+    }
+
+    function showSuperAdminApp() {
+      hideLoginAndLanding();
+      const app = document.querySelector('.app');
+      if (app) {
+        app.style.display = 'block';
+        app.hidden = false;
+      }
+      applyRoleShell('superadmin');
+      const route = parseAppRoute();
+      if (route.name !== 'superadmin') {
+        poReplaceHash('#/superadmin/users');
+      }
+      switchRole('superadmin');
+      applySuperAdminRoute();
+      renderSuperAdmin();
+      updateSuperAdminGreeting();
+    }
+
+    function applyRoleShell(role) {
+      const app = document.querySelector('.app');
+      app?.classList.toggle('app--sales-admin', role === 'sales_admin');
+      app?.classList.toggle('app--superadmin', role === 'superadmin');
+      document.body.classList.toggle('body--sales-admin', role === 'sales_admin');
+      document.body.classList.toggle('body--superadmin', role === 'superadmin');
+      const tabs = document.getElementById('role-tabs');
+      if (tabs) tabs.style.display = role ? 'none' : '';
+      const exportBtn = document.getElementById('btn-export-excel');
+      if (exportBtn) exportBtn.style.display = role === 'sales_admin' || role === 'superadmin' ? 'none' : '';
+      const spkRefreshBtn = document.getElementById('btn-speaker-refresh');
+      if (spkRefreshBtn) spkRefreshBtn.style.display = role === 'speaker' ? '' : 'none';
+    }
+
+    function hideAllShells() {
+      hideLoginAndLanding();
+      const app = document.querySelector('.app');
+      if (app) {
+        app.style.display = 'none';
+        app.classList.remove('app--sales-admin', 'app--superadmin');
+      }
+      document.body.classList.remove('body--sales-admin', 'body--superadmin');
     }
 
     function showLanding() {
@@ -984,6 +1144,7 @@
       const landing = document.getElementById('landing-screen');
       if (landing) {
         landing.style.display = 'flex';
+        landing.hidden = false;
         landing.style.pointerEvents = 'auto';
       }
       const route = parseAppRoute();
@@ -999,8 +1160,9 @@
       hideAllShells();
       const ls = document.getElementById('login-screen');
       if (ls) {
-      ls.style.display = 'flex';
-      ls.style.pointerEvents = 'auto';
+        ls.style.display = 'flex';
+        ls.hidden = false;
+        ls.style.pointerEvents = 'auto';
       }
       const titleEl = document.getElementById('login-portal-title');
       const subEl = document.getElementById('login-portal-sub');
@@ -1058,6 +1220,7 @@
         });
       } catch (_) { /* offline */ }
       poClearRole();
+      poClearUsername();
       document.getElementById('login-user').value = '';
       document.getElementById('login-pass').value = '';
       resetLoginPasswordVisibility();
@@ -1080,20 +1243,15 @@
     }
 
     function showApp() {
+      const role = poGetRole();
+      if (role === 'superadmin') {
+        showSuperAdminApp();
+        return;
+      }
+
       hideAllShells();
       document.querySelector('.app').style.display = 'block';
-
-      const role = poGetRole();
-      const tabs = document.getElementById('role-tabs');
-      if (role === 'pmo' || role === 'speaker' || role === 'sales_admin') {
-        if (tabs) tabs.style.display = 'none';
-      }
-      document.querySelector('.app')?.classList.toggle('app--sales-admin', role === 'sales_admin');
-      document.body.classList.toggle('body--sales-admin', role === 'sales_admin');
-      const exportBtn = document.getElementById('btn-export-excel');
-      if (exportBtn) exportBtn.style.display = role === 'sales_admin' ? 'none' : '';
-      const spkRefreshBtn = document.getElementById('btn-speaker-refresh');
-      if (spkRefreshBtn) spkRefreshBtn.style.display = role === 'speaker' ? '' : 'none';
+      applyRoleShell(role);
       const sub = document.querySelector('.app-sub');
       if (sub && role !== 'sales_admin') {
         sub.textContent = 'Pre-Sales Activity Management';
@@ -1103,24 +1261,39 @@
       if (role !== 'sales_admin') initPlanFormRegionAndBranch();
       startSessionsAutoSync();
       loadData();
+      updateAppUserGreeting();
     }
 
     async function loginUser() {
       const user = document.getElementById('login-user').value.trim();
       const pass = document.getElementById('login-pass').value;
+      if (!user || !pass) {
+        toast('Enter your username and password.', 'error');
+        return;
+      }
       const portalKey = getActiveLoginPortalKey();
       const expectedRole = portalRoleFromKey(portalKey);
       try {
         const r = await poApiFetch('api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user, pass })
+          body: JSON.stringify({ user, pass, portal: portalKey || undefined })
         });
         const j = await r.json().catch(() => ({}));
+        if ((r.status === 401 || r.status === 403) && j.error) {
+          toast(j.error, 'error');
+          return;
+        }
         if (r.ok && j.role) {
           if (expectedRole && j.role !== expectedRole) {
             const portalLabel =
-              portalKey === 'sales-admin' ? 'Sales Admin' : portalKey === 'pmo' ? 'PMO' : 'Speaker';
+              portalKey === 'sales-admin'
+                ? 'Sales Admin'
+                : portalKey === 'superadmin'
+                  ? 'Super Admin'
+                  : portalKey === 'pmo'
+                    ? 'PMO'
+                    : 'Speaker';
             try {
               await poApiFetch('api/logout', {
                 method: 'POST',
@@ -1135,22 +1308,31 @@
             return;
           }
           poSetRole(j.role);
+          if (j.username) poSetUsername(j.username);
           const v = await poApiFetch('api/me');
           const me = await v.json().catch(() => ({}));
           if (!v.ok || !me.role) {
             poClearRole();
+            poClearUsername();
             toast('Login succeeded but the browser did not keep your session. If the URL starts with http://, set COOKIE_SECURE=0 in the server .env and restart.', 'warning');
             return;
           }
+          if (me.username) poSetUsername(me.username);
           document.getElementById('login-pass').value = '';
           resetLoginPasswordVisibility();
-          showApp();
+          if (j.role === 'superadmin') {
+            showSuperAdminApp();
+          } else {
+            showApp();
+          }
           const welcome =
             j.role === 'pmo'
               ? 'Welcome PMO'
               : j.role === 'sales_admin'
                 ? 'Welcome Sales Admin'
-                : 'Welcome Speaker';
+                : j.role === 'superadmin'
+                  ? 'Welcome Super Admin'
+                  : 'Welcome Speaker';
           toast(welcome, 'success');
           return;
         }
@@ -1480,6 +1662,40 @@
       closed?.classList.toggle('login-eye-hidden', !showPassword);
     }
 
+    const PO_PASSWORD_EYE_BTN = `<button type="button" class="login-toggle-password" data-po-pass-toggle aria-label="Show password" aria-pressed="false">
+      <svg class="login-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+      <svg class="login-eye-closed login-eye-hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+      </svg>
+    </button>`;
+
+    function togglePasswordField(btn) {
+      const wrap = btn.closest('.login-password-wrap');
+      const pass = wrap?.querySelector('input');
+      if (!pass) return;
+      const show = pass.type === 'password';
+      pass.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+      setLoginEyeIcons(btn, show);
+    }
+
+    function resetPasswordFieldVisibility(inputId, btnId) {
+      const pass = document.getElementById(inputId);
+      const btn = btnId ? document.getElementById(btnId) : null;
+      if (!pass) return;
+      pass.type = 'password';
+      if (!btn) return;
+      btn.setAttribute('aria-label', 'Show password');
+      btn.setAttribute('aria-pressed', 'false');
+      setLoginEyeIcons(btn, false);
+    }
+
     function resetLoginPasswordVisibility() {
       const pass = document.getElementById('login-pass');
       const btn = document.getElementById('login-pass-toggle');
@@ -1499,11 +1715,18 @@
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const show = pass.type === 'password';
-        pass.type = show ? 'text' : 'password';
-        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-        btn.setAttribute('aria-pressed', show ? 'true' : 'false');
-        setLoginEyeIcons(btn, show);
+        togglePasswordField(btn);
+      });
+    }
+
+    function initSuperAdminPasswordToggle() {
+      const btn = document.getElementById('superadmin-new-pass-toggle');
+      if (!btn || btn.dataset.poBound === '1') return;
+      btn.dataset.poBound = '1';
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePasswordField(btn);
       });
     }
 
@@ -1538,15 +1761,18 @@
           const r = await poApiFetch('api/me');
           if (!r.ok) {
             poClearRole();
+            poClearUsername();
             syncRouteFromHash();
             return;
           }
           const j = await r.json();
           if (j.role && j.role === rememberedRole) {
+            if (j.username) poSetUsername(j.username);
             showApp();
             return;
           }
           poClearRole();
+          poClearUsername();
           syncRouteFromHash();
         } catch (_) {
           syncRouteFromHash();
@@ -2112,6 +2338,7 @@
       const vpmo = document.getElementById('view-pmo');
       const vspk = document.getElementById('view-speaker');
       const vsales = document.getElementById('view-sales-admin');
+      const vsuper = document.getElementById('view-superadmin');
       const hide = (el) => {
         if (!el) return;
         el.style.display = 'none';
@@ -2125,9 +2352,12 @@
       hide(vpmo);
       hide(vspk);
       hide(vsales);
+      hide(vsuper);
       if (r === 'pmo') show(vpmo);
       else if (r === 'sales_admin') show(vsales);
+      else if (r === 'superadmin') show(vsuper);
       else show(vspk);
+      applyRoleShell(r);
       document.getElementById('tab-pmo')?.classList.toggle('active', r === 'pmo');
       document.getElementById('tab-spk')?.classList.toggle('active', r === 'speaker');
     }
@@ -2229,7 +2459,7 @@
       if (wrap) wrap.style.display = 'none';
     }
 
-    const regionBranches = {
+    const regionBranchesFallback = {
       "Andhra Pradesh": [
         "Sri Chaitanya-Asilmetta 3",
         "Sri Chaitanya-Eluru CBSE",
@@ -2477,6 +2707,39 @@
         
       ],
     };
+    let regionBranches = regionBranchesFallback;
+    let _schoolCatalogLoaded = false;
+
+    function applySchoolCatalogPayload(catalog) {
+      const next = Object.create(null);
+      const coords = [];
+      for (const reg of catalog.regions || []) {
+        if (!reg || !reg.name) continue;
+        next[reg.name] = [...new Set((reg.branches || []).map((b) => String(b).trim()).filter(Boolean))];
+        coords.push({
+          name: reg.name,
+          left: reg.mapCoords && reg.mapCoords.left != null ? reg.mapCoords.left : 50,
+          top: reg.mapCoords && reg.mapCoords.top != null ? reg.mapCoords.top : 50,
+          short: (reg.mapCoords && reg.mapCoords.short) || reg.name,
+        });
+      }
+      if (Object.keys(next).length) {
+        regionBranches = next;
+        PMO_REGION_MAP_COORDS = coords;
+        PMO_REGION_MAP_POS = Object.fromEntries(
+          PMO_REGION_MAP_COORDS.map((r) => [r.name, { left: r.left, top: r.top, short: r.short }])
+        );
+        _schoolCatalogLoaded = true;
+      }
+    }
+
+    async function ensureSchoolCatalog() {
+      if (_schoolCatalogLoaded) return;
+      try {
+        const r = await poApiFetch('api/catalog/regions');
+        if (r.ok) applySchoolCatalogPayload(await r.json());
+      } catch (_) { /* keep fallback */ }
+    }
 
     function fillRegionSelectFromMap() {
       const sel = document.getElementById('p-region');
@@ -2552,9 +2815,9 @@
           optionsHTML += `<option value="${escapeAttr(currentVal)}">${escapeHtml(currentVal)}</option>`;
         }
 
-        container.innerHTML = `<label>Branch Name</label><select id="p-branch" name="branch" required>${optionsHTML}</select>`;
+        container.innerHTML = `<label for="p-branch">Branch Name</label><select id="p-branch" name="branch" required aria-label="Branch name">${optionsHTML}</select>`;
       } else {
-        container.innerHTML = `<label>Branch Name</label><input type="text" id="p-branch" name="branch" required placeholder="Type Branch Name here...">`;
+        container.innerHTML = `<label for="p-branch">Branch Name</label><input type="text" id="p-branch" name="branch" required placeholder="Type Branch Name here..." autocomplete="organization">`;
       }
 
       const el = document.getElementById('p-branch');
@@ -2900,8 +3163,8 @@
         <div class="fg2" style="margin-bottom:12px">
         <div id="spk-plan-fields-${s.id}">
         <div class="fg">
-          <label>No. of Parents Attended *</label>
-          <input type="number" id="f-att-${s.id}" data-po-invited-cap="${invitedCap}" placeholder="0" min="0" max="${invitedCap}" title="Must be â‰¤ parents invited (${invitedCap})" value="${escapeAttr(attVal)}" aria-describedby="f-att-err-${s.id}">
+          <label for="f-att-${s.id}">No. of Parents Attended *</label>
+          <input type="number" id="f-att-${s.id}" data-po-invited-cap="${invitedCap}" placeholder="0" min="0" max="${invitedCap}" title="Must be ≤ parents invited (${invitedCap})" value="${escapeAttr(attVal)}" aria-describedby="f-att-err-${s.id}" autocomplete="off">
           <div id="f-att-err-${s.id}" class="po-att-err" role="alert" style="display:none;color:#c62828;font-size:12px;margin-top:4px;font-weight:500"></div>
         </div>
         <div class="fg">
@@ -2913,20 +3176,20 @@
           </div>
         </div>
         <div class="fg">
-          <label>Follow-Up Required</label>
-          <select id="f-fu-${s.id}">
+          <label for="f-fu-${s.id}">Follow-Up Required</label>
+          <select id="f-fu-${s.id}" autocomplete="off">
             <option value="">Select</option>
             <option value="Y" ${s.follow_up === 'Y' ? 'selected' : ''}>Y – Yes</option>
             <option value="N" ${s.follow_up === 'N' ? 'selected' : ''}>N – No</option>
           </select>
         </div>
         <div class="fg" id="f-fud-wrap-${s.id}" style="display:${fuShow ? 'block' : 'none'}">
-          <label>Follow-Up Date *</label>
-          <input type="date" id="f-fud-${s.id}"${fudMinAttr} value="${escapeAttr(s.follow_up_date || '')}" title="Must be after the session date">
+          <label for="f-fud-${s.id}">Follow-Up Date *</label>
+          <input type="date" id="f-fud-${s.id}"${fudMinAttr} value="${escapeAttr(s.follow_up_date || '')}" title="Must be after the session date" autocomplete="off">
         </div>
         <div class="fg">
-          <label>Overall Session Status *</label>
-          <select id="f-sts-${s.id}">
+          <label for="f-sts-${s.id}">Overall Session Status *</label>
+          <select id="f-sts-${s.id}" autocomplete="off">
             <option value="">Select status</option>
             ${['Successful', 'Excellent', 'Moderate', 'Low Turnout']
           .map(o => `<option value="${o}" ${s.session_status === o ? 'selected' : ''}>${o}</option>`).join('')}
@@ -3472,7 +3735,7 @@
      * India map markers: left/top are direct percentages within the visible India outline
      * on india-outline.svg (viewBox 666×777). Tuned visually against the rendered map.
      */
-    const PMO_REGION_MAP_COORDS = [
+    let PMO_REGION_MAP_COORDS = [
       { name: 'Andhra Pradesh', left: 50, top: 60, short: 'A.P.' },
       { name: 'Bengaluru', left: 42, top: 67, short: 'Bengaluru' },
       { name: 'Chennai', left: 53, top: 70, short: 'Chennai' },
@@ -3489,7 +3752,7 @@
       { name: 'West Bengal', left: 60, top: 33, short: 'W. Bengal' },
     ];
 
-    const PMO_REGION_MAP_POS = Object.fromEntries(
+    let PMO_REGION_MAP_POS = Object.fromEntries(
       PMO_REGION_MAP_COORDS.map((r) => [r.name, { left: r.left, top: r.top, short: r.short }])
     );
 
@@ -3614,7 +3877,7 @@
         <p class="pmo-region-map__panel-meta"><strong>${branches.length}</strong> school${branches.length !== 1 ? 's' : ''} in this region</p>
       </div>
       <div class="pmo-map-panel-tools">
-        <input type="search" class="pmo-map-search" data-pmo-map-search placeholder="Search schools in ${escapeAttr(region)}…" autocomplete="off" value="${escapeAttr(q)}">
+        <input type="search" class="pmo-map-search" data-pmo-map-search placeholder="Search schools in ${escapeAttr(region)}…" autocomplete="off" aria-label="Search schools in region" value="${escapeAttr(q)}">
         <span class="pmo-map-search-count" data-pmo-map-count>${filtered.length} shown</span>
       </div>
       ${list}`;
@@ -3867,7 +4130,7 @@
           const pct = r.invited ? Math.round((r.attended / r.invited) * 100) : 0;
           const short = formatMonthLabel(r.monthKey).replace(/,?\s*\d{4}$/, '').trim();
           return `<div class="pmo-mo-att-row">
-          <span>${escapeHtml(short)}</span>
+          <span class="pmo-mo-att-row__label">${escapeHtml(short)}</span>
           <div class="pmo-mo-att-row__bar"><span class="pmo-mo-att-row__fill" style="width:${Math.round((pct / maxAtt) * 100)}%"></span></div>
           <span class="num"><strong>${pct}%</strong></span>
         </div>`;
@@ -5775,11 +6038,409 @@
         ensureSalesAdminData();
         return;
       }
+      if (role === 'superadmin') {
+        renderSuperAdmin();
+        return;
+      }
       renderPMO();
       renderSpeaker();
     }
 
-    // â”€â”€ Excel Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function applySuperAdminRoute() {
+      const route = parseAppRoute();
+      const section = route.params.section || 'users';
+      document.querySelectorAll('[data-superadmin-nav]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-superadmin-nav') === section);
+      });
+      document.querySelectorAll('[data-superadmin-section]').forEach((sec) => {
+        const on = sec.getAttribute('data-superadmin-section') === section;
+        sec.classList.toggle('is-hidden', !on);
+        sec.hidden = !on;
+      });
+    }
+
+    async function adminApiFetch(path, init) {
+      return poApiFetch(`api/admin/${path}`, init);
+    }
+
+    const _superadminSessionPasswords = Object.create(null);
+    let _superadminCredPlain = '';
+    let _superadminCredHidden = true;
+    let _superadminCredLastFocus = null;
+
+    function roleLabelForAdmin(role) {
+      if (role === 'sales_admin') return 'Sales Admin';
+      if (role === 'speaker') return 'Speaker';
+      if (role === 'pmo') return 'PMO';
+      return role || '—';
+    }
+
+    function rememberSessionPassword(id, username, role, password) {
+      if (!id || !password) return;
+      _superadminSessionPasswords[String(id)] = {
+        username: username || '',
+        role: role || '',
+        password: String(password),
+      };
+    }
+
+    function closeSavedCredentialsDialog() {
+      const overlay = document.getElementById('superadmin-cred-overlay');
+      if (overlay) overlay.hidden = true;
+      _superadminCredPlain = '';
+      _superadminCredHidden = true;
+      const passEl = document.getElementById('superadmin-cred-pass');
+      if (passEl) passEl.textContent = '';
+      const toggle = document.getElementById('superadmin-cred-toggle');
+      if (toggle) toggle.textContent = 'Show';
+      if (_superadminCredLastFocus && typeof _superadminCredLastFocus.focus === 'function') {
+        _superadminCredLastFocus.focus();
+      }
+      _superadminCredLastFocus = null;
+    }
+
+    function showSavedCredentialsDialog({ username, role, password, title }) {
+      const overlay = document.getElementById('superadmin-cred-overlay');
+      if (!overlay) {
+        toast('Password saved. Copy it now — it cannot be retrieved later.', 'success');
+        return;
+      }
+      _superadminCredLastFocus = document.activeElement;
+      _superadminCredPlain = String(password || '');
+      _superadminCredHidden = true;
+      const titleEl = document.getElementById('superadmin-cred-title');
+      if (titleEl) titleEl.textContent = title || 'Saved credentials';
+      const userEl = document.getElementById('superadmin-cred-user');
+      const roleEl = document.getElementById('superadmin-cred-role');
+      const passEl = document.getElementById('superadmin-cred-pass');
+      const toggle = document.getElementById('superadmin-cred-toggle');
+      if (userEl) userEl.textContent = username || '—';
+      if (roleEl) roleEl.textContent = roleLabelForAdmin(role);
+      if (passEl) passEl.textContent = _superadminCredPlain ? '••••••••' : '—';
+      if (toggle) toggle.textContent = 'Show';
+      overlay.hidden = false;
+      document.getElementById('superadmin-cred-copy')?.focus();
+    }
+
+    function initSavedCredentialsDialog() {
+      const overlay = document.getElementById('superadmin-cred-overlay');
+      if (!overlay || overlay.dataset.poBound === '1') return;
+      overlay.dataset.poBound = '1';
+      document.getElementById('superadmin-cred-close')?.addEventListener('click', closeSavedCredentialsDialog);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeSavedCredentialsDialog();
+      });
+      document.getElementById('superadmin-cred-toggle')?.addEventListener('click', () => {
+        const passEl = document.getElementById('superadmin-cred-pass');
+        const toggle = document.getElementById('superadmin-cred-toggle');
+        if (!passEl) return;
+        _superadminCredHidden = !_superadminCredHidden;
+        passEl.textContent = _superadminCredHidden
+          ? (_superadminCredPlain ? '••••••••' : '—')
+          : _superadminCredPlain || '—';
+        if (toggle) toggle.textContent = _superadminCredHidden ? 'Show' : 'Hide';
+      });
+      document.getElementById('superadmin-cred-copy')?.addEventListener('click', async () => {
+        if (!_superadminCredPlain) {
+          toast('No password to copy.', 'warning');
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(_superadminCredPlain);
+          toast('Password copied.', 'success');
+        } catch (_) {
+          toast('Could not copy automatically. Use Show and copy it manually.', 'warning');
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay && !overlay.hidden) closeSavedCredentialsDialog();
+      });
+    }
+
+    async function renderSuperAdminUsers() {
+      const root = document.getElementById('superadmin-users-root');
+      if (!root) return;
+      root.innerHTML = '<p class="sales-table-card__sub" style="padding:20px 28px">Loading users…</p>';
+      const r = await adminApiFetch('users');
+      if (!r.ok) {
+        root.innerHTML = '<p class="sales-table-card__sub" style="padding:20px 28px">Could not load users.</p>';
+        return;
+      }
+      const j = await r.json();
+      const rows = (j.users || [])
+        .map(
+          (u) => `<tr>
+            <td>${escapeHtml(u.username)}</td>
+            <td>${escapeHtml(u.role)}</td>
+            <td>${u.is_active ? '<span class="sales-badge-met">Active</span>' : '<span class="sales-badge-pending">Inactive</span>'}</td>
+            <td>
+              <form class="superadmin-row-pass" data-superadmin-pass-form="${escapeAttr(u.id)}" autocomplete="off" onsubmit="return false">
+                <input type="text" name="username" value="${escapeAttr(u.username)}" autocomplete="username" hidden aria-hidden="true" tabindex="-1" readonly>
+                <div class="login-password-wrap superadmin-password-wrap">
+                  <input type="password" class="superadmin-row-pass-input" id="superadmin-row-pass-${escapeAttr(u.id)}" name="superadmin-row-pass-${escapeAttr(u.id)}" data-superadmin-pass-for="${escapeAttr(u.id)}" placeholder="New password" autocomplete="new-password" aria-label="New password for ${escapeAttr(u.username)}">
+                  ${PO_PASSWORD_EYE_BTN}
+                </div>
+                <button type="button" class="btn btn-o btn-sm" data-superadmin-save-pass="${escapeAttr(u.id)}">Save password</button>
+              </form>
+            </td>
+            <td class="num">
+              <div class="superadmin-actions-cell">
+                <button type="button" class="btn btn-o btn-sm" data-superadmin-view-pass="${escapeAttr(u.id)}" data-superadmin-view-user="${escapeAttr(u.username)}" data-superadmin-view-role="${escapeAttr(u.role)}">View</button>
+                ${u.is_active ? `<button type="button" class="btn btn-o btn-sm" data-superadmin-deactivate="${escapeAttr(u.id)}">Deactivate</button>` : ''}
+              </div>
+            </td>
+          </tr>`
+        )
+        .join('');
+      root.innerHTML = `<table class="sales-school-table" aria-label="Managed users"><thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Set password</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5">No users yet.</td></tr>'}</tbody></table>`;
+    }
+
+    async function renderSuperAdminSchools() {
+      const root = document.getElementById('superadmin-schools-root');
+      if (!root) return;
+      root.innerHTML = '<p class="sales-table-card__sub" style="padding:20px 28px">Loading schools…</p>';
+      const r = await adminApiFetch('schools');
+      if (!r.ok) {
+        root.innerHTML = '<p class="sales-table-card__sub" style="padding:20px 28px">Could not load schools.</p>';
+        return;
+      }
+      const j = await r.json();
+      const rows = (j.schools || [])
+        .map(
+          (s) => `<tr>
+            <td>${escapeHtml(s.region)}</td>
+            <td>${escapeHtml(s.branch)}</td>
+            <td>${s.is_active ? '<span class="sales-badge-met">Active</span>' : '<span class="sales-badge-pending">Inactive</span>'}</td>
+            <td class="num">${s.is_active ? `<button type="button" class="btn btn-o btn-sm" data-superadmin-school-off="${escapeAttr(s.id)}">Deactivate</button>` : ''}</td>
+          </tr>`
+        )
+        .join('');
+      root.innerHTML = `<table class="sales-school-table" aria-label="School catalog"><thead><tr><th>Region</th><th>Branch</th><th>Status</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4">No schools.</td></tr>'}</tbody></table>`;
+    }
+
+    let auditActorFilter = '';
+
+    async function renderSuperAdminAudit() {
+      const root = document.getElementById('superadmin-audit-root');
+      if (!root) return;
+      root.innerHTML = '<p class="sales-table-card__sub" style="padding:20px 28px">Loading audit logs…</p>';
+      const qs = new URLSearchParams({ limit: '200' });
+      if (auditActorFilter) qs.set('actor', auditActorFilter);
+      const r = await adminApiFetch(`audit-logs?${qs.toString()}`);
+      if (!r.ok) {
+        root.innerHTML = '<p class="sales-table-card__sub" style="padding:20px 28px">Could not load audit logs.</p>';
+        return;
+      }
+      const j = await r.json();
+      const actors = j.actors || [];
+      const items = j.items || [];
+      const actorChips = actors.length
+        ? `<div class="audit-actors-bar" role="toolbar" aria-label="Filter audit logs by user">
+            <span class="audit-actors-label">Changed by</span>
+            <button type="button" class="audit-actor-chip${auditActorFilter ? '' : ' is-active'}" data-audit-actor="">All (${j.total ?? items.length})</button>
+            ${actors
+              .map(
+                (a) => `<button type="button" class="audit-actor-chip${auditActorFilter === a.username ? ' is-active' : ''}" data-audit-actor="${escapeAttr(a.username)}">${escapeHtml(a.username)} <span class="audit-actor-count">${a.count}</span></button>`
+              )
+              .join('')}
+          </div>`
+        : '';
+      const rows = items
+        .map(
+          (a) => `<tr>
+            <td>${escapeHtml(a.timestamp ? new Date(a.timestamp).toLocaleString() : '')}</td>
+            <td><strong>${escapeHtml(a.actor_username || '—')}</strong></td>
+            <td>${escapeHtml(a.actor_role || '')}</td>
+            <td>${escapeHtml(a.action || '')}</td>
+            <td>${escapeHtml(a.summary || '')}</td>
+          </tr>`
+        )
+        .join('');
+      root.innerHTML = `${actorChips}<table class="sales-school-table" aria-label="Audit logs"><thead><tr><th>When</th><th>User</th><th>Role</th><th>Action</th><th>Summary</th></tr></thead><tbody>${rows || '<tr><td colspan="5">No logs yet.</td></tr>'}</tbody></table>`;
+      root.querySelectorAll('[data-audit-actor]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          auditActorFilter = btn.getAttribute('data-audit-actor') || '';
+          renderSuperAdminAudit();
+        });
+      });
+    }
+
+    async function renderSuperAdmin() {
+      applySuperAdminRoute();
+      const route = parseAppRoute();
+      const section = route.params.section || 'users';
+      if (section === 'schools') await renderSuperAdminSchools();
+      else if (section === 'audit') await renderSuperAdminAudit();
+      else await renderSuperAdminUsers();
+    }
+
+    function initSuperAdminPanel() {
+      if (document.body.dataset.superadminBound === '1') return;
+      document.body.dataset.superadminBound = '1';
+      initSuperAdminPasswordToggle();
+      initSavedCredentialsDialog();
+      document.getElementById('superadmin-nav')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-superadmin-nav]');
+        if (!btn) return;
+        const section = btn.getAttribute('data-superadmin-nav') || 'users';
+        poReplaceHash(`#/superadmin/${section}`);
+        applySuperAdminRoute();
+        renderSuperAdmin();
+      });
+      document.getElementById('superadmin-topnav-home')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        poReplaceHash('#/superadmin/users');
+        syncRouteFromHash();
+      });
+      document.getElementById('btn-superadmin-logout')?.addEventListener('click', logoutUser);
+      document.getElementById('superadmin-user-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('superadmin-new-user')?.value.trim();
+        const password = document.getElementById('superadmin-new-pass')?.value || '';
+        const role = document.getElementById('superadmin-new-role')?.value || '';
+        const r = await adminApiFetch('users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, role }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          toast(j.error || 'Could not create user.', 'error');
+          return;
+        }
+        rememberSessionPassword(j.user?.id, username, role, password);
+        toast('User created.', 'success');
+        e.target.reset();
+        resetPasswordFieldVisibility('superadmin-new-pass', 'superadmin-new-pass-toggle');
+        renderSuperAdminUsers();
+        showSavedCredentialsDialog({
+          username,
+          role,
+          password,
+          title: 'User created — copy credentials',
+        });
+      });
+      document.getElementById('superadmin-school-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const region = document.getElementById('superadmin-school-region')?.value.trim();
+        const branch = document.getElementById('superadmin-school-branch')?.value.trim();
+        const r = await adminApiFetch('schools', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ region, branch }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          toast(j.error || 'Could not add school.', 'error');
+          return;
+        }
+        toast('School added.', 'success');
+        e.target.reset();
+        _schoolCatalogLoaded = false;
+        await ensureSchoolCatalog();
+        renderSuperAdminSchools();
+      });
+      document.getElementById('view-superadmin')?.addEventListener('click', async (e) => {
+        const toggleBtn = e.target.closest('[data-po-pass-toggle]');
+        if (toggleBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          togglePasswordField(toggleBtn);
+          return;
+        }
+        const viewBtn = e.target.closest('[data-superadmin-view-pass]');
+        if (viewBtn) {
+          e.preventDefault();
+          const id = viewBtn.getAttribute('data-superadmin-view-pass');
+          const cached = id ? _superadminSessionPasswords[id] : null;
+          if (cached?.password) {
+            showSavedCredentialsDialog({
+              username: cached.username || viewBtn.getAttribute('data-superadmin-view-user'),
+              role: cached.role || viewBtn.getAttribute('data-superadmin-view-role'),
+              password: cached.password,
+              title: 'View password',
+            });
+            return;
+          }
+          toast('This password is hashed and cannot be retrieved. Set a new password, then click View to show and copy it.', 'warning');
+          const input = id ? document.querySelector(`[data-superadmin-pass-for="${CSS.escape(id)}"]`) : null;
+          input?.focus();
+          return;
+        }
+        const savePassId = e.target.closest('[data-superadmin-save-pass]')?.getAttribute('data-superadmin-save-pass');
+        if (savePassId) {
+          e.preventDefault();
+          const input = document.querySelector(`[data-superadmin-pass-for="${CSS.escape(savePassId)}"]`);
+          const password = input?.value || '';
+          if (!password.trim()) {
+            toast('Enter a new password first.', 'warning');
+            input?.focus();
+            return;
+          }
+          const r = await adminApiFetch(`users/${encodeURIComponent(savePassId)}/password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+          });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok) {
+            const row = input?.closest('tr');
+            const username = row?.querySelector('td')?.textContent?.trim() || '';
+            const role = row?.querySelectorAll('td')[1]?.textContent?.trim() || '';
+            rememberSessionPassword(savePassId, username, role, password);
+            toast('Password saved.', 'success');
+            if (input) {
+              input.value = '';
+              input.type = 'password';
+              const wrapBtn = input.closest('.login-password-wrap')?.querySelector('[data-po-pass-toggle]');
+              if (wrapBtn) {
+                wrapBtn.setAttribute('aria-label', 'Show password');
+                wrapBtn.setAttribute('aria-pressed', 'false');
+                setLoginEyeIcons(wrapBtn, false);
+              }
+            }
+            showSavedCredentialsDialog({
+              username,
+              role,
+              password,
+              title: 'Password saved — copy it now',
+            });
+          } else {
+            toast(j.error || 'Password update failed.', 'error');
+          }
+          return;
+        }
+        const offId = e.target.closest('[data-superadmin-deactivate]')?.getAttribute('data-superadmin-deactivate');
+        if (offId) {
+          const r = await adminApiFetch(`users/${encodeURIComponent(offId)}`, { method: 'DELETE' });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok) {
+            toast('User deactivated.', 'success');
+            renderSuperAdminUsers();
+          } else {
+            toast(j.error || 'Could not deactivate user.', 'error');
+          }
+          return;
+        }
+        const schoolOff = e.target.closest('[data-superadmin-school-off]')?.getAttribute('data-superadmin-school-off');
+        if (schoolOff) {
+          const r = await adminApiFetch(`schools/${encodeURIComponent(schoolOff)}`, { method: 'DELETE' });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok) {
+            toast('School deactivated.', 'success');
+            _schoolCatalogLoaded = false;
+            await ensureSchoolCatalog();
+            renderSuperAdminSchools();
+          } else {
+            toast(j.error || 'Could not deactivate school.', 'error');
+          }
+        }
+      });
+    }
+
+    initSuperAdminPanel();
+
+    // Excel Export
     async function exportExcel() {
       await refreshData();
       toast('Generating Excel file... Please wait.', 'info', { autoClose: 4500 });

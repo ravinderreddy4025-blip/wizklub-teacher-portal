@@ -2,6 +2,11 @@
 const STATE_DOC_ID = 'tracker_sessions';
 const SESSIONS_COLLECTION = 'sessions';
 const TARGETS_COLLECTION = 'school_targets';
+const USERS_COLLECTION = 'admin_users';
+const SCHOOL_CATALOG_COLLECTION = 'school_catalog';
+const AUDIT_LOGS_COLLECTION = 'audit_logs';
+const MANAGED_ROLES = new Set(['pmo', 'speaker', 'sales_admin']);
+const USERNAME_RE = /^[a-zA-Z0-9._-]{3,64}$/;
 const MAX_SESSIONS = 5000;
 /** New sessions use UUID v4; legacy rows may still use short alphanumeric ids. */
 const SESSION_ID_RE =
@@ -29,6 +34,11 @@ module.exports = {
   STATE_DOC_ID,
   SESSIONS_COLLECTION,
   TARGETS_COLLECTION,
+  USERS_COLLECTION,
+  SCHOOL_CATALOG_COLLECTION,
+  AUDIT_LOGS_COLLECTION,
+  MANAGED_ROLES,
+  USERNAME_RE,
   MAX_SESSIONS,
   SESSION_ID_RE,
   SESSION_STATUS_ALLOWED,

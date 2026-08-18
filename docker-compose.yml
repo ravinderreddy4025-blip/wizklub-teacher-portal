@@ -1,12 +1,13 @@
 # Two-container stack:
-# - `backend`: runs APIs (PMO :8080, Testimonials :3001)
-# - `frontend`: serves UIs (/pmo, /wizklub-testimonials) and proxies API routes
+# - `backend`: runs APIs (PMO :8080, Teachers Portal :3001)
+# - `frontend`: serves UIs (/pmo, /wizklub-testimonials, /inventory) and proxies API routes
 #
 # Requires external Mongo hosts (no Mongo containers here).
 # Set these in repo-root `.env`:
 #   MONGO_URI=...                 (shared Mongo host/cluster URI)
 #   PMO_MONGO_DB_NAME=...         (PMO database)
 #   TESTIMONIALS_MONGO_DB_NAME=... (testimonials database)
+#   INVENTORY_MONGO_DB_NAME=...   (inventory database)
 
 name: wizklub-2c
 
@@ -24,13 +25,9 @@ services:
 
       # PMO backend
       PMO_NODE_ENV: ${PMO_NODE_ENV:-production}
-      PMO_USER: ${PMO_USER:?Set PMO_USER in .env}
-      PMO_PASS: ${PMO_PASS:?Set PMO_PASS in .env}
-      SPEAKER_USER: ${SPEAKER_USER:?Set SPEAKER_USER in .env}
-      SPEAKER_PASS: ${SPEAKER_PASS:?Set SPEAKER_PASS in .env}
-      SALES_ADMIN_USER: ${SALES_ADMIN_USER:?Set SALES_ADMIN_USER in .env}
-      SALES_ADMIN_PASS: ${SALES_ADMIN_PASS:?Set SALES_ADMIN_PASS in .env}
+      # PMO backend — Super Admin login only (env); PMO/Speaker/Sales use WizKlub or DB users
       ADMIN_USER: ${ADMIN_USER:-admin}
+      SUPERADMIN_PASS: ${SUPERADMIN_PASS:?Set SUPERADMIN_PASS in .env}
       COOKIE_SECRET: ${COOKIE_SECRET:?Set COOKIE_SECRET in .env}
       COOKIE_SECURE: ${COOKIE_SECURE:-0}
       WIZKLUB_PARENTS_SESSION_WEBHOOK_URL: ${WIZKLUB_PARENTS_SESSION_WEBHOOK_URL:-}
@@ -40,7 +37,7 @@ services:
       LSQ_WEBHOOK_BATCH_SIZE: ${LSQ_WEBHOOK_BATCH_SIZE:-25}
       LSQ_WEBHOOK_DISABLED: ${LSQ_WEBHOOK_DISABLED:-0}
 
-      # Wizklub Testimonials backend
+      # WizKlub Teachers Portal backend
       TESTIMONIALS_NODE_ENV: ${TESTIMONIALS_NODE_ENV:-production}
       TESTIMONIALS_PORT: ${TESTIMONIALS_PORT:-3001}
       WIZKLUB_API_BASE_URL: ${WIZKLUB_API_BASE_URL:-https://api.wizklub.com/v1}
@@ -51,6 +48,32 @@ services:
       GCS_FOLDER: ${GCS_FOLDER:-wizklub}
       GCS_CREDENTIALS: ${GCS_CREDENTIALS:-}
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcs-credentials.json
+
+      # Inventory / school portal (port 5002)
+      INVENTORY_PORT: ${INVENTORY_PORT:-5002}
+      INVENTORY_MONGO_DB_NAME: ${INVENTORY_MONGO_DB_NAME:-wizklub-inventory}
+      INVENTORY_MONGODB_URI: ${INVENTORY_MONGODB_URI:-}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      INTERNAL_BRIDGE_SECRET: ${INTERNAL_BRIDGE_SECRET:?Set INTERNAL_BRIDGE_SECRET in .env}
+      INVENTORY_API_BASE_URL: ${INVENTORY_API_BASE_URL:-http://127.0.0.1:5002/api}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-${S3_BUCKET_NAME:-}}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_S3_PUBLIC_BASE_URL: ${AWS_S3_PUBLIC_BASE_URL:-}
+      INVENTORY_S3_PREFIX: ${INVENTORY_S3_PREFIX:-${S3_UPLOAD_PREFIX:-inventory}}
+      S3_UPLOAD_PREFIX: ${S3_UPLOAD_PREFIX:-}
+      INVENTORY_S3_PUBLIC: ${INVENTORY_S3_PUBLIC:-0}
+      INVENTORY_S3_SIGNED_URL_TTL: ${INVENTORY_S3_SIGNED_URL_TTL:-3600}
+
+      # Inventory email (credentials, dispatch, receipt notifications)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      FRONTEND_URL: ${FRONTEND_URL:-}
     volumes:
       - ./gcs-credentials.json:/run/secrets/gcs-credentials.json:ro
     extra_hosts:
@@ -58,13 +81,14 @@ services:
     expose:
       - "8080"
       - "3001"
+      - "5002"
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "const http=require('http');const req=(u)=>new Promise((res,rej)=>{http.get(u,r=>{r.resume();res(r.statusCode>=200&&r.statusCode<400)}).on('error',rej)});Promise.all([req('http://127.0.0.1:8080/api/health'),req('http://127.0.0.1:3001/health')]).then(v=>process.exit(v.every(Boolean)?0:1)).catch(()=>process.exit(1));"
+          "const http=require('http');const req=(u)=>new Promise((res,rej)=>{http.get(u,r=>{r.resume();res(r.statusCode>=200&&r.statusCode<400)}).on('error',rej)});Promise.all([req('http://127.0.0.1:8080/api/health'),req('http://127.0.0.1:3001/health'),req('http://127.0.0.1:5002/api/health')]).then(v=>process.exit(v.every(Boolean)?0:1)).catch(()=>process.exit(1));"
         ]
       interval: 30s
       timeout: 5s
@@ -79,6 +103,7 @@ services:
       dockerfile: frontend/combined.Dockerfile
       args:
         TESTIMONIALS_BASE_PATH: /wizklub-testimonials/
+        INVENTORY_BASE_PATH: /inventory/
         VITE_USE_MOCK: "false"
     restart: unless-stopped
     depends_on:

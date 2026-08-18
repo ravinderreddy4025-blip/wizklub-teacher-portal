@@ -120,7 +120,20 @@ function pmoSessionsTimeOverlap(a, b) {
   return pmoConflictingGrades(a, b) != null;
 }
 
-const ZOOM_HTTP_RE = /^https?:\/\//i;
+function isSafeHttpUrl(raw) {
+  const s = String(raw ?? '').trim();
+  if (!s || s.length > 2048) return false;
+  let u;
+  try {
+    u = new URL(s);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+  if (u.username || u.password) return false;
+  if (!u.hostname) return false;
+  return true;
+}
 
 function parseParentsInvited(raw) {
   if (raw === null || raw === undefined || raw === '') return NaN;
@@ -154,7 +167,7 @@ function validatePmoSessionRecord(rawItem) {
   if (!teacher) return 'Each session must have a teacher name.';
   const location = item.location != null ? String(item.location).trim() : '';
   if (!location) return 'Each session must have a meeting link (online) or venue / location detail (offline).';
-  if (venue === 'Online' && !ZOOM_HTTP_RE.test(location)) {
+  if (venue === 'Online' && !isSafeHttpUrl(location)) {
     return 'Online sessions must include a valid http(s) meeting link.';
   }
   const inv = parseParentsInvited(item.invited);
@@ -323,4 +336,5 @@ module.exports = {
   validateCompletedAttendedVsInvited,
   validateSpeakerSessionBusinessRules,
   migrateLegacyToCanonical,
+  isSafeHttpUrl,
 };

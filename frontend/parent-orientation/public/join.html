@@ -15,23 +15,61 @@
       box-sizing: border-box;
     }
 
+    :root {
+      --po-blue: #ea580c;
+      --po-blue-dark: #c2410c;
+      --po-text: #1c1917;
+      --po-muted: #57534e;
+      --po-focus: rgba(234, 88, 12, 0.22);
+      --po-font: 'Nunito', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: 'Nunito', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
-      background: linear-gradient(160deg, #fff7ed 0%, #f1f5f9 45%, #e0f2fe 100%);
+      font-family: var(--po-font);
+      background: linear-gradient(160deg, #ffedd5 0%, #ffffff 45%, #fff7ed 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px 16px;
+      color: var(--po-text);
+    }
+
+    .skip-link {
+      position: absolute;
+      left: 12px;
+      top: -56px;
+      z-index: 10;
+      padding: 8px 14px;
+      background: var(--po-blue);
+      color: #fff;
+      font-weight: 700;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    .skip-link:focus,
+    .skip-link:focus-visible {
+      top: 12px;
     }
 
     .join-card {
       width: min(420px, 100%);
-      background: #fff;
+      background: rgba(255, 255, 255, 0.92);
       border-radius: 16px;
-      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+      box-shadow: 0 8px 32px rgba(234, 88, 12, 0.1), 0 32px 64px -24px rgba(234, 88, 12, 0.14);
       padding: 28px 24px 24px;
+      border-top: 4px solid #fb923c;
+    }
+
+    .join-logo {
+      display: block;
+      height: 56px;
+      width: auto;
+      max-width: min(220px, 80vw);
+      margin: 0 auto 12px;
+      object-fit: contain;
     }
 
     .join-brand {
@@ -39,20 +77,22 @@
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: #c2410c;
+      color: var(--po-blue-dark);
       margin-bottom: 8px;
+      text-align: center;
     }
 
     h1 {
       margin: 0 0 6px;
       font-size: 22px;
-      color: #0f172a;
+      color: #9a3412;
+      letter-spacing: -0.02em;
     }
 
     .join-meta {
       margin: 0 0 20px;
       font-size: 14px;
-      color: #64748b;
+      color: var(--po-muted);
       line-height: 1.45;
     }
 
@@ -60,23 +100,28 @@
       display: block;
       font-size: 13px;
       font-weight: 600;
-      color: #334155;
+      color: #44403c;
       margin-bottom: 6px;
     }
 
     input[type="text"] {
       width: 100%;
       padding: 12px 14px;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
+      border: 1px solid rgba(234, 88, 12, 0.22);
+      border-radius: 12px;
       font-size: 16px;
       letter-spacing: 0.05em;
       text-transform: uppercase;
+      font-family: inherit;
+      background: #fff;
     }
 
-    input:focus {
-      outline: none;
-      border-color: #c2410c;
+    input:focus,
+    input:focus-visible {
+      outline: 2px solid #ea580c;
+      outline-offset: 1px;
+      border-color: rgba(251, 146, 60, 0.85);
+      box-shadow: 0 0 0 3px var(--po-focus);
     }
 
     .join-err {
@@ -95,30 +140,47 @@
       margin-top: 18px;
       padding: 12px 16px;
       border: none;
-      border-radius: 10px;
-      background: #c2410c;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #ea580c 0%, #f97316 48%, #fb923c 100%);
       color: #fff;
       font-size: 15px;
       font-weight: 700;
+      font-family: inherit;
       cursor: pointer;
     }
 
     button:hover {
-      background: #9a3412;
+      background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+    }
+
+    button:focus-visible {
+      outline: 2px solid #ea580c;
+      outline-offset: 2px;
     }
 
     .join-hint {
       margin: 12px 0 0;
       font-size: 12px;
-      color: #94a3b8;
+      color: var(--po-muted);
       line-height: 1.4;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
 
 <body>
+  <a class="skip-link" href="#student_id">Skip to SCS id</a>
   <div class="join-card">
-    <div class="join-brand">WIZKLUB</div>
+    <img class="join-logo" src="brand/logo.png" alt="WIZKLUB Futurz" width="220" height="56" decoding="async">
+    <div class="join-brand">Parent Orientation</div>
     <h1>Enter your SCS id</h1>
     <p class="join-meta"><strong>__BRANCH__</strong><br>Session date: __DATE__</p>
     __ERROR__

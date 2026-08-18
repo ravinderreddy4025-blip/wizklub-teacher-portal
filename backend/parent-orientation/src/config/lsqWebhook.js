@@ -1,9 +1,6 @@
 const { isProd } = require('./env');
 const { parseDelayHours } = require('../domain/lsqWebhookSchedule');
 
-const DEV_FALLBACK_WEBHOOK_URL =
-  'https://app.srichaitanyacrm.com/apigateway/wizklub_parents_session_webhook/?token=0fe1304bde5e615bbf297d653e43bd2afba04ad3';
-
 function envFlag(name, defaultFalse = false) {
   const raw = process.env[name];
   if (raw == null || raw === '') return defaultFalse;
@@ -19,10 +16,7 @@ function envInt(name, fallback, { min = 0, max = Number.MAX_SAFE_INTEGER } = {})
 }
 
 function getWebhookUrl() {
-  const configured = String(process.env.WIZKLUB_PARENTS_SESSION_WEBHOOK_URL || '').trim();
-  if (configured) return configured;
-  if (isProd) return '';
-  return DEV_FALLBACK_WEBHOOK_URL;
+  return String(process.env.WIZKLUB_PARENTS_SESSION_WEBHOOK_URL || '').trim();
 }
 
 const lsqWebhookConfig = {

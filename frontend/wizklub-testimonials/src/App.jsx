@@ -1,5 +1,6 @@
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+import InventorySection from './inventory/InventorySection'
 import Login from './components/Login'
 import PwaInstallBanner from './components/PwaInstallBanner'
 import { RequireAuth } from './context/AuthContext.jsx'
@@ -20,6 +21,14 @@ function AppRoutes() {
 
   if (path === '/login') return <Login />
 
+  if (path === '/inventory' || path.startsWith('/inventory/')) {
+    return (
+      <RequireAuth>
+        <InventorySection />
+      </RequireAuth>
+    )
+  }
+
   const batchRoute = matchPath(path, '/schools/:schoolId/batches')
   const schoolStudentsRoute = matchPath(path, '/schools/:schoolId/batches/:batchId/students')
   const studentsRoute = matchPath(path, '/batches/:batchId/students')
@@ -34,6 +43,8 @@ function AppRoutes() {
     path === '/feedback' ||
     path === '/feedback/new' ||
     path === '/profile' ||
+    path === '/inventory' ||
+    path.startsWith('/inventory/') ||
     path === '/' ||
     batchRoute ||
     schoolStudentsRoute ||

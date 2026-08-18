@@ -3,12 +3,12 @@ const { isProd } = require('../config/env');
 function mountFallthrough(app) {
   app.use((req, res) => {
     if (req.path.startsWith('/api')) {
-      return res.status(404).json({
-        error: 'Unknown API route',
-        method: req.method,
-        path: req.path,
-        hint: 'Restart the Node server after updating code so routes like PUT /api/sessions/:id are registered.',
-      });
+      const body = { error: 'Unknown API route' };
+      if (!isProd) {
+        body.method = req.method;
+        body.path = req.path;
+      }
+      return res.status(404).json(body);
     }
     res.status(404).type('text/plain').send('Not found');
   });

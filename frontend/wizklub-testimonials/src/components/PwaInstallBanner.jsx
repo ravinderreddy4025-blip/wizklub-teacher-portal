@@ -41,7 +41,7 @@ export default function PwaInstallBanner() {
   return (
     <div className="pwa-install" role="region" aria-label="Install app">
       <div className="pwa-install__content">
-        <p className="pwa-install__title">Install Wizklub Teacher Upload</p>
+        <p className="pwa-install__title">Install WizKlub Teachers Portal</p>
         <p className="pwa-install__text">Add to your home screen for quick access and full-screen use.</p>
       </div>
       <div className="pwa-install__actions">

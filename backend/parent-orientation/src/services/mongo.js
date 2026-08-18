@@ -238,6 +238,14 @@ async function initMongo() {
     }
     const { seedSchoolTargets } = require('./seedSchoolTargets');
     await seedSchoolTargets();
+    const { seedSchoolCatalog } = require('./seedSchoolCatalog');
+    await seedSchoolCatalog();
+    const { ensureUserIndexes } = require('../models/userModel');
+    const { ensureCatalogIndexes } = require('../models/schoolCatalogModel');
+    const { ensureAuditIndexes } = require('./auditLog');
+    await ensureUserIndexes();
+    await ensureCatalogIndexes();
+    await ensureAuditIndexes();
   } catch (e) {
     console.error('Session migration/index setup:', e && e.message ? e.message : e);
   }

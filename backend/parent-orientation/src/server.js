@@ -4,9 +4,7 @@ const {
   PORT,
   HOST,
   COOKIE_SECRET,
-  PMO_PASS,
-  SPEAKER_PASS,
-  SALES_ADMIN_PASS,
+  SUPERADMIN_PASS,
   cookieSecure,
   trustProxyRaw,
 } = require('./config/env');
@@ -29,34 +27,19 @@ function assertProductionConfig() {
     console.error('[FATAL] Set COOKIE_SECRET in .env to a random string of at least 32 characters.');
     process.exit(1);
   }
-  if (!process.env.PMO_PASS || !process.env.SPEAKER_PASS || !process.env.SALES_ADMIN_PASS) {
-    console.error(
-      '[FATAL] Production requires PMO_PASS, SPEAKER_PASS, and SALES_ADMIN_PASS in the environment (no defaults).'
-    );
+  if (!process.env.SUPERADMIN_PASS && !process.env.PMO_PASS) {
+    console.error('[FATAL] Production requires SUPERADMIN_PASS in the environment (no default).');
     process.exit(1);
   }
   const minLen = 12;
-  if (
-    PMO_PASS.length < minLen ||
-    SPEAKER_PASS.length < minLen ||
-    SALES_ADMIN_PASS.length < minLen
-  ) {
+  if (SUPERADMIN_PASS.length < minLen) {
     console.error(
-      `[FATAL] Production: PMO_PASS, SPEAKER_PASS, and SALES_ADMIN_PASS must be at least ${minLen} characters.`
+      `[FATAL] Production: SUPERADMIN_PASS must be at least ${minLen} characters.`
     );
     process.exit(1);
   }
-  if (
-    WEAK_PASSWORDS.has(PMO_PASS.toLowerCase()) ||
-    WEAK_PASSWORDS.has(SPEAKER_PASS.toLowerCase()) ||
-    WEAK_PASSWORDS.has(SALES_ADMIN_PASS.toLowerCase())
-  ) {
-    console.error('[FATAL] Production: use stronger role passwords (not a common default).');
-    process.exit(1);
-  }
-  const passSet = new Set([PMO_PASS, SPEAKER_PASS, SALES_ADMIN_PASS]);
-  if (passSet.size < 3) {
-    console.error('[FATAL] Production: PMO_PASS, SPEAKER_PASS, and SALES_ADMIN_PASS must all differ.');
+  if (WEAK_PASSWORDS.has(SUPERADMIN_PASS.toLowerCase())) {
+    console.error('[FATAL] Production: use a stronger SUPERADMIN_PASS (not a common default).');
     process.exit(1);
   }
   if (!process.env.MONGODB_URI || !String(process.env.MONGODB_URI).trim()) {

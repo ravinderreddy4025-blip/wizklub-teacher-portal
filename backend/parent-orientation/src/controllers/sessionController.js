@@ -1,3 +1,4 @@
+const { recordAudit } = require('../services/auditLog');
 const {
   mongo,
   logMongoError,
@@ -86,6 +87,12 @@ async function createSession(req, res) {
       return res.status(409).type('text/plain').send(`Session ${req.body.id} already exists.`);
     }
     await insertSession(req.body);
+    await recordAudit(req, {
+      action: 'session.created',
+      resourceType: 'session',
+      resourceId: String(req.body.id || ''),
+      summary: `Created session ${req.body.id || ''}`,
+    });
     return res.status(201).end();
   } catch (err) {
     mongo.ready = false;
@@ -108,6 +115,12 @@ async function updateSession(req, res) {
     const v = validateCreateOrUpdateItem(body, all, id);
     if (!v.ok) return res.status(v.status).send(v.msg);
     await upsertSessionById(id, body);
+    await recordAudit(req, {
+      action: 'session.updated',
+      resourceType: 'session',
+      resourceId: String(id),
+      summary: `Updated session ${id}`,
+    });
     return res.status(204).end();
   } catch (err) {
     mongo.ready = false;
@@ -123,6 +136,12 @@ async function deleteSession(req, res) {
     if (!validateSessionId(id)) return res.status(400).send('Invalid id.');
     const r = await deleteSessionById(id);
     if (r.deletedCount === 0) return res.status(404).type('text/plain').send('Not found.');
+    await recordAudit(req, {
+      action: 'session.deleted',
+      resourceType: 'session',
+      resourceId: String(id),
+      summary: `Deleted session ${id}`,
+    });
     return res.status(204).end();
   } catch (err) {
     mongo.ready = false;

@@ -1,12 +1,11 @@
 const path = require('path');
 const fs = require('fs');
 const { PUBLIC_DIR } = require('../config/paths');
-const { validateSessionId } = require('../domain/sessions');
+const { validateSessionId, isSafeHttpUrl } = require('../domain/sessions');
 const { isValidStudentId, normalizeStudentId } = require('../domain/studentIds');
 const { findSessionById, appendStudentIdToSession } = require('../models/sessionModel');
 const { mongo, logMongoError, mongoPingOk } = require('../services/mongo');
 
-const ZOOM_HTTP_RE = /^https?:\/\//i;
 const JOIN_HTML_PATH = path.join(PUBLIC_DIR, 'join.html');
 
 function escapeHtml(s) {
@@ -65,7 +64,7 @@ async function loadJoinableSession(sessionId) {
     return { ok: false, status: 400, title: 'Meeting cancelled', message: 'This meeting has been cancelled.' };
   }
   const location = session.location != null ? String(session.location).trim() : '';
-  if (!ZOOM_HTTP_RE.test(location)) {
+  if (!isSafeHttpUrl(location)) {
     return { ok: false, status: 400, title: 'Link not ready', message: 'The meeting link has not been set up yet.' };
   }
   return { ok: true, session, location };
@@ -133,4 +132,4 @@ async function postJoin(req, res) {
   }
 }
 
-module.exports = { getJoinPage, postJoin };
+module.exports = { getJoinPage, postJoin, escapeHtml };

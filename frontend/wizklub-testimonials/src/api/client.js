@@ -619,4 +619,23 @@ export const api = {
     if (!result.ok) return { ok: false, status: result.status, error: result.error }
     return { ok: true, feedback: result.data.feedback }
   },
+
+  async listInventorySchools() {
+    const result = await request('/api/teacher/inventory/schools')
+    if (!result.ok) {
+      return { ok: false, error: result.error || result.data?.error || 'Could not load inventory schools.' }
+    }
+    return { ok: true, ...result.data }
+  },
+
+  async selectInventorySchool(schoolCode) {
+    const result = await request('/api/teacher/inventory/select-school', {
+      method: 'POST',
+      body: JSON.stringify({ schoolCode }),
+    })
+    if (!result.ok) {
+      return { ok: false, error: result.error || result.data?.error || 'Could not open school inventory.' }
+    }
+    return { ok: true, ...result.data }
+  },
 }

@@ -17,6 +17,8 @@ const {
 } = require('../controllers/sessionController');
 const { sendTemplateXlsx, uploadExcel } = require('../controllers/fileController');
 const { getTargets, putTargets, getFulfillment } = require('../controllers/targetController');
+const { getRegionsCatalog } = require('../controllers/catalogController');
+const { mountAdminRoutes } = require('../routes/adminRoutes');
 
 function mountApiRoutes(app) {
   app.use(express.json({ limit: '10mb', strict: true }));
@@ -62,6 +64,10 @@ function mountApiRoutes(app) {
   app.get('/api/sales/targets', requireAuth, getTargets);
   app.put('/api/sales/targets', requireAuth, requireSalesAdmin, putTargets);
   app.get('/api/sales/fulfillment', requireAuth, getFulfillment);
+
+  app.get('/api/catalog/regions', requireAuth, getRegionsCatalog);
+
+  mountAdminRoutes(app);
 }
 
 module.exports = { mountApiRoutes };
