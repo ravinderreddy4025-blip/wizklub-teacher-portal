@@ -1,13 +1,15 @@
-# Two-container stack:
+# Two-container stack (production / shared Mongo):
 # - `backend`: runs APIs (PMO :8080, Teachers Portal :3001)
 # - `frontend`: serves UIs (/pmo, /wizklub-testimonials, /inventory) and proxies API routes
 #
-# Requires external Mongo hosts (no Mongo containers here).
-# Set these in repo-root `.env`:
+# Requires an external Mongo host (Atlas or host Mongo). Set in repo-root `.env`:
 #   MONGO_URI=...                 (shared Mongo host/cluster URI)
 #   PMO_MONGO_DB_NAME=...         (PMO database)
 #   TESTIMONIALS_MONGO_DB_NAME=... (testimonials database)
 #   INVENTORY_MONGO_DB_NAME=...   (inventory database)
+#
+# UAT (adds a third Mongo container; MONGO_URI is not required):
+#   docker compose -f docker-compose.yml -f docker-compose.uat.yml up -d --build
 
 name: wizklub-2c
 
@@ -19,7 +21,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      MONGO_URI: ${MONGO_URI:?Set MONGO_URI in .env}
+      # Required for this file alone. docker-compose.uat.yml overrides this to mongodb://mongo:27017
+      MONGO_URI: ${MONGO_URI:-}
       PMO_MONGO_DB_NAME: ${PMO_MONGO_DB_NAME:-}
       TESTIMONIALS_MONGO_DB_NAME: ${TESTIMONIALS_MONGO_DB_NAME:-}
 
