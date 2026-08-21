@@ -7,7 +7,13 @@ function auditCollection() {
   return mongo.client.db(MONGODB_DB).collection(AUDIT_LOGS_COLLECTION);
 }
 
-function actorFromReq(req) {
+function actorFromReq(req, payload = {}) {
+  if (payload.actorUsername || payload.actorRole) {
+    return {
+      username: String(payload.actorUsername || 'unknown'),
+      role: String(payload.actorRole || 'unknown'),
+    };
+  }
   if (req.authUser) {
     return { username: req.authUser.username, role: req.authUser.role };
   }
@@ -21,7 +27,7 @@ async function recordAudit(req, payload) {
   try {
     const col = auditCollection();
     if (!col) return;
-    const actor = actorFromReq(req);
+    const actor = actorFromReq(req, payload);
     const doc = {
       timestamp: new Date(),
       actor_username: actor.username,

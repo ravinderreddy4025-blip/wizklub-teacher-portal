@@ -10,6 +10,17 @@ export function canAcknowledgeDispatch(item) {
   return false;
 }
 
+/** True after admin Ship: replacement is in transit, waiting for school receipt. */
+export function isReplacementInTransit(issue) {
+  if (!issue || issue.status !== 'Approved') return false;
+  const dispatch = issue.dispatch || {};
+  const cycles = Array.isArray(dispatch.cycles) ? dispatch.cycles : [];
+  const live = cycles.length ? cycles[cycles.length - 1] : null;
+  if (live?.status === 'OPEN' && live?.movementType === 'REPLACEMENT') return true;
+  if (dispatch.status === 'Dispatched' && issue.replacementDispatch) return true;
+  return false;
+}
+
 const EDITABLE_ISSUE_STATUSES = [
   'Pending AM Approval',
   'Clarification Requested',
@@ -19,6 +30,7 @@ const EDITABLE_ISSUE_STATUSES = [
 ];
 
 const EDITABLE_DISPATCH_STATUSES = [
+  'Completed',
   'missing_dispatch',
   'damaged_dispatch',
   'mismatch_dispatch',
@@ -52,6 +64,7 @@ export function isReplacementAwaitingReceipt(item) {
 
 /** Admin authorized at least one replacement on this dispatch. */
 export function hasRedispatchHistory(item) {
+  if ((item?.cycles || []).some((cycle) => cycle.movementType === 'REPLACEMENT')) return true;
   if ((item?.redispatchCycles || []).length > 0) return true;
   const issue = item?.receiptIssue;
   if (!issue || !ADMIN_REDISPATCH_ISSUE_STATUSES.includes(issue.status)) {
@@ -63,7 +76,9 @@ export function hasRedispatchHistory(item) {
     return false;
   }
   if (item.status === 'Dispatched') return true;
-  if (REPLACEMENT_ACK_STATUSES.includes(item.status)) return true;
+  if (item.status === 'Completed' && ['Resolved', 'Superseded', 'Approved'].includes(issue.status)) {
+    return true;
+  }
   if (item.status === 'Delivery Completed' && ['Resolved', 'Superseded', 'Approved'].includes(issue.status)) {
     return true;
   }
@@ -130,6 +145,20 @@ function buildRedispatchSnapshot(item, issue) {
  * Build ordered shipment history: original → each replaced cycle → current live.
  */
 export function getDispatchCycleHistory(item) {
+  const liveCycles = item?.cycles || [];
+  if (liveCycles.length) {
+    return liveCycles.map((cycle, index) => ({
+      label: cycle.movementType === 'REPLACEMENT'
+        ? (index === liveCycles.length - 1 ? `Current (redispatch ${index})` : `Redispatch ${index}`)
+        : 'Original',
+      cycle: cycle.cycle,
+      kitId: cycle.kitId || item?.kitId || item?.componentId || '—',
+      category: cycle.category || item?.category || 'New Dispatch',
+      quantity: cycle.quantityDispatched ?? 0,
+      trackingId: cycle.consignmentNo || '—',
+    }));
+  }
+
   const issue = item?.receiptIssue;
   const storedCycles = item?.redispatchCycles || [];
 
@@ -212,7 +241,7 @@ export function getDispatchRedispatchSummary(item) {
   const currentQty = item?.quantity ?? 0;
   const cycles = getDispatchCycleHistory(item);
 
-  if (!issue && !(item?.redispatchCycles || []).length) {
+  if (!issue && !(item?.redispatchCycles || []).length && !(item?.cycles || []).some((c) => c.movementType === 'REPLACEMENT')) {
     return {
       mode: 'single',
       original: {

@@ -1,10 +1,19 @@
 const PDFDocument = require('pdfkit');
 const { getSchoolReportData } = require('./monthlyReportService');
+const { getSchoolTrendData } = require('./monthlyAnalyticsService');
+const { drawPdfBrandHeader } = require('../utils/brandLogo');
 
 const BRAND_ORANGE = '#F7941D';
 const BRAND_DEEP = '#1A1A2E';
 const MUTED = '#64748B';
 const BORDER = '#E2E8F0';
+
+const TREND_COLORS = {
+  mismatch: '#6366F1',
+  notReceived: '#F89C28',
+  damaged: '#D97706',
+  lost: '#64748B',
+};
 
 function formatDate(date) {
   if (!date) return '—';
@@ -21,55 +30,138 @@ function formatMonthLabel(month) {
   return new Date(year, m - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 }
 
-function drawHeader(doc, title, subtitle) {
-  doc.save();
-  doc.rect(0, 0, doc.page.width, 88).fill(BRAND_ORANGE);
-  doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(20).text('WizKlub', 50, 24);
-  doc.font('Helvetica').fontSize(10).text('Inventory — Monthly School Report', 50, 48);
-  doc.font('Helvetica-Bold').fontSize(13).text(title, doc.page.width - 260, 26, { width: 210, align: 'right' });
-  doc.font('Helvetica').fontSize(9).text(subtitle, doc.page.width - 260, 48, { width: 210, align: 'right' });
-  doc.restore();
-  doc.y = 104;
+function formatShortMonth(month) {
+  const [year, m] = String(month || '').split('-').map(Number);
+  if (!year || !m) return month;
+  return new Date(year, m - 1, 1).toLocaleDateString('en-IN', { month: 'short' });
 }
 
-function drawStatRow(doc, stats, startY) {
-  const rejected = stats.rejectedKits || 0;
-  const rejectedHint = `Rejected by AM ${stats.rejectedByAm || 0} / Admin ${stats.rejectedByAdmin || 0}`;
-  const rows = [
-    [
-      ['Sent till date', stats.sentKits ?? stats.dispatchedKits],
-      ['Scheduled', stats.scheduledKits],
-      ['Acknowledged', stats.acknowledgedKits],
-      ['Mismatched', stats.mismatchKits],
-    ],
-    [
-      ['Lost', stats.lostKits],
-      ['Damaged', stats.damagedKits],
-      ['Rejected', rejected],
-    ],
+function drawHeader(doc, title, subtitle) {
+  drawPdfBrandHeader(doc, {
+    rightTitle: title,
+    rightSubtitle: subtitle,
+  });
+}
+
+function drawKpiCards(doc, stats, startY) {
+  const fulfillment = stats.fulfillment || {};
+  const cards = [
+    ['Shipped', stats.sentKits ?? 0, 'INITIAL kits'],
+    ['Received', stats.acknowledgedKits ?? 0, 'OK acknowledged'],
+    ['Replacements', stats.replacedKits ?? 0, 'Replacement shipped'],
+    ['Pending', stats.pendingKits ?? 0, 'Not yet shipped'],
+    ['Affected', stats.affectedKits ?? 0, 'Receipt issues'],
+    ['Fulfillment', `${fulfillment.rate ?? 0}%`, `${fulfillment.fulfilledDsps ?? 0}/${fulfillment.eligibleDsps ?? 0} DSPs`],
   ];
   const gap = 8;
-  const cardHeight = 58;
+  const cardWidth = (doc.page.width - 100 - gap * 2) / 3;
+  const cardHeight = 54;
   let y = startY;
-  rows.forEach((cards) => {
-    const cardWidth = (doc.page.width - 100 - gap * (cards.length - 1)) / cards.length;
-    let x = 50;
-    cards.forEach(([label, value]) => {
-      doc.roundedRect(x, y, cardWidth, cardHeight, 6).fillAndStroke('#FFF8F0', BORDER);
-      doc.fillColor(MUTED).font('Helvetica').fontSize(7).text(label.toUpperCase(), x + 8, y + 10, { width: cardWidth - 16 });
-      doc.fillColor(BRAND_DEEP).font('Helvetica-Bold').fontSize(16).text(String(value ?? 0), x + 8, y + 26, { width: cardWidth - 16 });
-      if (label === 'Rejected') {
-        doc.fillColor(MUTED).font('Helvetica').fontSize(6.5).text(rejectedHint, x + 8, y + 44, { width: cardWidth - 16 });
-      } else if (label === 'Scheduled') {
-        doc.fillColor(MUTED).font('Helvetica').fontSize(6.5).text('Includes sent + pending', x + 8, y + 44, { width: cardWidth - 16 });
-      } else if (label === 'Sent till date') {
-        doc.fillColor(MUTED).font('Helvetica').fontSize(6.5).text('Shipped — not pending', x + 8, y + 44, { width: cardWidth - 16 });
-      }
-      x += cardWidth + gap;
-    });
-    y += cardHeight + 8;
+  cards.forEach((card, index) => {
+    const col = index % 3;
+    const row = Math.floor(index / 3);
+    const x = 50 + col * (cardWidth + gap);
+    const cy = y + row * (cardHeight + gap);
+    doc.roundedRect(x, cy, cardWidth, cardHeight, 6).fillAndStroke('#FFF8F0', BORDER);
+    doc.fillColor(MUTED).font('Helvetica').fontSize(7).text(card[0].toUpperCase(), x + 8, cy + 8, { width: cardWidth - 16 });
+    doc.fillColor(BRAND_DEEP).font('Helvetica-Bold').fontSize(15).text(String(card[1]), x + 8, cy + 22, { width: cardWidth - 16 });
+    doc.fillColor(MUTED).font('Helvetica').fontSize(6.5).text(card[2], x + 8, cy + 40, { width: cardWidth - 16 });
   });
-  return y + 4;
+  return y + 2 * (cardHeight + gap) + 8;
+}
+
+function drawTrendChart(doc, trendSeries, startY) {
+  if (!trendSeries?.showChart) {
+    let y = startY;
+    doc.fillColor(BRAND_DEEP).font('Helvetica-Bold').fontSize(10)
+      .text('Not enough historical data yet', 50, y);
+    y += 16;
+    doc.font('Helvetica').fontSize(8).fillColor(MUTED)
+      .text('Issue trends will appear as monthly data accumulates.', 50, y, { width: doc.page.width - 100 });
+    y += 14;
+    if (trendSeries?.availableMonths === 1) {
+      doc.font('Helvetica-Bold').fontSize(8).fillColor(MUTED)
+        .text('1 month of data available', 50, y);
+      y += 12;
+    }
+    return y + 8;
+  }
+
+  const trendPoints = trendSeries.months.map((month, index) => ({
+    month,
+    volume: {
+      mismatch: trendSeries.volume.mismatch[index] || 0,
+      notReceived: trendSeries.volume.notReceived[index] || 0,
+      damaged: trendSeries.volume.damaged[index] || 0,
+      lost: trendSeries.volume.lost[index] || 0,
+    },
+  }));
+
+  if (!trendPoints.length) {
+    doc.fillColor(MUTED).font('Helvetica').fontSize(9).text('No trend data available.', 50, startY);
+    return startY + 20;
+  }
+
+  const chartX = 50;
+  const chartY = startY + 8;
+  const chartW = doc.page.width - 100;
+  const chartH = 100;
+  const maxVal = Math.max(
+    1,
+    ...trendPoints.flatMap((p) => [p.volume.mismatch, p.volume.notReceived, p.volume.damaged, p.volume.lost]),
+  );
+
+  doc.rect(chartX, chartY, chartW, chartH).strokeColor(BORDER).stroke();
+  trendPoints.forEach((point, i) => {
+    const px = chartX + (i / Math.max(trendPoints.length - 1, 1)) * (chartW - 20) + 10;
+    doc.fillColor(MUTED).font('Helvetica').fontSize(6).text(formatShortMonth(point.month), px - 12, chartY + chartH + 4, { width: 28, align: 'center' });
+    ['mismatch', 'notReceived', 'damaged', 'lost'].forEach((key, lineIndex) => {
+      const val = point.volume[key] || 0;
+      const py = chartY + chartH - (val / maxVal) * (chartH - 10) - 5;
+      if (i > 0) {
+        const prev = trendPoints[i - 1];
+        const prevX = chartX + ((i - 1) / Math.max(trendPoints.length - 1, 1)) * (chartW - 20) + 10;
+        const prevVal = prev.volume[key] || 0;
+        const prevY = chartY + chartH - (prevVal / maxVal) * (chartH - 10) - 5;
+        doc.moveTo(prevX, prevY).lineTo(px, py).strokeColor(TREND_COLORS[key]).lineWidth(1).stroke();
+      }
+      doc.circle(px, py, 1.5).fill(TREND_COLORS[key]);
+      if (lineIndex === 0) doc.circle(px, py, 1.5).fill(TREND_COLORS[key]);
+    });
+  });
+
+  doc.fillColor(MUTED).font('Helvetica').fontSize(7)
+    .text(`Issue volume by type — ${trendPoints.length} month${trendPoints.length === 1 ? '' : 's'} of available history`, chartX, chartY + chartH + 18, { width: chartW });
+  return chartY + chartH + 36;
+}
+
+function drawComposition(doc, composition, startY) {
+  const items = [
+    ['Mismatch', composition.mismatch || 0],
+    ['Not received', composition.notReceived || 0],
+    ['Damaged', composition.damaged || 0],
+    ['Lost', composition.lost || 0],
+  ];
+  const total = composition.totalAffected || items.reduce((s, [, v]) => s + v, 0);
+  if (total <= 0) {
+    doc.fillColor(MUTED).font('Helvetica').fontSize(9).text('No affected kits this month.', 50, startY);
+    return startY + 20;
+  }
+  let y = startY;
+  const barW = doc.page.width - 100;
+  let x = 50;
+  items.forEach(([label, value]) => {
+    if (value <= 0) return;
+    const w = (value / total) * barW;
+    doc.rect(x, y, w, 14).fill(BRAND_ORANGE);
+    x += w;
+  });
+  y += 22;
+  items.forEach(([label, value]) => {
+    doc.fillColor(BRAND_DEEP).font('Helvetica').fontSize(8).text(`${label}: ${value}`, 50, y);
+    y += 12;
+  });
+  return y + 8;
 }
 
 function drawSectionTitle(doc, title, y) {
@@ -78,52 +170,76 @@ function drawSectionTitle(doc, title, y) {
   return y + 24;
 }
 
-function drawDispatchTable(doc, dispatches, startY) {
-  if (!dispatches.length) {
-    doc.fillColor(MUTED).font('Helvetica').fontSize(9).text('No dispatches recorded for this month.', 50, startY);
+function drawCycleHistory(doc, dispatches, startY) {
+  const rows = [];
+  dispatches.forEach((dispatch) => {
+    const cycles = Array.isArray(dispatch.cycles) ? dispatch.cycles : [];
+    if (cycles.length) {
+      cycles.forEach((cycle) => {
+        rows.push({
+          date: cycle.dispatchedAt || dispatch.dispatchedAt || dispatch.createdAt,
+          dispatchId: dispatch.dispatchId,
+          kit: dispatch.kit?.name,
+          movement: cycle.movementType || '—',
+          qty: cycle.quantityDispatched ?? dispatch.quantity ?? 0,
+          tracking: dispatch.trackingId || '—',
+          status: cycle.status || dispatch.status,
+        });
+      });
+    } else {
+      rows.push({
+        date: dispatch.dispatchedAt || dispatch.createdAt,
+        dispatchId: dispatch.dispatchId,
+        kit: dispatch.kit?.name,
+        movement: 'INITIAL',
+        qty: dispatch.reportOriginalQty ?? dispatch.quantity ?? 0,
+        tracking: dispatch.trackingId || '—',
+        status: dispatch.status,
+      });
+      if ((dispatch.reportReshipQty ?? 0) > 0) {
+        rows.push({
+          date: dispatch.dispatchedAt || dispatch.createdAt,
+          dispatchId: dispatch.dispatchId,
+          kit: dispatch.kit?.name,
+          movement: 'REPLACEMENT',
+          qty: dispatch.reportReshipQty,
+          tracking: dispatch.trackingId || '—',
+          status: dispatch.status,
+        });
+      }
+    }
+  });
+
+  if (!rows.length) {
+    doc.fillColor(MUTED).font('Helvetica').fontSize(9).text('No dispatch cycles recorded for this month.', 50, startY);
     return startY + 20;
   }
 
-  const colDate = 50;
-  const colId = 115;
-  const colKit = 210;
-  const colSent = 355;
-  const colReship = 410;
-  const colStatus = 465;
-  const rowHeight = 22;
-  const headerHeight = 24;
+  const cols = [50, 105, 175, 285, 330, 400, 470];
+  const headers = ['DATE', 'DISPATCH', 'KIT', 'TYPE', 'QTY', 'TRACKING', 'STATUS'];
   let y = startY;
+  doc.rect(cols[0], y, doc.page.width - 100, 22).fill('#FFF8F0');
+  doc.fillColor(BRAND_ORANGE).font('Helvetica-Bold').fontSize(7);
+  headers.forEach((h, i) => doc.text(h, cols[i] + 4, y + 7));
+  y += 22;
 
-  doc.rect(colDate, y, doc.page.width - 100, headerHeight).fill('#FFF8F0');
-  doc.fillColor(BRAND_ORANGE).font('Helvetica-Bold').fontSize(8);
-  doc.text('DATE', colDate + 6, y + 7);
-  doc.text('DISPATCH ID', colId, y + 7);
-  doc.text('KIT', colKit, y + 7);
-  doc.text('SENT', colSent, y + 7);
-  doc.text('RESHIP', colReship, y + 7);
-  doc.text('STATUS', colStatus, y + 7);
-  y += headerHeight;
-
-  dispatches.forEach((d, index) => {
-    if (y > doc.page.height - 80) {
+  rows.forEach((row, index) => {
+    if (y > doc.page.height - 70) {
       doc.addPage();
       y = 50;
     }
-    const bg = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA';
-    doc.rect(colDate, y, doc.page.width - 100, rowHeight).fill(bg);
-    doc.fillColor(BRAND_DEEP).font('Helvetica').fontSize(8);
-    doc.text(formatDate(d.dispatchedAt || d.createdAt), colDate + 6, y + 6, { width: 60 });
-    doc.text(d.dispatchId || '—', colId, y + 6, { width: 90 });
-    doc.text(d.kit?.name || '—', colKit, y + 6, { width: 140 });
-    const sent = d.reportOriginalQty ?? d.reportSentQty ?? d.quantity ?? 0;
-    const reship = d.reportReshipQty ?? 0;
-    doc.text(String(sent), colSent, y + 6);
-    doc.text(reship > 0 ? String(reship) : '—', colReship, y + 6);
-    doc.text(d.status || '—', colStatus, y + 6, { width: 80 });
-    y += rowHeight;
+    doc.rect(cols[0], y, doc.page.width - 100, 20).fill(index % 2 === 0 ? '#FFFFFF' : '#FAFAFA');
+    doc.fillColor(BRAND_DEEP).font('Helvetica').fontSize(7);
+    doc.text(formatDate(row.date), cols[0] + 4, y + 6, { width: 50 });
+    doc.text(row.dispatchId || '—', cols[1], y + 6, { width: 65 });
+    doc.text(row.kit || '—', cols[2], y + 6, { width: 105 });
+    doc.text(row.movement, cols[3], y + 6, { width: 40 });
+    doc.text(String(row.qty), cols[4], y + 6);
+    doc.text(row.tracking, cols[5], y + 6, { width: 65 });
+    doc.text(row.status || '—', cols[6], y + 6, { width: 75 });
+    y += 20;
   });
-
-  return y + 12;
+  return y + 10;
 }
 
 function drawReceiptIssuesSection(doc, receiptIssues, startY) {
@@ -140,14 +256,11 @@ function drawReceiptIssuesSection(doc, receiptIssues, startY) {
       y = 50;
     }
     const dispatchId = issue.dispatch?.dispatchId || issue.sourceDispatchRef || '—';
-    const sent = issue.quantitySent ?? 0;
-    const receivedOk = issue.quantityReceived ?? 0;
-    const affected = issue.quantityAffected || 0;
     doc.fillColor(BRAND_DEEP).font('Helvetica-Bold').fontSize(9)
       .text(`${issue.kit?.name || 'Kit'} · ${issue.issueType || 'Issue'} · Dispatch ${dispatchId}`, 50, y);
     doc.font('Helvetica').fontSize(8).fillColor(MUTED)
       .text(
-        `Sent: ${sent} · Received OK: ${receivedOk} · Affected: ${affected} · Status: ${issue.status || '—'}`,
+        `Sent: ${issue.quantitySent ?? 0} · Received OK: ${issue.quantityReceived ?? 0} · Affected: ${issue.quantityAffected || 0} · Status: ${issue.status || '—'}`,
         50,
         y + 12,
       );
@@ -157,20 +270,21 @@ function drawReceiptIssuesSection(doc, receiptIssues, startY) {
 }
 
 function drawAuditSection(doc, audit, startY) {
+  doc.fillColor(MUTED).font('Helvetica').fontSize(7)
+    .text('Audit lost/damaged is separate from receipt-issue Affected Kits.', 50, startY, { width: doc.page.width - 100 });
+  let y = startY + 14;
+
   if (!audit) {
-    doc.fillColor(MUTED).font('Helvetica').fontSize(9).text('No monthly audit submitted for this period.', 50, startY);
-    return startY + 20;
+    doc.fillColor(MUTED).font('Helvetica').fontSize(9).text('No monthly audit submitted for this period.', 50, y);
+    return y + 20;
   }
 
-  let y = startY;
   if (audit.assumedIntact) {
     doc.fillColor(BRAND_DEEP).font('Helvetica-Bold').fontSize(9)
       .text('Official audit dates ended — all kits treated as intact and exact.', 50, y);
     y += 14;
     doc.font('Helvetica').fontSize(8).fillColor(MUTED)
-      .text('No school submission. Warehouse quantity is available; lost 0; damaged 0.', 50, y, {
-        width: doc.page.width - 100,
-      });
+      .text('No school submission. Warehouse quantity is available; audit lost 0; damaged 0.', 50, y, { width: doc.page.width - 100 });
     return y + 20;
   }
 
@@ -199,8 +313,11 @@ function drawAuditSection(doc, audit, startY) {
 }
 
 async function generateSchoolConsolidatedReportPdf(schoolId, month) {
-  const data = await getSchoolReportData(schoolId, month);
-  const { school, stats, dispatches, receiptIssues, audit } = data;
+  const [data, trendSeries] = await Promise.all([
+    getSchoolReportData(schoolId, month),
+    getSchoolTrendData(schoolId, month, 6),
+  ]);
+  const { school, stats, composition, dispatches, receiptIssues, audit } = data;
   const schoolName = school.name || 'School';
   const monthLabel = formatMonthLabel(month);
 
@@ -217,21 +334,18 @@ async function generateSchoolConsolidatedReportPdf(schoolId, month) {
     doc.fillColor(MUTED).font('Helvetica').fontSize(9)
       .text(`School code: ${school.code || '—'}`, 50, doc.y);
     doc.text(`Division: ${school.divisionId?.name || '—'}`, 50, doc.y + 12);
-    doc.y += 28;
-    doc.fontSize(8).text(
-      'Sent till date is kits actually shipped (not pending). Scheduled includes sent plus still pending. Rejected shows who closed the claim (AM or Admin).',
-      50,
-      doc.y,
-      { width: doc.page.width - 100 },
-    );
-    doc.y += 22;
+    doc.y += 24;
 
-    let y = drawStatRow(doc, stats, doc.y);
-    y = drawSectionTitle(doc, 'Dispatch activity', y);
-    y = drawDispatchTable(doc, dispatches, y);
-    y = drawSectionTitle(doc, 'Receipt outcomes — sent, received OK, affected', y + 8);
+    let y = drawKpiCards(doc, stats, doc.y);
+    y = drawSectionTitle(doc, '6-month issue trend', y);
+    y = drawTrendChart(doc, trendSeries, y);
+    y = drawSectionTitle(doc, 'Issue composition', y + 4);
+    y = drawComposition(doc, composition || {}, y);
+    y = drawSectionTitle(doc, 'Dispatch cycle history', y + 4);
+    y = drawCycleHistory(doc, dispatches, y);
+    y = drawSectionTitle(doc, 'Receipt outcomes', y + 4);
     y = drawReceiptIssuesSection(doc, receiptIssues, y);
-    y = drawSectionTitle(doc, 'Monthly audit — lost / damaged', y + 8);
+    y = drawSectionTitle(doc, 'Monthly audit', y + 4);
     drawAuditSection(doc, audit, y);
 
     doc.fillColor(MUTED).font('Helvetica').fontSize(7)

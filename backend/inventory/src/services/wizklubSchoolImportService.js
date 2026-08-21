@@ -6,7 +6,6 @@ const { preserveSchoolLoginId } = require('../utils/schoolCode');
 const { normalizeBranchName, formatSchoolDisplayName } = require('../utils/schoolName');
 const { getDivisionManager } = require('../utils/divisionManager');
 const { generateSecurePassword } = require('../utils/passwordGenerator');
-const { sendSchoolCredentialsEmail, sendCredentialsEmailAsync } = require('./emailService');
 const { hasRegionAssignment, resolveDivisionForSchool } = require('./wizklubRegionService');
 
 function resolveFallbackEmail(wizklubSchool) {
@@ -20,7 +19,6 @@ function resolveFallbackEmail(wizklubSchool) {
 async function registerWizklubSchool(wizklubSchool, {
   divisionId,
   contactEmail,
-  sendEmail = true,
 } = {}) {
   const schoolLoginId = preserveSchoolLoginId(wizklubSchool.code || wizklubSchool.id);
   if (!schoolLoginId.trim()) {
@@ -65,8 +63,6 @@ async function registerWizklubSchool(wizklubSchool, {
 
   let portalUser = null;
   let plainPassword = null;
-  let emailSent = false;
-  let emailNote = null;
 
   if (normalizedEmail) {
     plainPassword = generateSecurePassword(12);
@@ -77,21 +73,6 @@ async function registerWizklubSchool(wizklubSchool, {
       role: 'School',
       schoolId: school._id,
     });
-
-    if (sendEmail) {
-      const emailResult = await sendCredentialsEmailAsync(() =>
-        sendSchoolCredentialsEmail({
-          to: normalizedEmail,
-          name: displayName,
-          schoolName: displayName,
-          schoolCode: school.code,
-          password: plainPassword,
-          isRegenerated: false,
-        }),
-      );
-      emailSent = emailResult.sent;
-      emailNote = emailResult.reason || null;
-    }
   }
 
   return {
@@ -99,8 +80,6 @@ async function registerWizklubSchool(wizklubSchool, {
     school,
     portalUser: portalUser ? { _id: portalUser._id, email: portalUser.email } : null,
     generatedPassword: plainPassword,
-    emailSent,
-    emailNote,
     credentialsPending: !normalizedEmail,
   };
 }
@@ -165,7 +144,6 @@ async function bulkRegisterWizklubSchools(schools, {
         code: result.school.code,
         name: result.school.name,
         divisionId,
-        emailSent: result.emailSent,
         credentialsPending: result.credentialsPending,
       });
     } catch (err) {

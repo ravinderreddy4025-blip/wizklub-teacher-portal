@@ -201,7 +201,7 @@ const DispatchDashboard = () => {
                     <td className="font-mono text-xs text-slate-600">{item.replacementId || '—'}</td>
                     <td className="font-mono text-xs text-slate-600">{item.trackingId || '—'}</td>
                     <td>
-                      <Badge type={item.status === 'Delivery Completed' || item.status === 'Received' ? 'success' : item.status === 'Pending' ? 'pending' : item.status === 'Dispatched' ? 'info' : 'error'}>
+                      <Badge type={item.status === 'Delivery Completed' || item.status === 'Received' || item.status === 'Completed' ? 'success' : item.status === 'Pending' ? 'pending' : item.status === 'Dispatched' ? 'info' : 'error'}>
                         {item.status}
                       </Badge>
                     </td>

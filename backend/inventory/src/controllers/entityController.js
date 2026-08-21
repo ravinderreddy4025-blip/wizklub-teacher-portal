@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const { generateSecurePassword } = require('../utils/passwordGenerator');
 const { encryptSecret, decryptSecret } = require('../utils/credentialSecret');
 const { serializeAM } = require('../utils/amUser');
-const { sendAccountManagerCredentialsEmail, sendSchoolCredentialsEmail, sendCredentialsEmailAsync } = require('../services/emailService');
+const { sendAccountManagerCredentialsEmail, sendCredentialsEmailAsync } = require('../services/emailService');
 const { getDivisionManager, getAmDivisions } = require('../utils/divisionManager');
 const { normalizeBranchName, formatSchoolDisplayName } = require('../utils/schoolName');
 const { preserveSchoolLoginId } = require('../utils/schoolCode');
@@ -17,6 +17,81 @@ async function hashPassword(plain) {
 
 function formatAM(user) {
   return serializeAM(user);
+}
+
+function parseDivisionIds(body = {}) {
+  if (Array.isArray(body.divisionIds)) {
+    return [...new Set(body.divisionIds.filter(Boolean).map(String))];
+  }
+  if (body.divisionId) return [String(body.divisionId)];
+  return [];
+}
+
+/**
+ * One AM may own many divisions via Division.regionalManagerId.
+ * User.divisionId stays a single primary pointer because of the unique index.
+ */
+async function assignDivisionsToAm(am, nextDivisionIds) {
+  const uniqueIds = [...new Set((nextDivisionIds || []).map(String).filter(Boolean))];
+  const divisions = uniqueIds.length
+    ? await Division.find({ _id: { $in: uniqueIds } })
+    : [];
+
+  if (divisions.length !== uniqueIds.length) {
+    const error = new Error('One or more divisions were not found');
+    error.status = 400;
+    throw error;
+  }
+
+  const currentlyOwned = await Division.find({ regionalManagerId: am._id });
+  const nextSet = new Set(uniqueIds);
+
+  for (const division of currentlyOwned) {
+    if (nextSet.has(String(division._id))) continue;
+    division.regionalManagerId = null;
+    await division.save();
+    await School.updateMany({ divisionId: division._id }, { $set: { rmId: null } });
+  }
+
+  for (const division of divisions) {
+    const previousAmId = division.regionalManagerId ? String(division.regionalManagerId) : null;
+    if (previousAmId && previousAmId !== String(am._id)) {
+      const previousAm = await User.findById(previousAmId).select('name');
+      const error = new Error(
+        `Division "${division.name}" is already assigned to ${previousAm?.name || 'another Account Manager'}`,
+      );
+      error.status = 400;
+      throw error;
+    }
+
+    const legacyHolder = await User.findOne({
+      role: 'AM',
+      divisionId: division._id,
+      _id: { $ne: am._id },
+    }).select('name');
+    if (legacyHolder && !previousAmId) {
+      const error = new Error(
+        `Division "${division.name}" is already assigned to ${legacyHolder.name}`,
+      );
+      error.status = 400;
+      throw error;
+    }
+
+    division.regionalManagerId = am._id;
+    await division.save();
+    await School.updateMany({ divisionId: division._id }, { $set: { rmId: am._id } });
+  }
+
+  if (uniqueIds.length) {
+    await User.updateMany(
+      { role: 'AM', _id: { $ne: am._id }, divisionId: { $in: uniqueIds } },
+      { $set: { divisionId: null } },
+    );
+  }
+
+  am.divisionId = uniqueIds[0] || null;
+  await am.save();
+  return divisions;
 }
 
 // --- DIVISION (no bundled AM) ---
@@ -89,18 +164,15 @@ const deleteDivision = async (req, res) => {
 // --- ACCOUNT MANAGER (AM) ---
 const createAM = async (req, res) => {
   try {
-    const { name, email, divisionId } = req.body;
+    const { name, email } = req.body;
+    const divisionIds = parseDivisionIds(req.body);
 
-    if (!name?.trim() || !email?.trim() || !divisionId) {
-      return res.status(400).json({ message: 'AM name, email, and division are required' });
+    if (!name?.trim() || !email?.trim()) {
+      return res.status(400).json({ message: 'AM name and email are required' });
     }
 
-    const division = await Division.findById(divisionId);
-    if (!division) return res.status(400).json({ message: 'Division not found' });
-
-    const existingAM = await getDivisionManager(divisionId);
-    if (existingAM) {
-      return res.status(400).json({ message: 'This division already has an Account Manager' });
+    if (!divisionIds.length) {
+      return res.status(400).json({ message: 'Select at least one division for this Account Manager' });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -116,19 +188,16 @@ const createAM = async (req, res) => {
       password: await hashPassword(plainPassword),
       passwordEncrypted: encryptSecret(plainPassword),
       role: 'AM',
-      divisionId: division._id,
     });
 
-    division.regionalManagerId = am._id;
-    await division.save();
+    const divisions = await assignDivisionsToAm(am, divisionIds);
 
-    const assignedDivisions = await getAmDivisions(am);
     const emailResult = await sendCredentialsEmailAsync(() =>
       sendAccountManagerCredentialsEmail({
         to: am.email,
         name: am.name,
         password: plainPassword,
-        divisionNames: assignedDivisions.map((d) => d.name),
+        divisionNames: divisions.map((d) => d.name),
         isRegenerated: false,
       })
     );
@@ -140,7 +209,7 @@ const createAM = async (req, res) => {
       emailNote: emailResult.reason || null,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.status || 500).json({ message: error.message });
   }
 };
 
@@ -167,10 +236,20 @@ const updateAM = async (req, res) => {
       }
     }
 
-    await am.save();
+    const hasDivisionPayload = Array.isArray(req.body.divisionIds) || req.body.divisionId;
+    if (hasDivisionPayload) {
+      const divisionIds = parseDivisionIds(req.body);
+      if (!divisionIds.length) {
+        return res.status(400).json({ message: 'Select at least one division for this Account Manager' });
+      }
+      await assignDivisionsToAm(am, divisionIds);
+    } else {
+      await am.save();
+    }
+
     res.json(formatAM(am));
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.status || 500).json({ message: error.message });
   }
 };
 
@@ -306,8 +385,6 @@ const createSchool = async (req, res) => {
 
     let portalUser = null;
     let plainPassword = null;
-    let emailSent = false;
-    let emailNote = null;
 
     if (normalizedEmail) {
       plainPassword = generateSecurePassword(12);
@@ -318,27 +395,12 @@ const createSchool = async (req, res) => {
         role: 'School',
         schoolId: school._id,
       });
-
-      const emailResult = await sendCredentialsEmailAsync(() =>
-        sendSchoolCredentialsEmail({
-          to: normalizedEmail,
-          name: displayName,
-          schoolName: displayName,
-          schoolCode: school.code,
-          password: plainPassword,
-          isRegenerated: false,
-        })
-      );
-      emailSent = emailResult.sent;
-      emailNote = emailResult.reason || null;
     }
 
     res.status(201).json({
       school,
       portalUser: portalUser ? { _id: portalUser._id, email: portalUser.email } : null,
       generatedPassword: plainPassword,
-      emailSent,
-      emailNote,
       credentialsPending: !normalizedEmail,
     });
   } catch (error) {
@@ -439,24 +501,10 @@ const regenerateSchoolPassword = async (req, res) => {
       await schoolUser.save();
     }
 
-    const displayName = formatSchoolDisplayName(school.name);
-    const emailResult = await sendCredentialsEmailAsync(() =>
-      sendSchoolCredentialsEmail({
-        to: normalizedEmail,
-        name: displayName,
-        schoolName: displayName,
-        schoolCode: school.code,
-        password: plainPassword,
-        isRegenerated: true,
-      })
-    );
-
     res.json({
       school,
       portalUser: { _id: schoolUser._id, email: schoolUser.email },
       generatedPassword: plainPassword,
-      emailSent: emailResult.sent,
-      emailNote: emailResult.reason || null,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

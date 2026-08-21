@@ -18,11 +18,12 @@ import PageHeader from '../components/layout/PageHeader';
 import { formatAuditMonthLabel } from '../utils/auditMonth';
 import StatCard from '../components/admin/StatCard';
 import LifecycleStrip from '../components/admin/LifecycleStrip';
-import AttentionPanel from '../components/admin/AttentionPanel';
 import ModuleQuickLink from '../components/admin/ModuleQuickLink';
 import AdminKitManager from '../components/admin/AdminKitManager';
 import AdminAccountManagers from '../components/admin/AdminAccountManagers';
 import AdminReportsSection from '../components/admin/AdminReportsSection';
+import AdminOperationsBoard from '../components/admin/AdminOperationsBoard';
+import AttentionQueues from '../components/admin/AttentionQueues';
 import AdminDispatchModal, { emptyDispatchForm, hasDuplicateKitTypes } from '../components/admin/AdminDispatchModal';
 import AdminAuthorizeReplacementModal from '../components/admin/AdminAuthorizeReplacementModal';
 import AdminAuditReviewModal from '../components/admin/AdminAuditReviewModal';
@@ -47,6 +48,7 @@ import {
 } from '../utils/adminMetrics';
 import { formatSchoolDisplayName, normalizeBranchName } from '../utils/schoolName';
 import { preserveSchoolLoginId } from '../utils/schoolCode';
+import { isReplacementInTransit } from '../utils/schoolDispatch';
 import Pagination from '../components/shared/Pagination';
 import ListToolbar from '../components/shared/ListToolbar';
 import { usePaginatedList, fetchAllPages } from '../hooks/usePaginatedList';
@@ -95,7 +97,6 @@ const AdminDashboard = () => {
     schoolCount: 0,
   });
   const [stats, setStats] = useState(null);
-  const [attentionSchools, setAttentionSchools] = useState([]);
   const [divisionSummary, setDivisionSummary] = useState({
     schoolCountByDivision: {},
     divisionDispatchCounts: {},
@@ -219,14 +220,20 @@ const AdminDashboard = () => {
   const [wizklubListFilter, setWizklubListFilter] = useState('all');
   const [wizklubMappedPage, setWizklubMappedPage] = useState(1);
   const [wizklubNotMappedPage, setWizklubNotMappedPage] = useState(1);
+  const [opsData, setOpsData] = useState(null);
+  const [opsLoading, setOpsLoading] = useState(true);
+  const [receiptIssueMode, setReceiptIssueMode] = useState('approve');
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [bootstrapRes, statsRes, summaryRes] = await Promise.allSettled([
+      setOpsLoading(true);
+      const month = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const [bootstrapRes, statsRes, summaryRes, opsRes] = await Promise.allSettled([
         api.get('/admin/bootstrap'),
         api.get('/admin/dashboard'),
         api.get('/admin/dispatch-division-summary'),
+        api.get('/admin/operations', { params: { month } }),
       ]);
 
       if (bootstrapRes.status === 'fulfilled') {
@@ -248,7 +255,6 @@ const AdminDashboard = () => {
 
       if (statsRes.status === 'fulfilled') {
         setStats(statsRes.value.data.data);
-        setAttentionSchools(statsRes.value.data.attentionSchools || []);
       } else {
         console.error(statsRes.reason);
       }
@@ -256,11 +262,18 @@ const AdminDashboard = () => {
       if (summaryRes.status === 'fulfilled') {
         setDivisionSummary(summaryRes.value.data);
       }
+
+      if (opsRes.status === 'fulfilled') {
+        setOpsData(opsRes.value.data || null);
+      } else {
+        setOpsData(null);
+      }
     } catch (err) {
       console.error(err);
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
+      setOpsLoading(false);
     }
   };
 
@@ -353,18 +366,26 @@ const AdminDashboard = () => {
     () => (data.receiptIssues || []).filter((i) => i.status === 'Pending Admin Approval'),
     [data.receiptIssues]
   );
+  const actionableReceiptIssues = useMemo(
+    () => (data.receiptIssues || []).filter((i) => {
+      if (i.status === 'Pending Admin Approval') return true;
+      if (i.status === 'Approved' && !isReplacementInTransit(i)) return true;
+      return false;
+    }),
+    [data.receiptIssues]
+  );
 
   const quantityMismatchIssues = useMemo(
-    () => pendingAdminReceiptIssues.filter((i) => i.issueType === 'Quantity Mismatch'),
-    [pendingAdminReceiptIssues],
+    () => actionableReceiptIssues.filter((i) => i.issueType === 'Quantity Mismatch'),
+    [actionableReceiptIssues],
   );
   const missingProductIssues = useMemo(
-    () => pendingAdminReceiptIssues.filter((i) => i.issueType === 'Missing Product' || i.issueType === 'Shipment Not Received'),
-    [pendingAdminReceiptIssues],
+    () => actionableReceiptIssues.filter((i) => i.issueType === 'Missing Product' || i.issueType === 'Shipment Not Received'),
+    [actionableReceiptIssues],
   );
   const damagedProductIssues = useMemo(
-    () => pendingAdminReceiptIssues.filter((i) => i.issueType === 'Damaged Product'),
-    [pendingAdminReceiptIssues],
+    () => actionableReceiptIssues.filter((i) => i.issueType === 'Damaged Product'),
+    [actionableReceiptIssues],
   );
   const missingApprovalCount = missingProductIssues.length + data.requests.length;
   const pendingAuditLostReviewCount = countAuditLines(pendingAdminAudits, 'lost', { amStatus: 'Approved' });
@@ -475,6 +496,13 @@ const AdminDashboard = () => {
   };
 
   const openReceiptIssueApprove = (issue) => {
+    setReceiptIssueMode('approve');
+    setReceiptIssueModal(issue);
+    setReceiptIssueForm({ consignmentNo: '', adminNotes: '' });
+  };
+
+  const openReceiptIssueShip = (issue) => {
+    setReceiptIssueMode('ship');
     setReceiptIssueModal(issue);
     setReceiptIssueForm({ consignmentNo: '', adminNotes: '' });
   };
@@ -482,13 +510,24 @@ const AdminDashboard = () => {
   const submitReceiptIssueApprove = async (e) => {
     e.preventDefault();
     if (!receiptIssueModal) return;
+    if (receiptIssueMode === 'ship' && !String(receiptIssueForm.consignmentNo || '').trim()) {
+      toast.error('Tracking ID is required to ship a replacement');
+      return;
+    }
     try {
-      await api.put(`/admin/receipt-issue/${receiptIssueModal._id}/approve`, receiptIssueForm);
-      toast.success('Replacement authorized — same dispatch ID updated, warehouse stock reduced, and shipment marked Dispatched.');
+      if (receiptIssueMode === 'ship') {
+        await api.put(`/admin/receipt-issue/${receiptIssueModal._id}/ship`, receiptIssueForm);
+        toast.success('Replacement shipped. Warehouse stock reduced and dispatch marked Dispatched.');
+      } else {
+        await api.put(`/admin/receipt-issue/${receiptIssueModal._id}/approve`, {
+          adminNotes: receiptIssueForm.adminNotes,
+        });
+        toast.success('Replacement approved. Warehouse unchanged — ship when ready.');
+      }
       setReceiptIssueModal(null);
       afterMutation();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to approve issue');
+      toast.error(err.response?.data?.message || (receiptIssueMode === 'ship' ? 'Failed to ship replacement' : 'Failed to approve issue'));
     }
   };
 
@@ -498,7 +537,7 @@ const AdminDashboard = () => {
     try {
       await api.put(`/admin/replacement/${id}/${action}`, { adminNotes: result.notes });
       if (action === 'approve') {
-        toast.success('Approved — use Authorize to create the replacement dispatch.');
+        toast.success('Approved — ship the replacement with a tracking ID when ready.');
       } else {
         toast.success('Replacement request rejected.');
       }
@@ -602,13 +641,13 @@ const AdminDashboard = () => {
          setIsSchoolModalOpen(false);
          if (res.data.generatedPassword) {
            showGeneratedPassword(res.data.generatedPassword, {
-             emailSent: res.data.emailSent,
-             emailNote: res.data.emailNote,
+             emailSent: false,
+             emailNote: null,
              entityName: formatSchoolDisplayName(res.data.school?.name || payload.name),
              schoolCode: res.data.school?.code || payload.code,
              credentialType: 'school',
            });
-           toast.success(res.data.emailSent ? 'School created — credentials emailed' : 'School created — see password');
+           toast.success('School created — copy the password from the credentials dialog');
          } else {
            toast.success('School added — add email and portal password later from the school list');
          }
@@ -628,13 +667,13 @@ const AdminDashboard = () => {
     try {
       const res = await api.post(`/admin/schools/${school._id}/regenerate-password`);
       showGeneratedPassword(res.data.generatedPassword, {
-        emailSent: res.data.emailSent,
-        emailNote: res.data.emailNote,
+        emailSent: false,
+        emailNote: null,
         entityName: formatSchoolDisplayName(school.name),
         schoolCode: school.code,
         credentialType: 'school',
       });
-      toast.success(res.data.emailSent ? 'Password regenerated and emailed' : 'Password regenerated');
+      toast.success('Password regenerated');
       afterMutation();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to regenerate school password');
@@ -685,14 +724,7 @@ const AdminDashboard = () => {
       }
       const res = await api.post('/admin/dispatch', formData);
       const count = res.data.itemCount || res.data.dispatches?.length || 1;
-      const msg = res.data.emailNote?.includes('being sent')
-        ? `Dispatch created — ${count} kit line(s). Notification emails are being sent.`
-        : res.data.emailsSent
-          ? `Dispatch created — ${count} kit line(s), ${res.data.emailsSent} email(s) sent`
-          : res.data.emailNote
-            ? `Dispatch created — ${count} kit line(s). Email note: ${res.data.emailNote}`
-            : `Dispatch created — ${count} kit line(s) dispatched`;
-      toast.success(msg);
+      toast.success(`Dispatch created — ${count} kit line(s). Invoice PDF is available on Incoming.`);
       setIsModalOpen(false);
       setDispatchForm(emptyDispatchForm());
       afterMutation();
@@ -1143,7 +1175,7 @@ const AdminDashboard = () => {
   const replacementDetailCopy = {
     missing: {
       title: 'Missing product / not received',
-      subtitle: 'Normal dispatch — authorize replacement for missing kits or shipments not received.',
+      subtitle: 'Normal dispatch — approve first, then ship replacements for missing kits or shipments not received.',
     },
     lost: {
       title: 'Lost product',
@@ -1151,11 +1183,11 @@ const AdminDashboard = () => {
     },
     damaged: {
       title: 'Damaged product',
-      subtitle: 'Normal dispatch or monthly audit — authorize or dispatch damaged replacements.',
+      subtitle: 'Normal dispatch or monthly audit — approve or ship damaged replacements.',
     },
     mismatch: {
       title: 'Quantity mismatch',
-      subtitle: 'Normal dispatch — authorize replacement for quantity mismatch issues approved by AM.',
+      subtitle: 'Normal dispatch — approve, then ship replacements for quantity mismatch issues.',
     },
   };
 
@@ -1210,7 +1242,7 @@ const AdminDashboard = () => {
           <PageHeader
             eyebrow={`Hello ${adminDisplayName}`}
             title="System Overview"
-            subtitle="Real-time logistics and operational metrics."
+            subtitle="Action queues first, then this month’s operations, then live current state."
             action={
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">Status:</span>
@@ -1234,7 +1266,7 @@ const AdminDashboard = () => {
                   <p className="text-xs text-slate-600 mt-1">
                     {metrics.pendingReceiptIssues > 0 && `${metrics.pendingReceiptIssues} receipt issue(s) from dispatch reports. `}
                     {metrics.pendingReplacementRequests > 0 && `${metrics.pendingReplacementRequests} replacement request(s).`}
-                    {' '}Authorize quantity and tracking ID to dispatch replacements.
+                    {' '}Approve first, then ship replacements with a tracking ID.
                   </p>
                 </div>
                 <Button variant="gradient" className="text-sm" onClick={() => navigate(ROUTES.admin.replacements)}>
@@ -1243,6 +1275,21 @@ const AdminDashboard = () => {
               </div>
             </Card>
           )}
+
+          <AttentionQueues
+            className="mb-5"
+            queues={opsData?.attention?.queues}
+            loading={opsLoading}
+          />
+
+          <AdminOperationsBoard
+            className="mb-5"
+            month={opsData?.month}
+            period={opsData?.period}
+            current={opsData?.current}
+            loading={opsLoading}
+            clickable
+          />
 
           <div className="command-deep-shadow relative mb-5 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 md:p-6">
             <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-[#F89C28]/5" />
@@ -1253,17 +1300,13 @@ const AdminDashboard = () => {
               <StatCard label="Active Inventory" value={metrics.activeInventory} hint="Units received at schools" accent="success" icon={Boxes} />
               <StatCard label="Missing Inventory" value={metrics.missingInventory} hint="Lost units from audits" accent="error" icon={AlertTriangle} />
               <StatCard label="Pending Audits" value={metrics.pendingAudits} hint="Schools without this month" accent="warning" icon={ClipboardList} />
-              <StatCard label="Pending Ack." value={metrics.pendingAcknowledgments} hint="Shipped, not received" accent="slate" icon={Truck} />
             </div>
 
             <LifecycleStrip />
           </div>
 
           <div className="mb-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
-            <div className="xl:col-span-4">
-              <AttentionPanel items={attentionSchools} />
-            </div>
-            <div className="xl:col-span-8">
+            <div className="xl:col-span-12">
               <ModuleQuickLink metrics={metrics} />
             </div>
           </div>
@@ -2146,7 +2189,7 @@ const AdminDashboard = () => {
           {replacementCategory === 'missing' && (
             <AmApprovalSection
               title="Missing product"
-              subtitle="Normal dispatch — authorize replacement for missing kits or shipments not received."
+              subtitle="Normal dispatch — approve first, then ship replacements for missing kits or shipments not received."
               count={missingApprovalCount}
             >
               {filteredReplacementIssues.length > 0 && (
@@ -2158,7 +2201,8 @@ const AdminDashboard = () => {
                       replacementPageSafe * REPLACEMENT_PAGE_SIZE,
                     )}
                     onReject={(id) => handleReceiptIssueAction(id, 'reject')}
-                    onAuthorize={openReceiptIssueApprove}
+                    onApprove={openReceiptIssueApprove}
+                    onShip={openReceiptIssueShip}
                   />
                 </>
               )}
@@ -2231,7 +2275,7 @@ const AdminDashboard = () => {
           {replacementCategory === 'damaged' && (
             <AmApprovalSection
               title="Damaged product"
-              subtitle="Normal dispatch or monthly audit — authorize or dispatch damaged replacements."
+              subtitle="Normal dispatch or monthly audit — approve or ship damaged replacements."
               count={damagedApprovalCount}
             >
               {pendingAuditDamagedReviewCount > 0 && (
@@ -2271,7 +2315,8 @@ const AdminDashboard = () => {
                       replacementPageSafe * REPLACEMENT_PAGE_SIZE,
                     )}
                     onReject={(id) => handleReceiptIssueAction(id, 'reject')}
-                    onAuthorize={openReceiptIssueApprove}
+                    onApprove={openReceiptIssueApprove}
+                    onShip={openReceiptIssueShip}
                   />
                 </div>
               )}
@@ -2294,7 +2339,7 @@ const AdminDashboard = () => {
           {replacementCategory === 'mismatch' && (
             <AmApprovalSection
               title="Quantity mismatch"
-              subtitle="Normal dispatch — authorize replacement for quantity mismatch issues approved by AM."
+              subtitle="Normal dispatch — approve, then ship replacements for quantity mismatch issues."
               count={quantityMismatchIssues.length}
             >
               <AdminReceiptIssueTable
@@ -2303,7 +2348,8 @@ const AdminDashboard = () => {
                   replacementPageSafe * REPLACEMENT_PAGE_SIZE,
                 )}
                 onReject={(id) => handleReceiptIssueAction(id, 'reject')}
-                onAuthorize={openReceiptIssueApprove}
+                onApprove={openReceiptIssueApprove}
+                    onShip={openReceiptIssueShip}
               />
               {filteredReplacementIssues.length > REPLACEMENT_PAGE_SIZE && (
                 <div className="px-5 pb-5">
@@ -2410,6 +2456,7 @@ const AdminDashboard = () => {
 
       {activeView === 'reports' && (
         <AdminReportsSection
+          divisions={productionDivisions}
           registrySection={(
             <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E7EB] px-6 py-5">
@@ -2460,7 +2507,7 @@ const AdminDashboard = () => {
                           <td className="px-5 py-3.5"><KitDetailsCell item={d} showShippedDate={false} /></td>
                           <td className="px-5 py-3.5"><QuantityCell item={d} /></td>
                           <td className="px-5 py-3.5">
-                            <Badge type={d.status === 'Delivery Completed' || d.status === 'Received' ? 'success' : d.status === 'Pending' ? 'pending' : d.status === 'Dispatched' ? 'info' : 'error'}>
+                            <Badge type={d.status === 'Delivery Completed' || d.status === 'Received' || d.status === 'Completed' ? 'success' : d.status === 'Pending' ? 'pending' : d.status === 'Dispatched' ? 'info' : 'error'}>
                               {d.status}
                             </Badge>
                           </td>
@@ -2530,11 +2577,11 @@ const AdminDashboard = () => {
       <Modal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} title={`Credentials — ${passwordMeta.entityName}`}>
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
-            {passwordMeta.emailSent
-              ? passwordMeta.credentialType === 'school'
-                ? 'Portal credentials have been emailed to the school contact. Copy the login details below if needed — the password will not be shown again.'
-                : 'A new password has been emailed to the Account Manager. Admins can also view it anytime from the Account Managers page.'
-              : passwordMeta.emailNote || 'SMTP is not configured. Share these credentials manually.'}
+            {passwordMeta.credentialType === 'school'
+              ? 'School portal credentials are shown below. They are not emailed — copy them if you need to share them.'
+              : passwordMeta.emailSent
+                ? 'A new password has been emailed to the Account Manager. Admins can also view it anytime from the Account Managers page.'
+                : passwordMeta.emailNote || 'SES email was not sent. Share these credentials manually.'}
           </p>
           {passwordMeta.credentialType === 'school' && passwordMeta.schoolCode && (
             <div className="flex flex-col gap-1.5">
@@ -2555,9 +2602,9 @@ const AdminDashboard = () => {
               <Button type="button" variant="secondary" onClick={copyPassword}>Copy</Button>
             </div>
           </div>
-          {!passwordMeta.emailSent && (
+          {passwordMeta.credentialType !== 'school' && !passwordMeta.emailSent && (
             <p className="text-xs text-warning-600 bg-warning-50/80 border border-warning-100 rounded-lg p-3">
-              Configure SMTP in the project root <code className="text-[11px]">.env</code> to send credentials by email automatically.
+              Configure Amazon SES in the project root <code className="text-[11px]">.env</code> (SES_REGION, SES_FROM_EMAIL, AWS_NOTIF_*) to email credentials automatically.
             </p>
           )}
         </div>
@@ -2679,6 +2726,7 @@ const AdminDashboard = () => {
         issue={receiptIssueModal}
         form={receiptIssueForm}
         setForm={setReceiptIssueForm}
+        mode={receiptIssueMode}
         onClose={() => setReceiptIssueModal(null)}
         onSubmit={submitReceiptIssueApprove}
       />

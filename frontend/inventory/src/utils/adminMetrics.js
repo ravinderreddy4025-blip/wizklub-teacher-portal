@@ -34,7 +34,7 @@ export function computeAdminMetrics(data, stats = null) {
   const warehouseStock = warehouseTotal ?? kits.reduce((sum, k) => sum + (k.warehouseQuantity || 0), 0);
 
   const activeInventory = dispatches
-    .filter((d) => d.status === 'Received' || d.status === 'Delivery Completed')
+    .filter((d) => d.status === 'Received' || d.status === 'Delivery Completed' || d.status === 'Completed')
     .reduce((sum, d) => sum + (d.quantityReceived ?? d.quantity ?? 0), 0);
 
   const missingInventory = audits.reduce((sum, audit) => {
@@ -141,7 +141,7 @@ export const ADMIN_HEADER_COPY = {
   },
   accountManagers: {
     title: 'Account Managers',
-    subtitle: 'Assign one division head per division — manage credentials and access control for your global operations.',
+    subtitle: 'One AM can handle multiple divisions. Each division is assigned to only one AM.',
   },
   audits: {
     title: 'Audit Submissions',
@@ -157,7 +157,7 @@ export const ADMIN_HEADER_COPY = {
   },
   replacements: {
     title: 'Replacement Management',
-    subtitle: 'Authorize replacements from monthly audit and normal dispatch — then dispatch to schools.',
+    subtitle: 'Approve replacements from monthly audit and normal dispatch, then ship to schools.',
   },
   reports: {
     title: 'Reports',

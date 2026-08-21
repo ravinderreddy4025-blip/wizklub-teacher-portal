@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { models, services, utils } = require('../../core');
-const { fileUrl } = utils;
+const { fileUrl, dispatchCycle, operationsKpi } = utils;
 
 const Dispatch = models.Dispatch;
 const ReceiptIssue = models.ReceiptIssue;
@@ -9,6 +9,8 @@ const ReplacementRequest = models.ReplacementRequest;
 const auditService = services.auditService;
 const auditSubmissionService = services.auditSubmissionService;
 const monthlyReportService = services.monthlyReportService;
+const { getOperationsSnapshot } = services.operationsSnapshotService;
+const { getOperationsAttention } = services.operationsAttentionService;
 const replacementService = services.replacementService;
 const schoolReplacementService = services.schoolReplacementService;
 const schoolInventoryService = services.schoolInventoryService;
@@ -138,13 +140,12 @@ const confirmDelivery = async (req, res) => {
     dispatch.receiptNotes = receiptNotes;
     dispatch.receivedAt = parsedReceivedAt;
 
-    if (receiptType === 'all_received') {
-      dispatch.status = 'Delivery Completed';
-    } else if (quantityReceived > 0) {
-      dispatch.status = 'Received';
-    } else {
-      dispatch.status = 'Not Received';
-    }
+    dispatchCycle.hydrateCyclesIfNeeded(dispatch);
+    dispatchCycle.acknowledgeCurrentCycle(dispatch, {
+      quantityOk: quantityReceived,
+      receiverName,
+      receivedAt: parsedReceivedAt,
+    });
 
     await dispatch.save();
 
@@ -488,6 +489,8 @@ const reportReceiptIssues = async (req, res) => {
         issue.videoUrls = [fileUrl(videoFile)].filter(Boolean);
       }
 
+      dispatchCycle.ensureClaimHistory(issue);
+
       issue.issueType = issueType;
       issue.quantityReceived = quantityReceived;
       issue.quantityAffected = quantityAffected;
@@ -524,7 +527,14 @@ const reportReceiptIssues = async (req, res) => {
         ? sent - quantityReceived
         : 0;
       dispatch.damagedOnReceipt = issueType === 'Damaged Product' ? sent - quantityReceived : 0;
-      dispatch.status = receiptIssueService.dispatchStatusForIssueType(issueType);
+      dispatchCycle.hydrateCyclesIfNeeded(dispatch);
+      dispatchCycle.acknowledgeCurrentCycle(dispatch, {
+        quantityOk: quantityReceived,
+        receiverName,
+        receivedAt: parsedReceivedAt,
+        issueId: issue._id,
+      });
+      dispatchCycle.appendClaimVersion(issue);
 
       await issue.save();
       await dispatch.save();
@@ -571,7 +581,7 @@ const reportReceiptIssues = async (req, res) => {
             )
           )) {
           message = `Dispatch ${dispatch.dispatchId} already has a reported issue pending review`;
-        } else if (dispatch.status === 'Delivery Completed' || dispatch.status === 'Received') {
+        } else if (dispatch.status === 'Delivery Completed' || dispatch.status === 'Received' || dispatch.status === 'Completed') {
           message = `Dispatch ${dispatch.dispatchId} was already marked as received`;
         } else if (dispatch.status === 'Not Received') {
           message = `Dispatch ${dispatch.dispatchId} was already marked as not received`;
@@ -696,8 +706,14 @@ const reportReceiptIssues = async (req, res) => {
         ? dispatch.quantity - quantityReceived
         : 0;
       dispatch.damagedOnReceipt = issueType === 'Damaged Product' ? dispatch.quantity - quantityReceived : 0;
-      dispatch.status = receiptIssueService.dispatchStatusForIssueType(issueType);
       dispatch.receiptIssue = issue._id;
+      dispatchCycle.hydrateCyclesIfNeeded(dispatch);
+      dispatchCycle.acknowledgeCurrentCycle(dispatch, {
+        quantityOk: quantityReceived,
+        receiverName: issueType === 'Shipment Not Received' ? null : receiverName,
+        receivedAt: parsedReceivedAt,
+        issueId: issue._id,
+      });
       await dispatch.save();
 
       if (quantityReceived > 0) {
@@ -829,6 +845,8 @@ const getDispatchHub = async (req, res) => {
       page: req.query.page,
       limit: req.query.limit,
       search: req.query.search,
+      issueType: req.query.issueType,
+      issueStatus: req.query.issueStatus,
     });
     res.json(result);
   } catch (error) {
@@ -842,12 +860,28 @@ const getOperationsReport = async (req, res) => {
       return res.status(400).json({ message: 'User is not associated with a school' });
     }
     const month = req.query.month || monthlyReportService.currentMonth();
-    const data = await monthlyReportService.getMonthlyReport(month, {
-      schoolIds: [req.user.schoolId],
-    });
+    const schoolIds = [req.user.schoolId];
+    const [data, current, attention, onHandKits] = await Promise.all([
+      monthlyReportService.getMonthlyReport(month, { schoolIds }),
+      getOperationsSnapshot(month, { schoolIds }),
+      getOperationsAttention(month, { schoolIds, actor: 'school' }),
+      schoolInventoryService.getOnHandKits(req.user.schoolId),
+    ]);
+    const health = current.inventoryHealth || { lostKits: 0, damagedKits: 0, mismatchKits: 0 };
     res.json({
       summary: data.summary,
       school: data.schools[0] || null,
+      month,
+      period: operationsKpi.periodFromMonthlySummary(data.summary),
+      current,
+      inventory: { onHandKits },
+      inventoryHealth: {
+        availableKits: onHandKits,
+        lostKits: health.lostKits || 0,
+        damagedKits: health.damagedKits || 0,
+        mismatchKits: health.mismatchKits || 0,
+      },
+      attention,
     });
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
@@ -871,6 +905,23 @@ const downloadOperationsPdf = async (req, res) => {
   }
 };
 
+const downloadDispatchInvoice = async (req, res) => {
+  try {
+    if (!req.user.schoolId) {
+      return res.status(400).json({ message: 'User is not associated with a school' });
+    }
+    const owned = await Dispatch.findOne({ _id: req.params.id, school: req.user.schoolId }).select('_id');
+    if (!owned) {
+      return res.status(404).json({ message: 'Dispatch not found' });
+    }
+    const { generateDispatchInvoicePdf, sendInvoicePdf } = services.dispatchBillPdf;
+    const { buffer, filename } = await generateDispatchInvoicePdf(req.params.id);
+    sendInvoicePdf(res, buffer, filename);
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   confirmDelivery,
   reportReceiptIssues,
@@ -887,4 +938,5 @@ module.exports = {
   getAuditWindowStatus,
   getOperationsReport,
   downloadOperationsPdf,
+  downloadDispatchInvoice,
 };

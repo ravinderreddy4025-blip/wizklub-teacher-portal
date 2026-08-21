@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, Package, History, PackageX, Scale, ShieldAlert, Search } from 'lucide-react';
+import { ArrowLeft, Package, History, Search } from 'lucide-react';
 import api from '../../utils/api';
 import Badge from '../ui/Badge';
 import Pagination from '../shared/Pagination';
@@ -9,55 +9,65 @@ import AdminEditTrackingModal from './AdminEditTrackingModal';
 import { formatSchoolDisplayName } from '../../utils/schoolName';
 import { canAdminEditTracking, getDispatchTrackingValue, isTrackingOverdue } from '../../utils/dispatchTracking';
 import toast from '../../utils/toast';
-import OperationsKpiPanel from '../shared/OperationsKpiPanel';
-import downloadPdfBlob from '../../utils/downloadPdfBlob';
+import AdminOperationsBoard from './AdminOperationsBoard';
+import downloadPdfBlob, { downloadDispatchInvoicePdf } from '../../utils/downloadPdfBlob';
+import AuditHistoryList from '../shared/AuditHistoryList';
+import { rowListQuantity } from '../../utils/unitAnalytics';
 
-const SECTIONS = [
+const HUB_TABS = [
+  { id: 'activity', label: 'Dispatch activity' },
+  { id: 'issues', label: 'Issues' },
+  { id: 'inventory', label: 'Inventory' },
+  { id: 'audit', label: 'Audit' },
+];
+
+const ACTIVITY_SECTIONS = [
   {
     id: 'incoming',
     label: 'Incoming',
-    subtitle: 'In transit or awaiting receipt',
+    hint: 'Open shipments waiting for receipt',
     icon: Package,
-    iconWrap: 'bg-[#F89C28]/10 text-[#F89C28]',
-    bar: 'bg-[#F89C28]',
-    activeBorder: 'border-2 border-[#F89C28] shadow-lg shadow-orange-100/50',
+    color: '#F89C28',
+    track: '#FFF4E5',
+    activeBorder: 'border-[#F89C28]/70 bg-white shadow-sm',
   },
   {
     id: 'past',
     label: 'Completed',
-    subtitle: 'Completed or closed shipments',
+    hint: 'Responded with at least one OK kit',
     icon: History,
-    iconWrap: 'bg-[#F1F5F9] text-[#64748B]',
-    bar: 'bg-[#94A3B8]',
-    activeBorder: 'border-2 border-[#94A3B8] shadow-lg shadow-slate-100',
+    color: '#64748B',
+    track: '#F1F5F9',
+    activeBorder: 'border-[#64748B]/50 bg-white shadow-sm',
   },
   {
-    id: 'lost',
-    label: 'Lost / not received',
-    subtitle: 'Devices reported missing',
-    icon: PackageX,
-    iconWrap: 'bg-[#EF4444]/10 text-[#EF4444]',
-    bar: 'bg-[#EF4444]',
-    activeBorder: 'border-2 border-[#EF4444] shadow-lg shadow-red-100/50',
+    id: 'history',
+    label: 'History',
+    hint: 'Every dispatch this month, including Not Received',
+    icon: History,
+    color: '#0F172A',
+    track: '#E2E8F0',
+    activeBorder: 'border-[#0F172A]/40 bg-white shadow-sm',
   },
-  {
-    id: 'mismatch',
-    label: 'Mismatch',
-    subtitle: 'Quantity does not match',
-    icon: Scale,
-    iconWrap: 'bg-[#6366F1]/10 text-[#6366F1]',
-    bar: 'bg-[#6366F1]',
-    activeBorder: 'border-2 border-[#6366F1] shadow-lg shadow-indigo-100/50',
-  },
-  {
-    id: 'damaged',
-    label: 'Damaged',
-    subtitle: 'Devices reported damaged',
-    icon: ShieldAlert,
-    iconWrap: 'bg-[#F59E0B]/10 text-[#F59E0B]',
-    bar: 'bg-[#F59E0B]',
-    activeBorder: 'border-2 border-[#F59E0B] shadow-lg shadow-amber-100/50',
-  },
+];
+
+const ISSUE_TYPES = [
+  { id: '', label: 'All types' },
+  { id: 'notReceived', label: 'Not Received' },
+  { id: 'lost', label: 'Lost' },
+  { id: 'mismatch', label: 'Mismatch' },
+  { id: 'damaged', label: 'Damaged' },
+];
+
+const ISSUE_STATUSES = [
+  { id: '', label: 'All statuses' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'pendingAm', label: 'Pending AM' },
+  { id: 'pendingAdmin', label: 'Pending Admin' },
+  { id: 'clarification', label: 'Clarification' },
+  { id: 'approved', label: 'Approved' },
+  { id: 'resolved', label: 'Resolved' },
+  { id: 'rejected', label: 'Rejected' },
 ];
 
 export function defaultDispatchMonth() {
@@ -66,10 +76,20 @@ export function defaultDispatchMonth() {
 }
 
 function dispatchBadgeType(status) {
-  if (status === 'Delivery Completed' || status === 'Received') return 'success';
+  if (status === 'Delivery Completed' || status === 'Received' || status === 'Completed') return 'success';
   if (status === 'Pending') return 'pending';
   if (status === 'Dispatched') return 'info';
   return 'error';
+}
+
+function dispatchStatusLabel(d) {
+  if (d.status === 'Completed') {
+    return Number(d.outstandingQuantity) > 0 ? 'Cycle completed' : 'Fulfilled';
+  }
+  if (['missing_dispatch', 'damaged_dispatch', 'mismatch_dispatch', 'not_received_dispatch'].includes(d.status)) {
+    return 'Completed';
+  }
+  return d.status;
 }
 
 function issueBadgeType(issueType) {
@@ -78,38 +98,46 @@ function issueBadgeType(issueType) {
   return 'warning';
 }
 
+function issueStatusBadge(status) {
+  if (status === 'Approved' || status === 'Resolved') return 'success';
+  if (status === 'Rejected') return 'error';
+  return 'warning';
+}
+
 function SummaryTile({ section, summary, active, onClick }) {
   const Icon = section.icon;
   const stats = summary?.[section.id] || { count: 0, units: 0 };
+  const records = stats.count || 0;
+  const primary = section.id === 'history' || section.id === 'issues' ? records : (stats.units || records);
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-2xl bg-white p-5 text-left transition-all ${
+      className={`group relative z-0 w-full rounded-xl border px-3 py-3 text-left transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm ${
         active
           ? section.activeBorder
-          : 'border border-[#E5E7EB] hover:border-[#D1D5DB] hover:shadow-md'
+          : 'border-[#E5E7EB] bg-[#F8FAFC]/80 hover:border-[#F89C28]/40'
       }`}
     >
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${section.iconWrap}`}>
-          <Icon size={20} strokeWidth={1.75} />
-        </div>
-        <div className="text-right">
-          <p className="font-heading text-xl font-extrabold text-[#1F2937]">{stats.units}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">units</p>
-        </div>
+      <div className="mb-2 flex items-center justify-between">
+        <span
+          className="flex h-7 w-7 items-center justify-center rounded-full"
+          style={{ background: section.track, color: section.color }}
+        >
+          <Icon size={14} />
+        </span>
       </div>
-      <p className="text-sm font-bold text-[#1F2937]">{section.label}</p>
-      <p className="mt-0.5 text-xs text-[#6B7280]">
-        {stats.count} record{stats.count === 1 ? '' : 's'}
+      <p className="font-heading text-xl font-bold tabular-nums text-[#1F2937]">{primary}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">{section.label}</p>
+      <p className="mt-0.5 text-[10px] leading-snug text-[#9CA3AF]">{section.hint}</p>
+      <p className="mt-1 text-[10px] font-semibold tabular-nums" style={{ color: section.color }}>
+        {stats.units || 0} units · {records} record{records === 1 ? '' : 's'}
       </p>
-      <div className={`mt-4 h-1 w-full rounded-full ${section.bar}`} />
     </button>
   );
 }
 
-function DispatchTable({ rows, onView, onEditTracking }) {
+function DispatchTable({ rows, onView, onEditTracking, onDownloadInvoice, section }) {
   if (!rows.length) {
     return (
       <p className="py-12 text-center text-[#6B7280]">
@@ -149,10 +177,18 @@ function DispatchTable({ rows, onView, onEditTracking }) {
                   <QuantityCell item={d} />
                 </td>
                 <td className="px-5 py-4">
-                  <Badge type={dispatchBadgeType(d.status)}>{d.status}</Badge>
+                  <Badge type={dispatchBadgeType(d.status)}>{dispatchStatusLabel(d)}</Badge>
+                  {d.receiptIssue?.issueType && (
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                      {d.receiptIssue.issueType}
+                      {d.receiptIssue.status ? ` · ${d.receiptIssue.status}` : ''}
+                    </p>
+                  )}
                 </td>
                 <td className="px-5 py-4 text-sm font-medium text-[#6B7280]">
-                  {new Date(d.dispatchedAt || d.createdAt).toLocaleDateString()}
+                  {new Date(
+                    (section === 'past' && d.receivedAt) || d.dispatchedAt || d.createdAt
+                  ).toLocaleDateString()}
                 </td>
                 <td className="px-5 py-4">
                   <div className="flex flex-col items-start gap-2">
@@ -163,6 +199,15 @@ function DispatchTable({ rows, onView, onEditTracking }) {
                     >
                       View
                     </button>
+                    {onDownloadInvoice && (
+                      <button
+                        type="button"
+                        onClick={() => onDownloadInvoice(d)}
+                        className="min-w-[100px] rounded-lg border border-[#F89C28]/20 bg-[#F89C28]/5 px-4 py-1.5 text-xs font-semibold text-[#F89C28] transition hover:bg-[#F89C28] hover:text-white"
+                      >
+                        Invoice PDF
+                      </button>
+                    )}
                     {canEdit && (
                       <button
                         type="button"
@@ -182,6 +227,20 @@ function DispatchTable({ rows, onView, onEditTracking }) {
             );
           })}
         </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-[#E5E7EB] bg-[#FFFAF3]">
+            <td className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-[#6B7280]" colSpan={2}>
+              {section === 'past' ? 'Acknowledged OK total' : 'Qty column total'}
+            </td>
+            <td className="px-5 py-3 font-heading text-sm font-bold tabular-nums text-[#1F2937]">
+              {rows.reduce((sum, row) => sum + rowListQuantity(row), 0)}
+            </td>
+            <td className="px-5 py-3 text-xs text-[#6B7280]" colSpan={3}>
+              {rows.length} record{rows.length === 1 ? '' : 's'}
+              {section === 'past' ? ' — same OK kits as Acknowledged' : ' — shipped units on this page'}
+            </td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
@@ -241,7 +300,7 @@ function IssueTable({ rows }) {
                   </p>
                   <IssueShipmentDetailsCell issue={issue} />
                 </td>
-                <td className="px-5 py-4"><Badge type="warning">{issue.status}</Badge></td>
+                <td className="px-5 py-4"><Badge type={issueStatusBadge(issue.status)}>{issue.status}</Badge></td>
                 <td className="px-5 py-4 text-sm text-[#6B7280]">
                   {new Date(issue.receivedAt || issue.createdAt).toLocaleDateString()}
                 </td>
@@ -254,6 +313,27 @@ function IssueTable({ rows }) {
   );
 }
 
+function FilterPills({ options, value, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((option) => (
+        <button
+          key={option.id || 'all'}
+          type="button"
+          onClick={() => onChange(option.id)}
+          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+            value === option.id
+              ? 'border-[#F89C28] bg-[#F89C28] text-white'
+              : 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#F89C28]/40'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminSchoolDispatchHub({
   school,
   division,
@@ -261,7 +341,10 @@ export default function AdminSchoolDispatchHub({
   onCreateDispatch,
 }) {
   const [month, setMonth] = useState(defaultDispatchMonth());
+  const [hubTab, setHubTab] = useState('activity');
   const [section, setSection] = useState('incoming');
+  const [issueType, setIssueType] = useState('');
+  const [issueStatus, setIssueStatus] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -274,9 +357,13 @@ export default function AdminSchoolDispatchHub({
   const [trackingDispatch, setTrackingDispatch] = useState(null);
   const [editTrackingDispatch, setEditTrackingDispatch] = useState(null);
   const [trackingSubmitting, setTrackingSubmitting] = useState(false);
-  const [opsSummary, setOpsSummary] = useState(null);
+  const [opsData, setOpsData] = useState(null);
   const [opsLoading, setOpsLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [inventory, setInventory] = useState([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [audits, setAudits] = useState([]);
+  const [auditsLoading, setAuditsLoading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -285,19 +372,21 @@ export default function AdminSchoolDispatchHub({
 
   useEffect(() => {
     setPage(1);
-  }, [month, section, debouncedSearch]);
+  }, [month, section, hubTab, issueType, issueStatus, debouncedSearch]);
 
   const fetchHub = useCallback(async () => {
-    if (!school?._id) return;
+    if (!school?._id || hubTab === 'inventory' || hubTab === 'audit') return;
     try {
       setLoading(true);
       const res = await api.get(`/admin/schools/${school._id}/dispatch-hub`, {
         params: {
           month,
-          section,
+          section: hubTab === 'issues' ? 'issues' : section,
           page,
           limit: 20,
           ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          ...(hubTab === 'issues' && issueType ? { issueType } : {}),
+          ...(hubTab === 'issues' && issueStatus ? { issueStatus } : {}),
         },
       });
       setSummary(res.data.summary);
@@ -312,7 +401,7 @@ export default function AdminSchoolDispatchHub({
     } finally {
       setLoading(false);
     }
-  }, [school?._id, month, section, page, debouncedSearch]);
+  }, [school?._id, month, section, page, debouncedSearch, hubTab, issueType, issueStatus]);
 
   useEffect(() => {
     fetchHub();
@@ -324,13 +413,13 @@ export default function AdminSchoolDispatchHub({
     (async () => {
       try {
         setOpsLoading(true);
-        const res = await api.get('/admin/reports/monthly', {
+        const res = await api.get('/admin/operations', {
           params: { month, schoolId: school._id },
         });
-        if (!cancelled) setOpsSummary(res.data.summary || null);
+        if (!cancelled) setOpsData(res.data || null);
       } catch (err) {
         console.error(err);
-        if (!cancelled) setOpsSummary(null);
+        if (!cancelled) setOpsData(null);
       } finally {
         if (!cancelled) setOpsLoading(false);
       }
@@ -339,6 +428,46 @@ export default function AdminSchoolDispatchHub({
       cancelled = true;
     };
   }, [school?._id, month]);
+
+  useEffect(() => {
+    if (!school?._id || hubTab !== 'inventory') return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        setInventoryLoading(true);
+        const res = await api.get(`/admin/schools/${school._id}/inventory`);
+        if (!cancelled) setInventory(res.data.inventory || []);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setInventory([]);
+      } finally {
+        if (!cancelled) setInventoryLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [school?._id, hubTab]);
+
+  useEffect(() => {
+    if (!school?._id || hubTab !== 'audit') return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        setAuditsLoading(true);
+        const res = await api.get('/admin/audits', { params: { schoolId: school._id, limit: 50 } });
+        if (!cancelled) setAudits(res.data.data || res.data.audits || []);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setAudits([]);
+      } finally {
+        if (!cancelled) setAuditsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [school?._id, hubTab]);
 
   const handleDownloadPdf = async () => {
     if (!school?._id) return;
@@ -358,10 +487,10 @@ export default function AdminSchoolDispatchHub({
     }
   };
 
-  const activeSection = SECTIONS.find((s) => s.id === section) || SECTIONS[0];
+  const activeSection = ACTIVITY_SECTIONS.find((s) => s.id === section) || ACTIVITY_SECTIONS[0];
 
   return (
-    <section className="stitch-card overflow-hidden">
+    <section className="stitch-card">
       <div className="space-y-5 border-b border-[var(--stitch-border)] px-6 py-6">
         <button
           type="button"
@@ -396,22 +525,43 @@ export default function AdminSchoolDispatchHub({
               onChange={(e) => setMonth(e.target.value)}
             />
           </div>
-          <p className="pb-2 text-sm text-[#6B7280]">
-            Viewing <span className="font-semibold text-[#1F2937]">{activeSection.label}</span> for{' '}
-            <span className="font-semibold text-[#1F2937]">{month}</span>
-          </p>
         </div>
 
-        <OperationsKpiPanel
-          summary={opsSummary}
+        <AdminOperationsBoard
+          month={opsData?.month || month}
+          period={opsData?.period}
+          current={opsData?.current}
           loading={opsLoading}
           onDownloadPdf={handleDownloadPdf}
           downloading={downloadingPdf}
         />
 
-        {summary && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {SECTIONS.map((s) => (
+        <div className="flex flex-wrap gap-2">
+          {HUB_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setHubTab(tab.id);
+                if (tab.id === 'activity' && !ACTIVITY_SECTIONS.some((s) => s.id === section)) {
+                  setSection('incoming');
+                }
+              }}
+              className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider ${
+                hubTab === tab.id
+                  ? 'bg-[#F89C28] text-white'
+                  : 'bg-[#F1F5F9] text-[#6B7280] hover:bg-[#E5E7EB]'
+              }`}
+            >
+              {tab.label}
+              {tab.id === 'issues' && summary?.issues ? ` · ${summary.issues.count}` : ''}
+            </button>
+          ))}
+        </div>
+
+        {hubTab === 'activity' && summary && (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {ACTIVITY_SECTIONS.map((s) => (
               <SummaryTile
                 key={s.id}
                 section={s}
@@ -423,14 +573,24 @@ export default function AdminSchoolDispatchHub({
           </div>
         )}
 
-        {(section === 'incoming' || section === 'past') && (
+        {hubTab === 'issues' && (
+          <div className="space-y-3">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF]">
+              {summary?.issues?.count || 0} issue{(summary?.issues?.count || 0) === 1 ? '' : 's'} this month
+            </p>
+            <FilterPills options={ISSUE_STATUSES} value={issueStatus} onChange={setIssueStatus} />
+            <FilterPills options={ISSUE_TYPES} value={issueType} onChange={setIssueType} />
+          </div>
+        )}
+
+        {(hubTab === 'activity' || hubTab === 'issues') && (
           <div className="relative">
             <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search dispatch ID or tracking..."
+              placeholder={hubTab === 'issues' ? 'Search remarks or tracking...' : 'Search dispatch ID or tracking...'}
               className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] py-3 pl-12 pr-4 text-sm text-[#1F2937] outline-none transition focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
             />
           </div>
@@ -438,26 +598,78 @@ export default function AdminSchoolDispatchHub({
       </div>
 
       <div className="px-6 py-5">
-        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#9CA3AF]">
-          {activeSection.label}
-        </p>
-        <p className="mb-4 text-sm text-[#6B7280]">{activeSection.subtitle}</p>
-        {loading ? (
-          <p className="py-12 text-center text-[#6B7280]">Loading…</p>
-        ) : kind === 'dispatches' ? (
-          <DispatchTable
-            rows={rows}
-            onView={setTrackingDispatch}
-            onEditTracking={setEditTrackingDispatch}
-          />
+        {hubTab === 'inventory' ? (
+          inventoryLoading ? (
+            <p className="py-12 text-center text-[#6B7280]">Loading inventory…</p>
+          ) : inventory.length === 0 ? (
+            <p className="py-12 text-center text-[#6B7280]">No on-hand school inventory.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-[#E5E7EB] bg-[#F89C28]/5">
+                    {['Kit', 'On hand'].map((col) => (
+                      <th key={col} className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-[#F89C28]">{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E5E7EB]">
+                  {inventory.map((row) => (
+                    <tr key={row._id}>
+                      <td className="px-5 py-4 font-bold text-[#1F2937]">{row.kit?.name || '—'}</td>
+                      <td className="px-5 py-4 tabular-nums">{row.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : hubTab === 'audit' ? (
+          auditsLoading ? (
+            <p className="py-12 text-center text-[#6B7280]">Loading audits…</p>
+          ) : (
+            <AuditHistoryList audits={audits} emptyMessage="No audit reports for this school." />
+          )
         ) : (
-          <IssueTable rows={rows} />
+          <>
+            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#9CA3AF]">
+              {hubTab === 'issues' ? 'Issues' : activeSection.label}
+            </p>
+            <p className="mb-4 text-sm text-[#6B7280]">
+              {hubTab === 'issues'
+                ? 'Lost, mismatch, damaged, and not received live here as issue types — not as equal top-level lists.'
+                : activeSection.hint}
+            </p>
+            {loading ? (
+              <p className="py-12 text-center text-[#6B7280]">Loading…</p>
+            ) : kind === 'dispatches' ? (
+              <DispatchTable
+                rows={rows}
+                section={section}
+                onView={setTrackingDispatch}
+                onEditTracking={setEditTrackingDispatch}
+                onDownloadInvoice={async (dispatch) => {
+                  if (!dispatch?._id) return;
+                  try {
+                    await downloadDispatchInvoicePdf(api, `/admin/dispatches/${dispatch._id}/invoice`);
+                    toast.success('Invoice PDF downloaded');
+                  } catch (err) {
+                    toast.error(err.response?.data?.message || 'Failed to download invoice PDF');
+                  }
+                }}
+              />
+            ) : (
+              <IssueTable rows={rows} />
+            )}
+          </>
         )}
       </div>
 
-      <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-4">
-        <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
-      </div>
+      {(hubTab === 'activity' || hubTab === 'issues') && (
+        <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-4">
+          <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+        </div>
+      )}
 
       <DispatchTrackingModal
         dispatch={trackingDispatch}

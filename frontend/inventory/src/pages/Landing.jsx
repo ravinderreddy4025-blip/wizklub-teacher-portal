@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   BarChart3,
-  ChevronDown,
   LayoutGrid,
   Lock,
   Rocket,
@@ -12,13 +11,6 @@ import {
 } from 'lucide-react';
 import { ROLE_PORTALS } from '../utils/routes';
 import BrandLogo from '../components/brand/BrandLogo';
-
-const NAV_LINKS = [
-  { label: 'Home', href: '#' },
-  { label: 'About', href: '#about' },
-  { label: 'Features', href: '#features' },
-  { label: 'Pricing', href: '#pricing' },
-];
 
 const LANDING_PORTALS = ROLE_PORTALS.filter((portal) => portal.role !== 'School');
 
@@ -59,33 +51,10 @@ const FEATURES = [
 ];
 
 const Landing = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
     <div className="landing-shell flex min-h-screen flex-col">
       <header className="relative z-20 mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-5 md:px-8 lg:px-10">
         <BrandLogo className="h-9 w-auto max-w-[160px] md:h-10 md:max-w-[180px]" />
-
-        <nav className="hidden items-center gap-8 lg:flex">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="text-sm font-medium text-[#6B7280] transition-colors hover:text-[var(--stitch-primary)]"
-            >
-              {link.label}
-            </a>
-          ))}
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 text-sm font-medium text-[#6B7280] transition-colors hover:text-[var(--stitch-primary)]"
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            Resources
-            <ChevronDown size={15} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
-          </button>
-        </nav>
-
         <span className="landing-chip-cta hidden sm:inline-flex">Educators | Kit Management</span>
       </header>
 

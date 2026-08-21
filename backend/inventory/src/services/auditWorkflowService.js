@@ -6,6 +6,7 @@ const { generateUniqueDispatchId } = require('../utils/dispatchId');
 const { formatComponentId } = require('../utils/componentId');
 const { getDivisionManager } = require('../utils/divisionManager');
 const notificationService = require('./notificationService');
+const dispatchCycle = require('../utils/dispatchCycle');
 
 const PENDING_AM = 'Pending AM Approval';
 const PENDING_ADMIN = 'Pending Admin Approval';
@@ -354,6 +355,15 @@ async function dispatchAuditReplacement(auditId, itemIndex, type, adminUserId, o
     auditReport: audit._id,
     dispatchProofUrl: options.dispatchProofUrl,
   });
+  dispatchCycle.ensureInitialCycle(dispatch, {
+    quantity: dispatchQuantity,
+    kitId: componentId,
+    consignmentNo: options.consignmentNo.trim(),
+    category,
+    dispatchedAt: now,
+    dispatchedBy: adminUserId,
+  });
+  await dispatch.save();
 
   kitDoc.warehouseQuantity = Math.max(0, (kitDoc.warehouseQuantity || 0) - dispatchQuantity);
   await kitDoc.save();

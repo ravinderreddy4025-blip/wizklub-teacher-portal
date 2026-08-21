@@ -3,9 +3,8 @@ const AuditReport = require('../models/AuditReport');
 function auditLineStatus(audit, dispatchRef) {
   if (audit.workflowStatus === 'Rejected') return 'Rejected';
   if (dispatchRef) return 'Dispatched';
-  if (audit.workflowStatus === 'Approved') return 'Awaiting dispatch';
-  if (audit.workflowStatus === 'Pending Admin Approval') return 'Pending Admin Approval';
-  return 'Pending AM Approval';
+  if (audit.workflowStatus === 'Approved') return 'Waiting for Replacement';
+  return 'Needs Review';
 }
 
 function buildAuditReplacementRows(audits) {

@@ -49,10 +49,10 @@ function ApprovalNotesToastContent({ action, kind, closeToast, resolve }) {
     : isApprove
       ? kind === 'receipt' || kind === 'admin-receipt'
         ? kind === 'admin-receipt'
-          ? 'The same dispatch ID is updated with a new tracking number. Warehouse stock is reduced by the authorized quantity and the shipment is marked Dispatched.'
-          : 'After your approval, this is sent to Admin. Once Admin authorizes the replacement quantity and tracking ID, the product will be dispatched to the school.'
+          ? 'Approval does not ship. Warehouse stock stays unchanged until you ship the replacement with a tracking ID.'
+          : 'After your approval, this is sent to Admin. Once Admin approves, they still need to ship the replacement separately.'
         : kind === 'admin-replacement'
-          ? 'Confirm approval, then use Authorize to create the replacement dispatch with tracking ID.'
+          ? 'Confirm approval, then ship the replacement with a tracking ID when ready.'
           : 'After your approval, this is sent to Admin. Once Admin authorizes it, the replacement will be dispatched.'
       : null;
 

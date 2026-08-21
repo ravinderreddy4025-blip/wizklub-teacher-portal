@@ -23,7 +23,24 @@ const dispatchSchema = new mongoose.Schema({
     default: 'New Dispatch'
   },
   originalCategory: { type: String, trim: true },
-  /** Snapshots of each replaced shipment before a redispatch (cycle 1 = first ship). */
+  /** First-class physical movements. Live cycle is the last item. */
+  cycles: [{
+    cycle: { type: Number, required: true, min: 1 },
+    movementType: { type: String, enum: ['INITIAL', 'REPLACEMENT'], default: 'INITIAL' },
+    status: { type: String, enum: ['OPEN', 'ACKNOWLEDGED'], default: 'OPEN' },
+    quantityDispatched: { type: Number, min: 0, default: 0 },
+    quantityAcknowledged: { type: Number, min: 0, default: 0 },
+    quantityAffected: { type: Number, min: 0, default: 0 },
+    kitId: { type: String, trim: true },
+    consignmentNo: { type: String, trim: true },
+    category: { type: String, trim: true },
+    dispatchedAt: { type: Date },
+    dispatchedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    acknowledgedAt: { type: Date },
+    receiverName: { type: String, trim: true },
+    issue: { type: mongoose.Schema.Types.ObjectId, ref: 'ReceiptIssue' },
+  }],
+  /** Snapshots of each replaced shipment before a redispatch (legacy; prefer cycles). */
   redispatchCycles: [{
     cycle: { type: Number, required: true, min: 1 },
     issue: { type: mongoose.Schema.Types.ObjectId, ref: 'ReceiptIssue' },
@@ -38,11 +55,18 @@ const dispatchSchema = new mongoose.Schema({
   dispatchDetails: { type: String },
   replacementId: { type: String, index: true },
   trackingId: { type: String, trim: true },
+  trackingHistory: [{
+    consignmentNo: { type: String, trim: true },
+    setAt: { type: Date, default: Date.now },
+    setBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  }],
   status: { 
     type: String, 
     enum: [
       'Pending',
       'Dispatched',
+      'Completed',
+      // legacy — kept until migrateDispatchCycles runs
       'Received',
       'Delivery Completed',
       'Received with Issues',
@@ -69,6 +93,12 @@ const dispatchSchema = new mongoose.Schema({
     index: true,
   },
   quantityReceived: { type: Number, min: 0 },
+  quantityInitial: { type: Number, min: 0, default: 0 },
+  quantityReplaced: { type: Number, min: 0, default: 0 },
+  quantityDispatched: { type: Number, min: 0, default: 0 },
+  quantityAcknowledged: { type: Number, min: 0, default: 0 },
+  quantityAffected: { type: Number, min: 0, default: 0 },
+  outstandingQuantity: { type: Number, min: 0, default: 0 },
   lostOnReceipt: { type: Number, min: 0, default: 0 },
   damagedOnReceipt: { type: Number, min: 0, default: 0 },
   damagedImageUrl: { type: String },

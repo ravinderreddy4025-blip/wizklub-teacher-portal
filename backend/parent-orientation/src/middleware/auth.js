@@ -191,6 +191,43 @@ function requireSuperAdmin(req, res, next) {
   next();
 }
 
+/** Best-effort actor for audit rows when auth middleware has not run (e.g. logout). */
+function resolveAuditActorFromCookies(req, preferredRole = '') {
+  const roleCookies = [
+    ['superadmin', COOKIE_NAME_SUPERADMIN],
+    ['pmo', COOKIE_NAME_PMO, COOKIE_NAME],
+    ['speaker', COOKIE_NAME_SPEAKER, COOKIE_NAME],
+    ['sales_admin', COOKIE_NAME_SALES_ADMIN],
+  ];
+  const want = String(preferredRole || '').trim().toLowerCase().replace(/-/g, '_');
+  if (want) {
+    const match = roleCookies.find(([role]) => role === want);
+    if (match) {
+      const parsed =
+        parseRoleCookie(req.signedCookies[match[1]], want) ||
+        (match[2] ? parseRoleCookie(req.signedCookies[match[2]], want) : null);
+      if (parsed) return parsed;
+      return { username: want, role: want };
+    }
+  }
+  for (const [role, cookieName, legacyCookie] of roleCookies) {
+    const parsed =
+      parseRoleCookie(req.signedCookies[cookieName], role) ||
+      (legacyCookie ? parseRoleCookie(req.signedCookies[legacyCookie], role) : null);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+function portalToRole(portal) {
+  const p = String(portal || '').trim().toLowerCase().replace(/-/g, '_');
+  if (p === 'superadmin') return 'superadmin';
+  if (p === 'pmo') return 'pmo';
+  if (p === 'speaker') return 'speaker';
+  if (p === 'sales_admin' || p === 'salesadmin') return 'sales_admin';
+  return p || 'unknown';
+}
+
 module.exports = {
   COOKIE_NAME,
   COOKIE_NAME_PMO,
@@ -212,4 +249,6 @@ module.exports = {
   roleCookieValue,
   parseRoleCookie,
   sanitizeCookieUsername,
+  resolveAuditActorFromCookies,
+  portalToRole,
 };

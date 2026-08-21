@@ -178,6 +178,66 @@
       font-weight: 700
     }
 
+    .audit-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px 0
+    }
+
+    .audit-filter-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #57534e;
+      cursor: pointer;
+      user-select: none
+    }
+
+    .audit-filter-toggle input {
+      accent-color: #ea580c
+    }
+
+    .audit-detail {
+      max-width: 520px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: #44403c
+    }
+
+    .audit-detail-head {
+      font-weight: 700;
+      color: #1c1917;
+      margin-bottom: 6px
+    }
+
+    .audit-detail-row {
+      display: grid;
+      grid-template-columns: minmax(110px, 38%) 1fr;
+      gap: 8px 12px;
+      padding: 3px 0;
+      border-top: 1px solid rgba(120, 113, 108, 0.08)
+    }
+
+    .audit-detail-row:first-of-type {
+      border-top: none
+    }
+
+    .audit-detail-k {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #78716c
+    }
+
+    .audit-detail-v {
+      word-break: break-word
+    }
+
     .superadmin-user-greeting {
       display: block;
       font-size: 0.75rem;
@@ -3495,17 +3555,32 @@
 
     .superadmin-form {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
-      gap: 16px 20px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px 20px;
       align-items: end;
       padding: 20px 28px 24px;
       border-top: 1px solid rgba(255, 228, 204, 0.55)
     }
 
-    .superadmin-form label {
+    .superadmin-form--two-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .superadmin-form--create-user .superadmin-form__actions,
+    .superadmin-form--two-col .superadmin-form__actions {
+      grid-column: 1 / -1;
+      padding-top: 2px
+    }
+
+    .superadmin-field {
       display: flex;
       flex-direction: column;
       gap: 6px;
+      min-width: 0
+    }
+
+    .superadmin-field label,
+    .superadmin-field__label {
       font-size: 0.8125rem;
       font-weight: 600;
       color: #9a3412
@@ -3513,6 +3588,7 @@
 
     .superadmin-form input,
     .superadmin-form select {
+      width: 100%;
       min-height: 40px;
       padding: 9px 12px;
       border: 1px solid rgba(255, 228, 204, 0.95);
@@ -3520,15 +3596,33 @@
       font: inherit;
       font-size: 0.875rem;
       color: #1e1b15;
-      background: #fff
+      background: #fff;
+      box-sizing: border-box
+    }
+
+    .superadmin-form input:focus,
+    .superadmin-form select:focus {
+      outline: none;
+      border-color: #fb923c;
+      box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.18)
+    }
+
+    .superadmin-form__actions {
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-start
     }
 
     .superadmin-form .btn-p {
-      justify-self: start;
       min-height: 40px;
       padding: 10px 24px;
       border-radius: 8px;
-      font-weight: 600
+      font-weight: 600;
+      white-space: nowrap
+    }
+
+    .superadmin-password-wrap {
+      width: 100%
     }
 
     .superadmin-password-wrap input {
@@ -5214,8 +5308,17 @@
       .sales-targets-card__head,
       .sales-targets-card__body,
       .superadmin-form {
+        grid-template-columns: 1fr;
         padding-left: 16px;
         padding-right: 16px
+      }
+
+      .superadmin-form__actions {
+        justify-content: stretch
+      }
+
+      .superadmin-form__actions .btn-p {
+        width: 100%
       }
 
       .sales-kpi-card {
@@ -5699,32 +5802,40 @@
               <h2 class="sales-targets-card__title">Create user</h2>
               <p class="sales-targets-card__lead">Choose the role carefully. Sales Admin accounts sign in only on the Sales Admin portal (not PMO or Speaker). PMO staff normally use WizKlub; a local PMO account is optional. Super Admin is env-only and cannot be created here.</p>
             </header>
-            <form id="superadmin-user-form" class="superadmin-form">
-              <label for="superadmin-new-user">Username</label>
-              <input type="text" id="superadmin-new-user" required autocomplete="username" placeholder="e.g. pmo.ops">
-              <label for="superadmin-new-pass">Password</label>
-              <div class="login-password-wrap superadmin-password-wrap">
-                <input type="password" id="superadmin-new-pass" required autocomplete="new-password" minlength="8" placeholder="Min. 8 characters (12 in production)">
-                <button type="button" class="login-toggle-password" id="superadmin-new-pass-toggle" data-po-pass-toggle aria-label="Show password" aria-pressed="false">
-                  <svg class="login-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                  <svg class="login-eye-closed login-eye-hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
-                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                  </svg>
-                </button>
+            <form id="superadmin-user-form" class="superadmin-form superadmin-form--create-user" autocomplete="off">
+              <div class="superadmin-field">
+                <label for="superadmin-new-user">Username</label>
+                <input type="text" id="superadmin-new-user" name="superadmin-new-user" required autocomplete="off" spellcheck="false">
               </div>
-              <label for="superadmin-new-role">Role</label>
-              <select id="superadmin-new-role" required autocomplete="off">
-                <option value="" disabled selected>Select role</option>
-                <option value="pmo">PMO (local fallback)</option>
-                <option value="speaker">Speaker</option>
-                <option value="sales_admin">Sales Admin</option>
-              </select>
-              <button type="submit" class="btn btn-p">Create user</button>
+              <div class="superadmin-field">
+                <label for="superadmin-new-pass">Password</label>
+                <div class="login-password-wrap superadmin-password-wrap">
+                  <input type="password" id="superadmin-new-pass" name="superadmin-new-pass" required autocomplete="new-password" minlength="8">
+                  <button type="button" class="login-toggle-password" id="superadmin-new-pass-toggle" data-po-pass-toggle aria-label="Show password" aria-pressed="false">
+                    <svg class="login-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg class="login-eye-closed login-eye-hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="superadmin-field">
+                <label for="superadmin-new-role">Role</label>
+                <select id="superadmin-new-role" name="superadmin-new-role" required autocomplete="off">
+                  <option value="" disabled selected>Select role</option>
+                  <option value="pmo">PMO (local fallback)</option>
+                  <option value="speaker">Speaker</option>
+                  <option value="sales_admin">Sales Admin</option>
+                </select>
+              </div>
+              <div class="superadmin-form__actions">
+                <button type="submit" class="btn btn-p">Create user</button>
+              </div>
             </form>
           </article>
           <article class="sales-table-card">
@@ -5745,12 +5856,18 @@
               <h2 class="sales-targets-card__title">Add school branch</h2>
               <p class="sales-targets-card__lead">New branches appear in PMO region/branch dropdowns after save.</p>
             </header>
-            <form id="superadmin-school-form" class="superadmin-form">
-              <label for="superadmin-school-region">Region</label>
-              <input type="text" id="superadmin-school-region" required placeholder="Haryana" autocomplete="address-level1">
-              <label for="superadmin-school-branch">Branch</label>
-              <input type="text" id="superadmin-school-branch" required placeholder="Sri Chaitanya-Sirsa" autocomplete="organization">
-              <button type="submit" class="btn btn-p">Add school</button>
+            <form id="superadmin-school-form" class="superadmin-form superadmin-form--two-col" autocomplete="off">
+              <div class="superadmin-field">
+                <label for="superadmin-school-region">Region</label>
+                <input type="text" id="superadmin-school-region" name="superadmin-school-region" required autocomplete="off">
+              </div>
+              <div class="superadmin-field">
+                <label for="superadmin-school-branch">Branch</label>
+                <input type="text" id="superadmin-school-branch" name="superadmin-school-branch" required autocomplete="off">
+              </div>
+              <div class="superadmin-form__actions">
+                <button type="submit" class="btn btn-p">Add school</button>
+              </div>
             </form>
           </article>
           <article class="sales-table-card">
@@ -5770,7 +5887,7 @@
             <header class="sales-table-card__head">
               <div>
                 <h3 class="sales-table-card__title">Audit logs</h3>
-                <p class="sales-table-card__sub">Recent sign-ins, user changes, school updates, and session activity — filter by username below</p>
+                <p class="sales-table-card__sub">Account, school, and session changes — filter by user below</p>
               </div>
             </header>
             <div id="superadmin-audit-root" class="sales-school-table-wrap" aria-live="polite"></div>
@@ -5825,7 +5942,7 @@
       });
     });
   </script>
-  <script src="app.js?v=20260817d" defer></script>
+  <script src="app.js?v=20260821a" defer></script>
 </body>
 
 </html>

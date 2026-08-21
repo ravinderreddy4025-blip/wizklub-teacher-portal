@@ -12,18 +12,18 @@ const DashboardService = require('../services/dashboardService');
 const APIFeatures = require('../utils/apiFeatures');
 const crypto = require('crypto');
 const { getDivisionManager } = require('../utils/divisionManager');
-const { buildAndSendDispatchNotifications, sendDispatchNotificationsAsync } = require('../services/emailService');
 const { formatComponentId } = require('../utils/componentId');
-const { formatSchoolDisplayName } = require('../utils/schoolName');
 const { generateUniqueDispatchId, generateUniqueDispatchIds } = require('../utils/dispatchId');
 const { findDuplicateKitOnConsignment } = require('../services/dispatchConsignmentService');
 const wizklubApi = require('../services/wizklubApiService');
 const { fileUrl } = require('../utils/mediaUrl');
+const { generateDispatchInvoicePdf, sendInvoicePdf } = require('../services/dispatchBillPdf');
 const wizklubRegionService = require('../services/wizklubRegionService');
 const { loadOperationalVerification } = require('../services/operationalSchoolList');
 const { bulkRegisterWizklubSchools } = require('../services/wizklubSchoolImportService');
 const { syncOperationalAmsToDivisions } = require('../services/operationalAmService');
 const { serializeAMList } = require('../utils/amUser');
+const dispatchCycle = require('../utils/dispatchCycle');
 
 function readWizklubAccessToken(req) {
   return (
@@ -140,14 +140,9 @@ const createDispatch = async (req, res) => {
     }
 
     const divisionRef = schoolDoc.divisionId?._id || schoolDoc.divisionId;
-    const schoolEmailFromDoc = schoolDoc.contactEmail?.trim().toLowerCase() || null;
-
-    const [am, dispatchIds, schoolUser] = await Promise.all([
+    const [am, dispatchIds] = await Promise.all([
       getDivisionManager(divisionRef),
       generateUniqueDispatchIds(normalizedItems.length),
-      schoolEmailFromDoc
-        ? Promise.resolve(null)
-        : User.findOne({ role: 'School', schoolId: schoolDoc._id }).select('email').lean(),
     ]);
 
     if (new Set(dispatchIds).size !== dispatchIds.length) {
@@ -189,6 +184,15 @@ const createDispatch = async (req, res) => {
           createdBy: req.user._id,
           dispatchProofUrl,
         });
+        dispatchCycle.ensureInitialCycle(record, {
+          quantity: item.quantity,
+          kitId: componentId,
+          consignmentNo: trimmedConsignment,
+          category: category || 'New Dispatch',
+          dispatchedAt: now,
+          dispatchedBy: req.user._id,
+        });
+        await record.save();
         dispatchRecords.push(record);
         createdDispatchIds.push(record._id);
       }
@@ -215,39 +219,11 @@ const createDispatch = async (req, res) => {
       .populate('reportingManager')
       .sort({ createdAt: 1 });
 
-    const emailItems = preparedLines.map(({ kitDoc, item, componentId }, i) => ({
-      kitName: kitDoc.name,
-      quantity: item.quantity,
-      componentId,
-      dispatchId: dispatchRecords[i].dispatchId,
-    }));
-
-    const schoolDisplayName = formatSchoolDisplayName(schoolDoc.name);
-    const schoolEmail = schoolEmailFromDoc || schoolUser?.email || null;
-
-    const emailResults = await sendDispatchNotificationsAsync(() =>
-      buildAndSendDispatchNotifications({
-        consignmentNo: trimmedConsignment || 'Pending',
-        schoolName: schoolDisplayName,
-        schoolCode: schoolDoc.code,
-        divisionName: schoolDoc.divisionId?.name || '—',
-        category: category || 'New Dispatch',
-        amName: am?.name,
-        amEmail: am?.email,
-        schoolEmail,
-        authorizedBy: req.user?.name,
-        authorizedAt: now,
-        items: emailItems,
-      })
-    );
-
     res.status(201).json({
       dispatches: populated,
       dispatch: populated[0],
-      componentId: emailItems[0]?.componentId,
+      componentId: preparedLines[0]?.componentId,
       itemCount: populated.length,
-      emailsSent: emailResults.filter((r) => r.sent).length,
-      emailNote: emailResults.find((r) => !r.sent)?.reason || null,
     });
   } catch (error) {
     const status = error.message?.startsWith('Line ') ? 400 : 500;
@@ -307,6 +283,15 @@ const generateDispatchForReplacement = async (req, res) => {
       createdBy: req.user._id,
       dispatchProofUrl,
     });
+    dispatchCycle.ensureInitialCycle(dispatch, {
+      quantity: request.quantity,
+      kitId,
+      consignmentNo: dispatch.consignmentNo,
+      category,
+      dispatchedAt: now,
+      dispatchedBy: req.user._id,
+    });
+    await dispatch.save();
 
     await notificationService.notifyReplacementApproval(request);
     await notificationService.notifyDispatchCreated(dispatch);
@@ -497,11 +482,29 @@ const approveReceiptIssue = async (req, res) => {
     const { adminNotes, consignmentNo, reportingManager } = req.body;
     const result = await receiptIssueService.approveReceiptIssueByAdmin(issueId, {
       adminNotes,
-      consignmentNo,
-      reportingManager,
-      createdBy: req.user._id,
     });
     await notificationService.notifyReceiptIssueWorkflow(result.issue._id, 'admin_approved', {
+      replacementDispatchId: result.dispatch._id,
+      parentDispatchRef: result.dispatch.parentDispatchRef,
+      workflowNote: adminNotes,
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ message: error.message });
+  }
+};
+
+const shipReceiptIssueReplacement = async (req, res) => {
+  try {
+    const { issueId } = req.params;
+    const { consignmentNo, reportingManager, adminNotes } = req.body;
+    const result = await receiptIssueService.shipReceiptIssueReplacement(issueId, {
+      consignmentNo,
+      reportingManager,
+      adminNotes,
+      createdBy: req.user._id,
+    });
+    await notificationService.notifyReceiptIssueWorkflow(result.issue._id, 'admin_shipped', {
       replacementDispatchId: result.dispatch._id,
       parentDispatchRef: result.dispatch.parentDispatchRef,
       newConsignmentNo: result.dispatch.consignmentNo,
@@ -580,6 +583,13 @@ const updateDispatchTracking = async (req, res) => {
 
     dispatch.consignmentNo = trimmed;
     dispatch.trackingId = trimmed;
+    dispatchCycle.pushTrackingHistory(dispatch, {
+      consignmentNo: trimmed,
+      setAt: new Date(),
+      setBy: req.user._id,
+    });
+    const live = dispatchCycle.currentCycle(dispatch);
+    if (live) live.consignmentNo = trimmed;
     await dispatch.save();
 
     const populated = await Dispatch.findById(dispatch._id)
@@ -892,15 +902,26 @@ const syncOperationalAms = async (req, res) => {
   }
 };
 
+const downloadDispatchInvoice = async (req, res) => {
+  try {
+    const { buffer, filename } = await generateDispatchInvoicePdf(req.params.id);
+    sendInvoicePdf(res, buffer, filename);
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createDispatch,
   generateDispatchForReplacement,
   approveReplacement,
   rejectReplacement,
   approveReceiptIssue,
+  shipReceiptIssueReplacement,
   rejectReceiptIssue,
   requestReceiptIssueClarification,
   updateDispatchTracking,
+  downloadDispatchInvoice,
   getReports,
   getDashboardStats,
   getAllSchools,

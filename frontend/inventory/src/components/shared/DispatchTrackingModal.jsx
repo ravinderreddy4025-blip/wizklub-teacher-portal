@@ -49,11 +49,14 @@ function buildDeliveryOutcomeStep(dispatch, issue) {
   let outcomeSubtitle = 'School will acknowledge receipt once the shipment arrives';
   let outcomeTone = 'pending';
 
-  if (status === 'Delivery Completed') {
-    outcomeTitle = issue ? 'Replacement received — delivery completed' : 'Delivered — all items received';
-    outcomeSubtitle = dispatch.receiverName
-      ? `Acknowledged by ${dispatch.receiverName}`
-      : 'Delivery completed successfully';
+  if (status === 'Delivery Completed' || status === 'Completed') {
+    const outstanding = Number(dispatch.outstandingQuantity) || 0;
+    outcomeTitle = outstanding > 0 ? 'Cycle completed' : 'Fulfilled';
+    outcomeSubtitle = outstanding > 0
+      ? `OK ${dispatch.quantityAcknowledged ?? 0} of initial ${dispatch.quantityInitial ?? dispatch.quantity} · outstanding ${outstanding}`
+      : (dispatch.receiverName
+        ? `Acknowledged by ${dispatch.receiverName}`
+        : 'All outstanding kits have been acknowledged');
     outcomeTone = 'success';
   } else if (status === 'Received') {
     outcomeTitle = 'Delivered — partially received';
@@ -228,9 +231,9 @@ function buildIssueTrackingSteps(dispatch) {
       subtitle: clarification
         ? (issue.adminNotes || 'Additional information requested before authorization')
         : adminPending
-          ? 'Awaiting authorization for replacement quantity and tracking'
+          ? 'Awaiting approval — shipping happens separately'
           : adminApproved
-            ? (issue.adminNotes || `Replacement authorized for ${issue.quantityAffected} kit(s)`)
+            ? (issue.adminNotes || `Approved for ${issue.quantityAffected} kit(s). Ship when ready.`)
             : rejected
               ? (issue.adminNotes || 'Replacement request declined')
               : 'Pending admin review',
@@ -249,7 +252,13 @@ function buildIssueTrackingSteps(dispatch) {
     },
   ];
 
-  if (adminApproved && !rejected) {
+  const replacementShipped = adminApproved && !rejected && (
+    dispatch.status === 'Dispatched'
+    || isRedispatched
+    || (Array.isArray(dispatch.cycles) && dispatch.cycles.some((cycle) => cycle.movementType === 'REPLACEMENT'))
+  );
+
+  if (replacementShipped) {
     const redispatchTracking = isRedispatched
       ? summary.redispatch.trackingId
       : (dispatch.consignmentNo || dispatch.trackingId || '—');
@@ -350,7 +359,7 @@ const TimelineStep = ({ step, isLast }) => {
 };
 
 const statusBadgeType = (status) => {
-  if (status === 'Delivery Completed' || status === 'Received') return 'success';
+  if (status === 'Delivery Completed' || status === 'Received' || status === 'Completed') return 'success';
   if (status === 'missing_dispatch' || status === 'damaged_dispatch' || status === 'mismatch_dispatch' || status === 'not_received_dispatch') return 'warning';
   if (status === 'Damage Under Review' || status === 'Missing Item Under Review' || status === 'Received with Issues') return 'warning';
   if (status === 'Replacement Pending') return 'pending';
@@ -457,6 +466,32 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
         </div>
 
         <DispatchShipmentHistoryList item={dispatch} />
+        {(dispatch.trackingHistory || []).length > 1 && (
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tracking history</p>
+            <ul className="mt-2 space-y-1 text-xs text-slate-600">
+              {dispatch.trackingHistory.map((row, index) => (
+                <li key={`${row.consignmentNo}-${index}`} className="font-mono">
+                  {row.consignmentNo}
+                  {row.setAt ? ` · ${formatDateShort(row.setAt)}` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {(dispatch.receiptIssues || []).length > 1 && (
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Issues on this order</p>
+            <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
+              {dispatch.receiptIssues.map((issue, index) => (
+                <li key={issue._id || index}>
+                  Issue #{issue.cycle || index + 1}: {issue.issueType} · {issue.status}
+                  {' '}({issue.quantityAffected} affected)
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <DispatchCompareGrid item={dispatch} />
 
         {dispatch.dispatchProofUrl && (

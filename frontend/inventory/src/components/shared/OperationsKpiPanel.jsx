@@ -17,8 +17,9 @@ export default function OperationsKpiPanel({
             Operations KPIs
           </p>
           <p className="mt-0.5 max-w-3xl text-[11px] leading-snug text-[var(--stitch-muted)]">
-            Sent till date is kits actually shipped (not pending). Scheduled includes sent plus still
-            pending. Then acknowledged, mismatched, lost, damaged, and rejected (by AM or Admin).
+            Sent till date is kits actually shipped. Pending is created this month but not yet shipped.
+            Scheduled is sent plus pending. Then acknowledged, mismatched, lost, damaged, and rejected
+            (by AM or Admin).
           </p>
         </div>
         {onDownloadPdf && (

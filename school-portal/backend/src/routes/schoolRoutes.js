@@ -18,6 +18,7 @@ const {
   getAuditWindowStatus,
   getOperationsReport,
   downloadOperationsPdf,
+  downloadDispatchInvoice,
 } = require('../controllers/schoolController');
 
 router.use(protect);
@@ -41,5 +42,6 @@ router.post('/replacement', upload.single('image'), createReplacementRequest);
 router.get('/replacements/history', getReplacementHistory);
 router.get('/reports/summary', getOperationsReport);
 router.get('/reports/pdf', downloadOperationsPdf);
+router.get('/dispatches/:id/invoice', downloadDispatchInvoice);
 
 module.exports = router;

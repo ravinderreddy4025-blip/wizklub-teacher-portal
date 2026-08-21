@@ -78,7 +78,7 @@ export const ROUTES = {
 
     root: '/school',
 
-    dispatches: '/school',
+    dispatches: '/school/dispatches',
 
     warehouse: '/school/warehouse',
 
@@ -293,6 +293,8 @@ export const PAGE_TITLES = {
   '/admin/reports': 'Reports',
 
   '/school': 'Dispatches',
+
+  '/school/dispatches': 'Dispatches',
 
   '/school/warehouse': 'School Warehouse',
 

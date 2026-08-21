@@ -8,9 +8,11 @@ const {
   generateDispatchForReplacement,
   rejectReplacement,
   approveReceiptIssue,
+  shipReceiptIssueReplacement,
   rejectReceiptIssue,
   requestReceiptIssueClarification,
   updateDispatchTracking,
+  downloadDispatchInvoice,
   getReports,
   getDashboardStats,
   getWizklubSchools,
@@ -45,7 +47,7 @@ const {
 const { createKit, updateKit, deleteKit, getWarehouse, bulkUploadKits } = require('../controllers/kitController');
 const { listAuditWindows, upsertAuditWindow, deleteAuditWindow } = require('../controllers/auditWindowController');
 const { approveAuditAdmin, rejectAuditAdmin, dispatchAuditKit } = require('../controllers/auditController');
-const { getMonthlyReport, downloadSchoolReportPdf } = require('../controllers/reportController');
+const { getMonthlyReport, getAdminOperations, getSchoolInventory, downloadSchoolReportPdf } = require('../controllers/reportController');
 const excelUpload = require('../middleware/excelUpload');
 const receiptUpload = require('../middleware/receiptUpload');
 
@@ -54,14 +56,18 @@ router.use(authorize('Admin'));
 
 router.post('/dispatch', receiptUpload.single('dispatchProof'), createDispatch);
 router.patch('/dispatches/:id/tracking', updateDispatchTracking);
+router.get('/dispatches/:id/invoice', downloadDispatchInvoice);
 router.put('/replacement/:requestId/generate-dispatch', receiptUpload.single('dispatchProof'), generateDispatchForReplacement);
 router.put('/replacement/:requestId/approve', approveReplacement);
 router.put('/replacement/:requestId/reject', rejectReplacement);
 router.put('/receipt-issue/:issueId/approve', approveReceiptIssue);
+router.put('/receipt-issue/:issueId/ship', shipReceiptIssueReplacement);
 router.put('/receipt-issue/:issueId/reject', rejectReceiptIssue);
 router.put('/receipt-issue/:issueId/clarify', requestReceiptIssueClarification);
 router.get('/reports', getReports);
 router.get('/reports/monthly', getMonthlyReport);
+router.get('/operations', getAdminOperations);
+router.get('/schools/:schoolId/inventory', getSchoolInventory);
 router.get('/reports/school/:schoolId/pdf', downloadSchoolReportPdf);
 router.get('/bootstrap', getBootstrap);
 router.get('/wizklub/schools', getWizklubSchools);

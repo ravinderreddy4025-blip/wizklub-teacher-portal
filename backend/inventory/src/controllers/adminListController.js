@@ -46,6 +46,7 @@ const getBootstrap = async (req, res) => {
           $in: [
             'Pending Admin Approval',
             'Clarification Requested',
+            'Approved',
             'Damage Under Review',
             'Missing Item Under Review',
             'Received with Issues',
@@ -347,6 +348,8 @@ const getSchoolDispatchHub = async (req, res) => {
       page: req.query.page,
       limit: req.query.limit,
       search: req.query.search,
+      issueType: req.query.issueType,
+      issueStatus: req.query.issueStatus,
     });
     res.json(result);
   } catch (error) {

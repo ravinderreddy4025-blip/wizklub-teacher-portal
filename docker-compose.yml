@@ -1,15 +1,14 @@
-# Two-container stack (production / shared Mongo):
-# - `backend`: runs APIs (PMO :8080, Teachers Portal :3001)
-# - `frontend`: serves UIs (/pmo, /wizklub-testimonials, /inventory) and proxies API routes
+# Production stack — exactly 2 containers (no Mongo service):
+#   backend  — PMO :8080, Teachers Portal :3001, Inventory :5002
+#   frontend — nginx gateway on host :8080
 #
-# Requires an external Mongo host (Atlas or host Mongo). Set in repo-root `.env`:
-#   MONGO_URI=...                 (shared Mongo host/cluster URI)
-#   PMO_MONGO_DB_NAME=...         (PMO database)
-#   TESTIMONIALS_MONGO_DB_NAME=... (testimonials database)
-#   INVENTORY_MONGO_DB_NAME=...   (inventory database)
+# MongoDB is external. Set in repo-root `.env`:
+#   MONGO_URI=...
+#   PMO_MONGO_DB_NAME=parent_orientation
+#   TESTIMONIALS_MONGO_DB_NAME=wizklub_testimonials
+#   INVENTORY_MONGO_DB_NAME=wizklub-inventory
 #
-# UAT (adds a third Mongo container; MONGO_URI is not required):
-#   docker compose -f docker-compose.yml -f docker-compose.uat.yml up -d --build
+#   docker compose up -d --build
 
 name: wizklub-2c
 
@@ -19,13 +18,14 @@ services:
       context: .
       dockerfile: backend/combined.Dockerfile
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      # Required for this file alone. docker-compose.uat.yml overrides this to mongodb://mongo:27017
-      MONGO_URI: ${MONGO_URI:-}
-      PMO_MONGO_DB_NAME: ${PMO_MONGO_DB_NAME:-}
-      TESTIMONIALS_MONGO_DB_NAME: ${TESTIMONIALS_MONGO_DB_NAME:-}
-
+      MONGO_URI: ${MONGO_URI:?Set MONGO_URI in .env}
+      PMO_MONGO_DB_NAME: ${PMO_MONGO_DB_NAME:-parent_orientation}
+      TESTIMONIALS_MONGO_DB_NAME: ${TESTIMONIALS_MONGO_DB_NAME:-wizklub_testimonials}
+      INVENTORY_MONGO_DB_NAME: ${INVENTORY_MONGO_DB_NAME:-wizklub-inventory}
       # PMO backend
       PMO_NODE_ENV: ${PMO_NODE_ENV:-production}
       # PMO backend — Super Admin login only (env); PMO/Speaker/Sales use WizKlub or DB users
@@ -54,7 +54,6 @@ services:
 
       # Inventory / school portal (port 5002)
       INVENTORY_PORT: ${INVENTORY_PORT:-5002}
-      INVENTORY_MONGO_DB_NAME: ${INVENTORY_MONGO_DB_NAME:-wizklub-inventory}
       INVENTORY_MONGODB_URI: ${INVENTORY_MONGODB_URI:-}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       INTERNAL_BRIDGE_SECRET: ${INTERNAL_BRIDGE_SECRET:?Set INTERNAL_BRIDGE_SECRET in .env}
@@ -70,13 +69,15 @@ services:
       INVENTORY_S3_PUBLIC: ${INVENTORY_S3_PUBLIC:-0}
       INVENTORY_S3_SIGNED_URL_TTL: ${INVENTORY_S3_SIGNED_URL_TTL:-3600}
 
-      # Inventory email (credentials, dispatch, receipt notifications)
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-}
+      # Inventory email — AM create / password reset only (Amazon SES)
       FRONTEND_URL: ${FRONTEND_URL:-}
+      SES_REGION: ${SES_REGION:-}
+      SES_FROM_EMAIL: ${SES_FROM_EMAIL:-}
+      AWS_NOTIF_ACCESS_KEY: ${AWS_NOTIF_ACCESS_KEY:-}
+      AWS_NOTIF_SECRET_KEY: ${AWS_NOTIF_SECRET_KEY:-}
+      SES_AM_CREATED_TEMPLATE: ${SES_AM_CREATED_TEMPLATE:-WIZ_INVENTORY_AM_CREDENTIALS_TEMPLATE}
+      SES_AM_REGENERATED_TEMPLATE: ${SES_AM_REGENERATED_TEMPLATE:-WIZ_INVENTORY_AM_PASSWORD_RESET_TEMPLATE}
+      WIZKLUB_LOGO_PATH: ${WIZKLUB_LOGO_PATH:-backend/inventory/assets/wizklub-futurz-logo.png}
     volumes:
       - ./gcs-credentials.json:/run/secrets/gcs-credentials.json:ro
     extra_hosts:

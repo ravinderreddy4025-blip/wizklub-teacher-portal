@@ -38,6 +38,10 @@ const {
 
   roleCookieValue,
 
+  resolveAuditActorFromCookies,
+
+  portalToRole,
+
 } = require('../middleware/auth');
 
 
@@ -332,7 +336,11 @@ async function login(req, res) {
 
       resourceType: 'auth',
 
-      summary: `Failed login for ${user || '(empty)'} (${portal})`,
+      summary: 'Failed sign-in',
+
+      actorUsername: user || '(unknown)',
+
+      actorRole: portalToRole(portal),
 
     });
 
@@ -356,7 +364,7 @@ async function login(req, res) {
 
       resourceId: auth.username,
 
-      summary: `${auth.username} logged in as ${auth.role}`,
+      summary: 'Signed in',
 
     }
 
@@ -373,6 +381,22 @@ function logout(req, res) {
   const bodyRole =
 
     req.body && req.body.role != null ? String(req.body.role).trim().toLowerCase() : '';
+
+  const logoutActor = resolveAuditActorFromCookies(req, bodyRole) || { username: 'unknown', role: 'unknown' };
+
+  recordAudit(req, {
+
+    action: 'user.logout',
+
+    resourceType: 'auth',
+
+    summary: 'Signed out',
+
+    actorUsername: logoutActor.username,
+
+    actorRole: logoutActor.role,
+
+  });
 
   const c = clearAuthCookieOpts();
 
@@ -397,8 +421,6 @@ function logout(req, res) {
     res.clearCookie(COOKIE_NAME, c);
 
   }
-
-  recordAudit(req, { action: 'user.logout', resourceType: 'auth', summary: `Logout (${bodyRole || 'all'})` });
 
   return res.json({ ok: true });
 

@@ -47,6 +47,9 @@ _local/
 _mongo_relay.cjs
 test-mongo.js
 desktop.ini
+Inventory/
+docs/
+qa/
 
 # ── OS / Editor ──────────────────────────────────────────
 .DS_Store

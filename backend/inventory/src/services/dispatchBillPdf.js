@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const { drawPdfBrandHeader } = require('../utils/brandLogo');
 
 const BRAND_ORANGE = '#F7941D';
 const BRAND_DEEP = '#1A1A2E';
@@ -14,14 +15,10 @@ function formatDate(date) {
 }
 
 function drawHeader(doc, consignmentNo) {
-  doc.save();
-  doc.rect(0, 0, doc.page.width, 96).fill(BRAND_ORANGE);
-  doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(22).text('WizKlub', 50, 28);
-  doc.font('Helvetica').fontSize(10).text('Inventory & Dispatch Operations', 50, 54);
-  doc.font('Helvetica-Bold').fontSize(14).text('DISPATCH CHALLAN', doc.page.width - 220, 32, { width: 170, align: 'right' });
-  doc.font('Helvetica').fontSize(9).text(`Consignment: ${consignmentNo}`, doc.page.width - 220, 54, { width: 170, align: 'right' });
-  doc.restore();
-  doc.y = 112;
+  drawPdfBrandHeader(doc, {
+    rightTitle: 'DISPATCH CHALLAN',
+    rightSubtitle: `Consignment: ${consignmentNo || '—'}`,
+  });
 }
 
 function drawMetaBlock(doc, rows, x, y, width) {
@@ -133,4 +130,76 @@ function generateDispatchBillPdf(bill) {
   });
 }
 
-module.exports = { generateDispatchBillPdf };
+function safePdfFilename(value, fallback) {
+  const cleaned = String(value || fallback || 'invoice').replace(/[^\w.-]+/g, '_');
+  return `WizKlub-Dispatch-${cleaned}.pdf`;
+}
+
+async function generateDispatchInvoicePdf(dispatchId) {
+  const Dispatch = require('../models/Dispatch');
+  const { formatSchoolDisplayName } = require('../utils/schoolName');
+  const { getDivisionManager } = require('../utils/divisionManager');
+
+  const dispatch = await Dispatch.findById(dispatchId)
+    .populate({ path: 'school', populate: { path: 'divisionId' } })
+    .populate('kit')
+    .populate('reportingManager')
+    .populate('dispatchedBy');
+
+  if (!dispatch) {
+    const error = new Error('Dispatch not found');
+    error.status = 404;
+    throw error;
+  }
+
+  const school = dispatch.school;
+  const schoolId = school?._id || dispatch.school;
+  const tracking = String(dispatch.consignmentNo || dispatch.trackingId || '').trim();
+
+  let lines = [];
+  if (tracking) {
+    lines = await Dispatch.find({
+      school: schoolId,
+      $or: [{ consignmentNo: tracking }, { trackingId: tracking }],
+    })
+      .populate('kit')
+      .sort({ createdAt: 1 });
+  }
+  if (!lines.length) lines = [dispatch];
+
+  const items = lines.map((line) => ({
+    kitName: line.kit?.name || 'Kit',
+    quantity: line.quantity,
+    componentId: line.componentId || line.kitId || '—',
+    dispatchId: line.dispatchId || String(line._id),
+  }));
+
+  const am = dispatch.reportingManager
+    || await getDivisionManager(school?.divisionId?._id || school?.divisionId);
+
+  const buffer = await generateDispatchBillPdf({
+    consignmentNo: tracking || dispatch.dispatchId || '—',
+    schoolName: formatSchoolDisplayName(school?.name),
+    schoolCode: school?.code || '—',
+    divisionName: school?.divisionId?.name || '—',
+    category: dispatch.category || 'New Dispatch',
+    amName: am?.name,
+    authorizedBy: dispatch.dispatchedBy?.name,
+    authorizedAt: dispatch.dispatchedAt || dispatch.createdAt,
+    items,
+  });
+
+  return {
+    buffer,
+    filename: safePdfFilename(tracking || dispatch.dispatchId, dispatchId),
+    dispatch,
+  };
+}
+
+function sendInvoicePdf(res, buffer, filename) {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(buffer);
+}
+
+module.exports = { generateDispatchBillPdf, generateDispatchInvoicePdf, sendInvoicePdf };

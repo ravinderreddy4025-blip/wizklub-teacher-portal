@@ -16,8 +16,8 @@ import { formatSchoolDisplayName } from '../utils/schoolName';
 import { DispatchIdCell, KitDetailsCell, QuantityCell } from '../components/shared/DispatchRedispatchCells';
 import DispatchTrackingModal from '../components/shared/DispatchTrackingModal';
 import DispatchProofPhoto from '../components/shared/DispatchProofPhoto';
-import OperationsKpiPanel from '../components/shared/OperationsKpiPanel';
-import downloadPdfBlob from '../utils/downloadPdfBlob';
+import AmOperationsBoard from '../components/am/AmOperationsBoard';
+import downloadPdfBlob, { downloadDispatchInvoicePdf } from '../utils/downloadPdfBlob';
 import { useAmApprovalCounts } from '../context/AmApprovalCountsContext';
 import { countAuditLines } from '../utils/auditApprovals';
 import AmRegionPicker from '../components/am/AmRegionPicker';
@@ -218,7 +218,7 @@ const AMDashboard = () => {
             ...(selectedDispatchSchool?._id ? { schoolId: selectedDispatchSchool._id } : {}),
           },
         });
-        if (!cancelled) setOpsSummary(res.data.summary || null);
+        if (!cancelled) setOpsSummary(res.data || null);
       } catch (err) {
         console.error(err);
         if (!cancelled) setOpsSummary(null);
@@ -563,7 +563,13 @@ const AMDashboard = () => {
                 onChange={(e) => setOpsMonth(e.target.value)}
               />
             </div>
-            <OperationsKpiPanel summary={opsSummary} loading={opsLoading} />
+            <AmOperationsBoard
+              month={opsSummary?.month || opsMonth}
+              period={opsSummary?.period}
+              current={opsSummary?.current}
+              attention={opsSummary?.attention}
+              loading={opsLoading}
+            />
           </div>
 
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -674,7 +680,13 @@ const AMDashboard = () => {
                     onChange={(e) => setOpsMonth(e.target.value)}
                   />
                 </div>
-                <OperationsKpiPanel summary={opsSummary} loading={opsLoading} />
+                <AmOperationsBoard
+                  month={opsSummary?.month || opsMonth}
+                  period={opsSummary?.period}
+                  current={opsSummary?.current}
+                  attention={opsSummary?.attention}
+                  loading={opsLoading}
+                />
               </div>
               <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
                 {data.schools.map((school) => {
@@ -765,8 +777,11 @@ const AMDashboard = () => {
                 <p className="text-sm font-bold text-[var(--stitch-primary)]">
                   {filteredDispatches.length} dispatch{filteredDispatches.length === 1 ? '' : 'es'} for this period
                 </p>
-                <OperationsKpiPanel
-                  summary={opsSummary}
+                <AmOperationsBoard
+                  month={opsSummary?.month || opsMonth}
+                  period={opsSummary?.period}
+                  current={opsSummary?.current}
+                  attention={opsSummary?.attention}
                   loading={opsLoading}
                   onDownloadPdf={handleDownloadOpsPdf}
                   downloading={downloadingPdf}
@@ -790,7 +805,7 @@ const AMDashboard = () => {
                         <td className="px-5 py-3.5"><KitDetailsCell item={d} showShippedDate={false} /></td>
                         <td className="px-5 py-3.5"><QuantityCell item={d} /></td>
                         <td className="px-5 py-3.5">
-                          <Badge type={d.status === 'Delivery Completed' || d.status === 'Received' ? 'success' : d.status === 'Pending' ? 'pending' : d.status === 'Dispatched' ? 'info' : 'error'}>
+                          <Badge type={d.status === 'Delivery Completed' || d.status === 'Received' || d.status === 'Completed' ? 'success' : d.status === 'Pending' ? 'pending' : d.status === 'Dispatched' ? 'info' : 'error'}>
                             {d.status}
                           </Badge>
                         </td>
@@ -801,13 +816,29 @@ const AMDashboard = () => {
                         </td>
                         <td className="px-5 py-3.5 text-sm text-[#6B7280]">{dispatchDate(d)?.toLocaleDateString() || '—'}</td>
                         <td className="px-5 py-3.5">
-                          <button
-                            type="button"
-                            className="text-xs font-bold text-[#F89C28] hover:underline"
-                            onClick={() => setTrackingDispatch(d)}
-                          >
-                            View
-                          </button>
+                          <div className="flex flex-col items-start gap-2">
+                            <button
+                              type="button"
+                              className="text-xs font-bold text-[#F89C28] hover:underline"
+                              onClick={() => setTrackingDispatch(d)}
+                            >
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              className="text-xs font-bold text-[#F89C28] hover:underline"
+                              onClick={async () => {
+                                try {
+                                  await downloadDispatchInvoicePdf(api, `/am/dispatches/${d._id}/invoice`);
+                                  toast.success('Invoice PDF downloaded');
+                                } catch (err) {
+                                  toast.error(err.response?.data?.message || 'Failed to download invoice PDF');
+                                }
+                              }}
+                            >
+                              Invoice PDF
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

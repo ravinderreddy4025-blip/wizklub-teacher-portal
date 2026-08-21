@@ -1,6 +1,25 @@
 #!/bin/sh
 set -eu
 
+resolve_docker_mongo_uri() {
+  uri="$1"
+  if [ ! -f /.dockerenv ] || [ -z "$uri" ]; then
+    printf '%s' "$uri"
+    return
+  fi
+  case "$uri" in
+    mongodb+srv://*) printf '%s' "$uri" ;;
+    *)
+      printf '%s' "$uri" \
+        | sed 's|//127\.0\.0\.1|//host.docker.internal|g' \
+        | sed 's|//localhost|//host.docker.internal|g'
+      ;;
+  esac
+}
+
+MONGO_URI="$(resolve_docker_mongo_uri "${MONGO_URI:?MONGO_URI is required}")"
+export MONGO_URI
+
 cleanup() {
   kill "${PMO_PID:-0}" "${TESTIMONIALS_PID:-0}" "${INVENTORY_PID:-0}" 2>/dev/null || true
 }

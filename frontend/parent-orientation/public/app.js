@@ -6177,7 +6177,7 @@
               <form class="superadmin-row-pass" data-superadmin-pass-form="${escapeAttr(u.id)}" autocomplete="off" onsubmit="return false">
                 <input type="text" name="username" value="${escapeAttr(u.username)}" autocomplete="username" hidden aria-hidden="true" tabindex="-1" readonly>
                 <div class="login-password-wrap superadmin-password-wrap">
-                  <input type="password" class="superadmin-row-pass-input" id="superadmin-row-pass-${escapeAttr(u.id)}" name="superadmin-row-pass-${escapeAttr(u.id)}" data-superadmin-pass-for="${escapeAttr(u.id)}" placeholder="New password" autocomplete="new-password" aria-label="New password for ${escapeAttr(u.username)}">
+                  <input type="password" class="superadmin-row-pass-input" id="superadmin-row-pass-${escapeAttr(u.id)}" name="superadmin-row-pass-${escapeAttr(u.id)}" data-superadmin-pass-for="${escapeAttr(u.id)}" autocomplete="new-password" aria-label="New password for ${escapeAttr(u.username)}">
                   ${PO_PASSWORD_EYE_BTN}
                 </div>
                 <button type="button" class="btn btn-o btn-sm" data-superadmin-save-pass="${escapeAttr(u.id)}">Save password</button>
@@ -6219,6 +6219,271 @@
     }
 
     let auditActorFilter = '';
+    let auditShowAuthEvents = false;
+
+    const AUDIT_AUTH_ACTIONS = new Set(['user.login', 'user.logout', 'user.login_failed']);
+
+    const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+    function normalizeAuditRole(raw) {
+      const r = String(raw || '')
+        .trim()
+        .toLowerCase()
+        .replace(/-/g, '_');
+      if (!r || r === 'all') return '';
+      if (r === 'salesadmin') return 'sales_admin';
+      return r;
+    }
+
+    function formatAuditRoleLabel(role) {
+      const r = normalizeAuditRole(role);
+      if (!r) return '';
+      if (r === 'pmo') return 'PMO';
+      if (r === 'sales_admin') return 'Sales Admin';
+      if (r === 'superadmin') return 'Super Admin';
+      return r.charAt(0).toUpperCase() + r.slice(1);
+    }
+
+    function resolveAuditDisplayActor(entry) {
+      let username = entry.actor_username ? String(entry.actor_username).trim() : '';
+      let role = entry.actor_role ? String(entry.actor_role).trim() : '';
+      const summary = entry.summary ? String(entry.summary).trim() : '';
+
+      if (username && username !== 'unknown') {
+        return {
+          username,
+          role: role && role !== 'unknown' ? role : '',
+        };
+      }
+
+      const failMatch = summary.match(/Failed login for\s+([^\s(]+)(?:\s*\(([^)]+)\))?/i);
+      if (failMatch) {
+        return {
+          username: failMatch[1].trim(),
+          role: normalizeAuditRole(failMatch[2]) || role,
+        };
+      }
+
+      const loginMatch = summary.match(/^(\S+)\s+logged in as\s+([\w_]+)/i);
+      if (loginMatch) {
+        return {
+          username: loginMatch[1],
+          role: normalizeAuditRole(loginMatch[2]),
+        };
+      }
+
+      const logoutMatch = summary.match(/Logout\s*\(([^)]+)\)/i);
+      if (logoutMatch) {
+        return {
+          username: '—',
+          role: normalizeAuditRole(logoutMatch[1]),
+        };
+      }
+
+      return {
+        username: '—',
+        role: role && role !== 'unknown' ? role : '',
+      };
+    }
+
+    function isAuditAuthEvent(entry) {
+      return AUDIT_AUTH_ACTIONS.has(String(entry.action || ''));
+    }
+
+    function buildAuditActorCounts(items) {
+      const map = new Map();
+      items.forEach((entry) => {
+        const { username } = resolveAuditDisplayActor(entry);
+        if (!username || username === '—') return;
+        map.set(username, (map.get(username) || 0) + 1);
+      });
+      return [...map.entries()]
+        .map(([username, count]) => ({ username, count }))
+        .sort((a, b) => b.count - a.count || a.username.localeCompare(b.username));
+    }
+
+    function filterAuditItems(items) {
+      let filtered = items;
+      if (!auditShowAuthEvents) {
+        filtered = filtered.filter((entry) => !isAuditAuthEvent(entry));
+      }
+      if (auditActorFilter) {
+        filtered = filtered.filter((entry) => resolveAuditDisplayActor(entry).username === auditActorFilter);
+      }
+      return filtered;
+    }
+
+    function buildSessionAuditFields(session) {
+      if (!session || typeof session !== 'object') return [];
+      const fields = [];
+      const push = (label, value) => {
+        if (value == null || value === '') return;
+        const text = String(value).trim();
+        if (!text) return;
+        fields.push({ label, value: text });
+      };
+      const date = session.scheduled_date || session.date || '';
+      const start = session.scheduled_start_time || session.scheduled_time || session.time || '';
+      const end = session.scheduled_end_time || session.end_time || '';
+      const venue = session.venue != null ? String(session.venue).trim() : '';
+
+      push('School / branch', session.branch);
+      push('Region', session.region);
+      push('Grade', session.grade);
+      if (date) {
+        const d = new Date(`${String(date).slice(0, 10)}T12:00:00`);
+        let when = Number.isNaN(d.getTime())
+          ? String(date)
+          : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        if (start && end) when += ` · ${start}–${end}`;
+        else if (start) when += ` · ${start}`;
+        push('Date & time', when);
+      } else if (start || end) {
+        push('Time', start && end ? `${start}–${end}` : start || end);
+      }
+      push('Venue', venue);
+      if (session.location) {
+        push(venue === 'Online' ? 'Meeting link' : 'Location / address', session.location);
+      }
+      push('Teacher', session.teacher);
+      push('Co-host', session.co_host);
+      if (session.invited != null && session.invited !== '') push('Parents invited', session.invited);
+      push('Status', session.status || session.session_status);
+      if (session.attended != null && session.attended !== '') push('Parents attended', session.attended);
+      push('Engagement', session.engagement);
+      push('Follow-up', session.follow_up);
+      push('Follow-up date', session.follow_up_date);
+      push('Follow-up notes', session.follow_up_notes);
+      push('Remarks', session.remarks);
+      push('Update action', session.update_action);
+      if (Array.isArray(session.student_ids) && session.student_ids.length) {
+        push('Student IDs logged', String(session.student_ids.length));
+      }
+      push('Session ID', session.id);
+      return fields;
+    }
+
+    function auditSessionDetail(session) {
+      return buildSessionAuditFields(session)
+        .map(({ label, value }) => `${label}: ${value}`)
+        .join(' · ');
+    }
+
+    function mergeSessionIntoAuditEntry(entry, sessionMap) {
+      if (entry.resource_type !== 'session' || !entry.resource_id) return entry;
+      const snap = sessionMap.get(String(entry.resource_id));
+      if (!snap) return entry;
+      if (entry.action === 'session.deleted') {
+        return { ...entry, before: entry.before || snap };
+      }
+      return { ...entry, after: entry.after || snap };
+    }
+
+    function formatSessionAuditSummary(entry, verb) {
+      const actor = resolveAuditDisplayActor(entry);
+      const who = actor.username && actor.username !== '—' ? actor.username : 'Unknown user';
+      const role = formatAuditRoleLabel(actor.role);
+      const whoPart = role ? `${who} (${role})` : who;
+      const session = entry.after || entry.before || null;
+      const detail = auditSessionDetail(session);
+      if (detail) return `${whoPart} ${verb} — ${detail}`;
+      return `${whoPart} ${verb} session`;
+    }
+
+    function formatAuditDetailCell(entry) {
+      const action = entry.action ? String(entry.action) : '';
+      if (!action.startsWith('session.')) {
+        return escapeHtml(formatAuditSummary(entry));
+      }
+
+      const verb =
+        action === 'session.created' ? 'scheduled' : action === 'session.updated' ? 'updated' : 'removed';
+      const actor = resolveAuditDisplayActor(entry);
+      const who = actor.username && actor.username !== '—' ? actor.username : 'Unknown user';
+      const role = formatAuditRoleLabel(actor.role);
+      const whoPart = role ? `${who} (${role})` : who;
+      const session = entry.after || entry.before || null;
+      const fields =
+        Array.isArray(entry.session_fields) && entry.session_fields.length
+          ? entry.session_fields
+          : buildSessionAuditFields(session);
+
+      if (!fields.length) {
+        return `<div class="audit-detail"><div class="audit-detail-head">${escapeHtml(`${whoPart} ${verb} session`)}</div><div class="audit-detail-v">Meeting details are no longer available.</div></div>`;
+      }
+
+      const rows = fields
+        .map(
+          (f) =>
+            `<div class="audit-detail-row"><span class="audit-detail-k">${escapeHtml(f.label)}</span><span class="audit-detail-v">${escapeHtml(f.value)}</span></div>`
+        )
+        .join('');
+      return `<div class="audit-detail"><div class="audit-detail-head">${escapeHtml(`${whoPart} ${verb} parent orientation meeting`)}</div>${rows}</div>`;
+    }
+
+    function formatAuditSummary(entry) {
+      const summary = entry.summary ? String(entry.summary).trim() : '';
+      const action = entry.action ? String(entry.action) : '';
+
+      switch (action) {
+        case 'user.login':
+          return 'Signed in';
+        case 'user.logout':
+          return 'Signed out';
+        case 'user.login_failed':
+          return 'Failed sign-in';
+        case 'user.password_reset':
+          return 'Reset password';
+        case 'user.created': {
+          const roleMatch = summary.match(/Created\s+([\w_]+)\s+user/i);
+          if (roleMatch) return `Created ${roleMatch[1].replace(/_/g, ' ')} account`;
+          return 'Created account';
+        }
+        case 'user.updated':
+          return 'Updated account details';
+        case 'user.deactivated':
+          return 'Deactivated account';
+        case 'session.created':
+          if (summary && / scheduled — /i.test(summary)) return summary;
+          return formatSessionAuditSummary(entry, 'scheduled');
+        case 'session.updated':
+          if (summary && / updated — /i.test(summary)) return summary;
+          return formatSessionAuditSummary(entry, 'updated');
+        case 'session.deleted':
+          if (summary && / removed — /i.test(summary)) return summary;
+          return formatSessionAuditSummary(entry, 'removed');
+        case 'school.created':
+        case 'school.updated':
+        case 'school.deactivated':
+        case 'target.updated':
+          if (summary) return summary;
+          break;
+        default:
+          break;
+      }
+
+      if (/logged in as/i.test(summary)) return 'Signed in';
+      if (/^Logout/i.test(summary)) return 'Signed out';
+      if (/Failed login/i.test(summary)) return 'Failed sign-in';
+      if (/Password reset for/i.test(summary)) return 'Reset password';
+      if (/Created\s+[\w_]+\s+user/i.test(summary)) {
+        const roleMatch = summary.match(/Created\s+([\w_]+)\s+user/i);
+        return roleMatch ? `Created ${roleMatch[1].replace(/_/g, ' ')} account` : 'Created account';
+      }
+      if (/Deactivated user/i.test(summary)) return 'Deactivated account';
+      if (/^Created session/i.test(summary)) {
+        return formatSessionAuditSummary(entry, 'scheduled');
+      }
+      if (/^Updated session/i.test(summary)) {
+        return formatSessionAuditSummary(entry, 'updated');
+      }
+      if (/^Deleted session/i.test(summary)) {
+        return formatSessionAuditSummary(entry, 'removed');
+      }
+
+      if (summary) return summary.replace(UUID_RE, '').replace(/\s+/g, ' ').trim() || 'Activity recorded';
+      return 'Activity recorded';
+    }
 
     async function renderSuperAdminAudit() {
       const root = document.getElementById('superadmin-audit-root');
@@ -6226,18 +6491,42 @@
       root.innerHTML = '<p class="sales-table-card__sub" style="padding:20px 28px">Loading audit logs…</p>';
       const qs = new URLSearchParams({ limit: '200' });
       if (auditActorFilter) qs.set('actor', auditActorFilter);
-      const r = await adminApiFetch(`audit-logs?${qs.toString()}`);
-      if (!r.ok) {
+      const [auditRes, sessionsRes] = await Promise.all([
+        adminApiFetch(`audit-logs?${qs.toString()}`),
+        adminApiFetch('sessions').catch(() => null),
+      ]);
+      if (!auditRes.ok) {
         root.innerHTML = '<p class="sales-table-card__sub" style="padding:20px 28px">Could not load audit logs.</p>';
         return;
       }
-      const j = await r.json();
-      const actors = j.actors || [];
-      const items = j.items || [];
+      const j = await auditRes.json();
+      const sessionMap = new Map();
+      if (sessionsRes && sessionsRes.ok) {
+        try {
+          const sessionsJson = await sessionsRes.json();
+          (sessionsJson.sessions || []).forEach((s) => {
+            if (s && s.id) sessionMap.set(String(s.id), s);
+          });
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      const allItems = (j.items || []).map((entry) => mergeSessionIntoAuditEntry(entry, sessionMap));
+      const visibleItems = filterAuditItems(allItems);
+      const actorSource = auditShowAuthEvents
+        ? allItems
+        : allItems.filter((entry) => !isAuditAuthEvent(entry));
+      const actors = buildAuditActorCounts(actorSource);
+      const toolbar = `<div class="audit-toolbar">
+          <label class="audit-filter-toggle">
+            <input type="checkbox" id="audit-show-auth"${auditShowAuthEvents ? ' checked' : ''}>
+            Show sign-in activity
+          </label>
+        </div>`;
       const actorChips = actors.length
         ? `<div class="audit-actors-bar" role="toolbar" aria-label="Filter audit logs by user">
             <span class="audit-actors-label">Changed by</span>
-            <button type="button" class="audit-actor-chip${auditActorFilter ? '' : ' is-active'}" data-audit-actor="">All (${j.total ?? items.length})</button>
+            <button type="button" class="audit-actor-chip${auditActorFilter ? '' : ' is-active'}" data-audit-actor="">All (${visibleItems.length})</button>
             ${actors
               .map(
                 (a) => `<button type="button" class="audit-actor-chip${auditActorFilter === a.username ? ' is-active' : ''}" data-audit-actor="${escapeAttr(a.username)}">${escapeHtml(a.username)} <span class="audit-actor-count">${a.count}</span></button>`
@@ -6245,18 +6534,26 @@
               .join('')}
           </div>`
         : '';
-      const rows = items
-        .map(
-          (a) => `<tr>
+      const rows = visibleItems
+        .map((a) => {
+          const actor = resolveAuditDisplayActor(a);
+          return `<tr>
             <td>${escapeHtml(a.timestamp ? new Date(a.timestamp).toLocaleString() : '')}</td>
-            <td><strong>${escapeHtml(a.actor_username || '—')}</strong></td>
-            <td>${escapeHtml(a.actor_role || '')}</td>
-            <td>${escapeHtml(a.action || '')}</td>
-            <td>${escapeHtml(a.summary || '')}</td>
-          </tr>`
-        )
+            <td><strong>${escapeHtml(actor.username || '—')}</strong></td>
+            <td>${escapeHtml(formatAuditRoleLabel(actor.role))}</td>
+            <td>${formatAuditDetailCell(a)}</td>
+          </tr>`;
+        })
         .join('');
-      root.innerHTML = `${actorChips}<table class="sales-school-table" aria-label="Audit logs"><thead><tr><th>When</th><th>User</th><th>Role</th><th>Action</th><th>Summary</th></tr></thead><tbody>${rows || '<tr><td colspan="5">No logs yet.</td></tr>'}</tbody></table>`;
+      const emptyMsg = auditShowAuthEvents
+        ? 'No logs yet.'
+        : 'No account, school, or session changes yet. Turn on “Show sign-in activity” to see logins.';
+      root.innerHTML = `${toolbar}${actorChips}<table class="sales-school-table" aria-label="Audit logs"><thead><tr><th>When</th><th>User</th><th>Role</th><th>What happened</th></tr></thead><tbody>${rows || `<tr><td colspan="4">${emptyMsg}</td></tr>`}</tbody></table>`;
+      root.querySelector('#audit-show-auth')?.addEventListener('change', (e) => {
+        auditShowAuthEvents = Boolean(e.target.checked);
+        auditActorFilter = '';
+        renderSuperAdminAudit();
+      });
       root.querySelectorAll('[data-audit-actor]').forEach((btn) => {
         btn.addEventListener('click', () => {
           auditActorFilter = btn.getAttribute('data-audit-actor') || '';

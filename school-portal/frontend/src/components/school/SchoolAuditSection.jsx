@@ -216,7 +216,7 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setConfirmSummary(null);
-      toast.success('Audit submitted — pending AM approval. Lost/damaged items are listed under Replacements.');
+      toast.success('Audit submitted for review. Lost/damaged items are listed under Replacements.');
       await Promise.all([loadForm(), loadHistory()]);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Audit submission failed');
@@ -236,10 +236,10 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
     const audit = formData.existingAudit;
     const note =
       audit.assumedIntact ? 'Official audit dates ended with no submission. All kits are recorded as intact and exact.'
-      : audit.workflowStatus === 'Pending AM Approval' ? 'Your audit has been submitted and is awaiting AM review.'
-        : audit.workflowStatus === 'Pending Admin Approval' ? 'AM approved — awaiting admin approval.'
-          : audit.workflowStatus === 'Approved' ? 'Audit approved. Lost/damaged replacements will be dispatched by admin.'
-            : audit.workflowStatus === 'Rejected' ? 'This audit was rejected. Contact your AM or admin.'
+      : audit.workflowStatus === 'Pending AM Approval' ? 'Your audit has been submitted and is under review.'
+        : audit.workflowStatus === 'Pending Admin Approval' ? 'Your audit is still under review.'
+          : audit.workflowStatus === 'Approved' ? 'Audit approved. Lost/damaged replacements will be dispatched.'
+            : audit.workflowStatus === 'Rejected' ? 'This audit was rejected. Contact support if you need help.'
               : null;
     currentSection = (
       <section className="stitch-card overflow-hidden">
@@ -249,7 +249,11 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
               Monthly Audit — {formatAuditMonthLabel(audit.month)}
             </h2>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge type={workflowBadgeType(audit.workflowStatus)}>{audit.workflowStatus}</Badge>
+              <Badge type={workflowBadgeType(audit.workflowStatus)}>
+                {audit.workflowStatus === 'Pending AM Approval' || audit.workflowStatus === 'Pending Admin Approval'
+                  ? 'Needs Review'
+                  : audit.workflowStatus}
+              </Badge>
               <Badge type={audit.status === 'Mismatch' ? 'error' : 'success'}>{audit.status}</Badge>
               <span className="ml-1 self-center text-sm text-[var(--stitch-muted)]">
                 Month: {formatAuditMonthLabel(audit.month)}

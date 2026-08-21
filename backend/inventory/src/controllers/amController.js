@@ -8,6 +8,10 @@ const receiptIssueService = require('../services/receiptIssueService');
 const notificationService = require('../services/notificationService');
 const monthlyReportService = require('../services/monthlyReportService');
 const { generateSchoolConsolidatedReportPdf } = require('../services/schoolConsolidatedReportPdf');
+const { generateDispatchInvoicePdf, sendInvoicePdf } = require('../services/dispatchBillPdf');
+const { getOperationsSnapshot } = require('../services/operationsSnapshotService');
+const { getOperationsAttention } = require('../services/operationsAttentionService');
+const operationsKpi = require('../utils/operationsKpi');
 const { closeExpiredAuditWindows } = require('../services/auditCloseoutService');
 const { populateAuditRelations } = require('../utils/auditQuery');
 const { getAmDivisions } = require('../utils/divisionManager');
@@ -240,7 +244,9 @@ const emptyOpsPayload = (month) => ({
     scheduledKits: 0,
     sentKits: 0,
     dispatchedKits: 0,
+    replacedKits: 0,
     lostKits: 0,
+    notReceivedKits: 0,
     damagedKits: 0,
     mismatchKits: 0,
     acknowledgedKits: 0,
@@ -250,6 +256,16 @@ const emptyOpsPayload = (month) => ({
     schoolsWithActivity: 0,
   },
   schools: [],
+  month,
+  period: operationsKpi.periodFromMonthlySummary({}),
+  current: {
+    month,
+    pendingAcknowledgementKits: 0,
+    outstandingKits: 0,
+    openIssues: { claims: 0, kitsAffected: 0, byType: { mismatchKits: 0, notReceivedKits: 0, damagedKits: 0, lostKits: 0 } },
+    fulfillment: { eligibleDsps: 0, fulfilledDsps: 0, rate: 0 },
+  },
+  attention: { queues: [] },
 });
 
 const getOperationsReport = async (req, res) => {
@@ -275,8 +291,20 @@ const getOperationsReport = async (req, res) => {
       schoolIds = [requestedSchoolId];
     }
 
-    const data = await monthlyReportService.getMonthlyReport(month, { schoolIds });
-    res.json(data);
+    const scope = { schoolIds };
+    const [data, current, attention] = await Promise.all([
+      monthlyReportService.getMonthlyReport(month, scope),
+      getOperationsSnapshot(month, scope),
+      getOperationsAttention(month, { ...scope, actor: 'am' }),
+    ]);
+    res.json({
+      summary: data.summary,
+      schools: data.schools,
+      month,
+      period: operationsKpi.periodFromMonthlySummary(data.summary),
+      current,
+      attention,
+    });
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
@@ -299,6 +327,22 @@ const downloadSchoolReportPdf = async (req, res) => {
   }
 };
 
+const downloadDispatchInvoice = async (req, res) => {
+  try {
+    const assigned = await requireAmDivisions(req.user);
+    const divisionIds = assigned.map((d) => d._id);
+    const dispatch = await Dispatch.findById(req.params.id).select('school');
+    if (!dispatch) {
+      return res.status(404).json({ message: 'Dispatch not found' });
+    }
+    await assertSchoolInAmDivisions(dispatch.school, divisionIds);
+    const { buffer, filename } = await generateDispatchInvoicePdf(req.params.id);
+    sendInvoicePdf(res, buffer, filename);
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   approveLostRequest,
   rejectLostRequest,
@@ -307,4 +351,5 @@ module.exports = {
   getDashboard,
   getOperationsReport,
   downloadSchoolReportPdf,
+  downloadDispatchInvoice,
 };

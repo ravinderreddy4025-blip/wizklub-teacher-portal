@@ -65,7 +65,7 @@ class DashboardService {
         { $group: { _id: null, total: { $sum: '$items.lostQuantity' } } },
       ]),
       Dispatch.aggregate([
-        { $match: { status: { $in: ['Received', 'Delivery Completed'] } } },
+        { $match: { status: { $in: ['Received', 'Delivery Completed', 'Completed'] } } },
         {
           $group: {
             _id: null,

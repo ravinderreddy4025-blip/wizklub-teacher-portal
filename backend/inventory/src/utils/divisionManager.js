@@ -4,9 +4,6 @@ const Division = require('../models/Division');
 async function getDivisionManager(divisionId) {
   if (!divisionId) return null;
 
-  const byDivisionId = await User.findOne({ divisionId, role: 'AM' });
-  if (byDivisionId) return byDivisionId;
-
   const division = await Division.findById(divisionId).populate('regionalManagerId');
   if (division?.regionalManagerId?.role === 'AM') {
     return division.regionalManagerId;
@@ -15,7 +12,7 @@ async function getDivisionManager(divisionId) {
     return User.findById(division.regionalManagerId);
   }
 
-  return null;
+  return User.findOne({ divisionId, role: 'AM' });
 }
 
 async function getAmDivisions(user) {
@@ -27,7 +24,10 @@ async function getAmDivisions(user) {
 
   if (user.divisionId && !seen.has(String(user.divisionId))) {
     const legacy = await Division.findById(user.divisionId);
-    if (legacy) list.push(legacy);
+    const ownerId = legacy?.regionalManagerId ? String(legacy.regionalManagerId) : null;
+    if (legacy && (!ownerId || ownerId === String(user._id))) {
+      list.push(legacy);
+    }
   }
 
   return list.sort((a, b) => a.name.localeCompare(b.name));

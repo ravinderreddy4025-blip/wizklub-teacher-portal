@@ -53,6 +53,9 @@ module.exports = {
     wizklubApi: load('services/wizklubApiService'),
     monthlyReportService: load('services/monthlyReportService'),
     schoolConsolidatedReportPdf: load('services/schoolConsolidatedReportPdf'),
+    dispatchBillPdf: load('services/dispatchBillPdf'),
+    operationsSnapshotService: load('services/operationsSnapshotService'),
+    operationsAttentionService: load('services/operationsAttentionService'),
   },
   utils: {
     preserveSchoolLoginId: load('utils/schoolCode').preserveSchoolLoginId,
@@ -60,5 +63,7 @@ module.exports = {
     formatSchoolDisplayName: load('utils/schoolName').formatSchoolDisplayName,
     generateSecurePassword: load('utils/passwordGenerator').generateSecurePassword,
     fileUrl: load('utils/mediaUrl').fileUrl,
+    dispatchCycle: load('utils/dispatchCycle'),
+    operationsKpi: load('utils/operationsKpi'),
   },
 };

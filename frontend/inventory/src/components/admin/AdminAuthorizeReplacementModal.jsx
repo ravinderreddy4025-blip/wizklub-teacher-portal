@@ -19,10 +19,12 @@ const AdminAuthorizeReplacementModal = ({
   setForm,
   onClose,
   onSubmit,
+  mode = 'approve',
 }) => {
   const school = issue?.school;
   const kit = issue?.kit;
   const qty = issue?.quantityAffected;
+  const isShip = mode === 'ship';
 
   const newKitIdPreview = useMemo(
     () => previewComponentId(school, kit, qty),
@@ -37,14 +39,19 @@ const AdminAuthorizeReplacementModal = ({
   if (!issue) return null;
 
   return (
-    <Modal isOpen={!!issue} onClose={onClose} title="Authorize replacement quantity" className="max-w-lg">
+    <Modal
+      isOpen={!!issue}
+      onClose={onClose}
+      title={isShip ? 'Ship replacement' : 'Approve replacement'}
+      className="max-w-lg"
+    >
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm space-y-2">
           <p><strong>School:</strong> {formatSchoolDisplayName(school?.name)}</p>
           <p><strong>Kit:</strong> {kit?.name}</p>
           <p><strong>Issue type:</strong> {issue.issueType}</p>
           <p>
-            <strong>Quantity to dispatch:</strong>{' '}
+            <strong>Quantity:</strong>{' '}
             <span className="text-brand-primary font-bold">{qty}</span> kit(s)
           </p>
           <p>
@@ -52,38 +59,44 @@ const AdminAuthorizeReplacementModal = ({
             <span className="font-mono text-xs">{issue.sourceDispatchRef || issue.dispatch?.dispatchId || '—'}</span>
           </p>
           <p className="text-xs text-slate-500 pt-1">
-            The same dispatch ID is updated — category changes to {replacementCategory(issue.issueType)},
-            status becomes Dispatched, and {qty} unit(s) are deducted from warehouse stock.
+            {isShip
+              ? `Shipping opens a replacement cycle, marks the dispatch Dispatched, deducts ${qty} unit(s) from warehouse, and sets category to ${replacementCategory(issue.issueType)}.`
+              : 'Approval does not ship. The dispatch stays Completed and warehouse stock is unchanged until you ship.'}
           </p>
         </div>
 
-        <div className="glass-card-frosted p-4 rounded-xl space-y-3">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Kit IDs for this school</p>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Original Kit ID</label>
-            <div className="saas-input font-mono text-sm text-slate-700 bg-slate-50 break-all min-h-[42px] flex items-center">
-              {originalKitId}
+        {isShip && (
+          <div className="glass-card-frosted p-4 rounded-xl space-y-3">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Kit IDs for this school</p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Original Kit ID</label>
+              <div className="saas-input font-mono text-sm text-slate-700 bg-slate-50 break-all min-h-[42px] flex items-center">
+                {originalKitId}
+              </div>
             </div>
+            <ComponentIdPreview
+              value={newKitIdPreview}
+              label="New Kit ID (preview)"
+              hint="Auto-generated for this school when you ship"
+            />
           </div>
-          <ComponentIdPreview
-            value={newKitIdPreview}
-            label="New Kit ID (preview)"
-            hint="Auto-generated for this school when you authorize — same format as new dispatch"
-          />
-        </div>
+        )}
 
         <IssueEvidencePanel issue={issue} />
-        <div className="flex flex-col gap-1.5">
-          <Input
-            label="New tracking ID (consignment no.)"
-            value={form.consignmentNo}
-            onChange={(e) => setForm({ ...form, consignmentNo: e.target.value })}
-            placeholder="New consignment / tracking number (optional)"
-          />
-          <p className="text-[11px] text-slate-500">
-            Optional now — add tracking within 24 hours after redispatch.
-          </p>
-        </div>
+        {isShip && (
+          <div className="flex flex-col gap-1.5">
+            <Input
+              label="New tracking ID (consignment no.)"
+              value={form.consignmentNo}
+              onChange={(e) => setForm({ ...form, consignmentNo: e.target.value })}
+              placeholder="Required to ship"
+              required
+            />
+            <p className="text-[11px] text-slate-500">
+              Required — this is the tracking ID for the replacement shipment.
+            </p>
+          </div>
+        )}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Admin notes</label>
           <textarea
@@ -94,7 +107,9 @@ const AdminAuthorizeReplacementModal = ({
         </div>
         <div className="flex gap-3 pt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="gradient" className="flex-1">Authorize & dispatch</Button>
+          <Button type="submit" variant="gradient" className="flex-1">
+            {isShip ? 'Ship replacement' : 'Approve'}
+          </Button>
         </div>
       </form>
     </Modal>

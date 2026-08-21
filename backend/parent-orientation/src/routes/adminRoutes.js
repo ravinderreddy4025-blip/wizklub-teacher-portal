@@ -13,7 +13,7 @@ const {
   putSchool,
   deleteSchool,
 } = require('../controllers/schoolAdminController');
-const { getAuditLogs } = require('../controllers/auditController');
+const { getAuditLogs, getAdminSessions } = require('../controllers/auditController');
 
 function mountAdminRoutes(app) {
   const router = express.Router();
@@ -31,6 +31,7 @@ function mountAdminRoutes(app) {
   router.delete('/schools/:id', deleteSchool);
 
   router.get('/audit-logs', getAuditLogs);
+  router.get('/sessions', getAdminSessions);
 
   app.use('/api/admin', router);
 }

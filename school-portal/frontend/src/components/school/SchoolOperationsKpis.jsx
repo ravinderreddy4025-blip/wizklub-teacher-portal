@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import api from '@inventory/utils/api';
 import toast from '@inventory/utils/toast';
-import OperationsKpiPanel from '@inventory/components/shared/OperationsKpiPanel';
+import SchoolOperationsBoard from '@inventory/components/school/SchoolOperationsBoard';
 import downloadPdfBlob from '@inventory/utils/downloadPdfBlob';
 
 export default function SchoolOperationsKpis({ month }) {
-  const [summary, setSummary] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -15,10 +15,10 @@ export default function SchoolOperationsKpis({ month }) {
       try {
         setLoading(true);
         const res = await api.get('/school/reports/summary', { params: { month } });
-        if (!cancelled) setSummary(res.data.summary || null);
+        if (!cancelled) setData(res.data || null);
       } catch (err) {
         console.error(err);
-        if (!cancelled) setSummary(null);
+        if (!cancelled) setData(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -45,8 +45,13 @@ export default function SchoolOperationsKpis({ month }) {
   };
 
   return (
-    <OperationsKpiPanel
-      summary={summary}
+    <SchoolOperationsBoard
+      month={data?.month || month}
+      period={data?.period}
+      current={data?.current}
+      inventory={data?.inventory}
+      inventoryHealth={data?.inventoryHealth}
+      attention={data?.attention}
       loading={loading}
       onDownloadPdf={handleDownloadPdf}
       downloading={downloading}

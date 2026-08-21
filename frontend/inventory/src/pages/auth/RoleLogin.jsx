@@ -17,47 +17,36 @@ import BrandLogo from '../../components/brand/BrandLogo';
 const WELCOME_BY_ROLE = {
   Admin: 'Welcome Admin',
   AM: 'Welcome Account Manager',
-  School: 'Welcome School',
+  School: 'Welcome Teacher',
   Dispatch: 'Welcome Dispatch',
 };
 
 const RoleLogin = ({ expectedRole }) => {
   const portal = getPortalByRole(expectedRole);
   const isSchoolPortal = expectedRole === 'School';
-  const [loginMode, setLoginMode] = useState('school');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginAdmin, loginSchool, loginInstructor, logout } = useContext(AuthContext);
+  const { login, loginAdmin, loginInstructor, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   if (!portal) return null;
 
   const isAdminPortal = expectedRole === 'Admin';
-  const isInstructorMode = isSchoolPortal && loginMode === 'instructor';
-  const usesUsername = isAdminPortal || isInstructorMode;
+  const usesUsername = isAdminPortal || isSchoolPortal;
   const welcomeHeading = WELCOME_BY_ROLE[expectedRole] || 'Welcome back!';
 
-  const identifierLabel = isAdminPortal || isInstructorMode
-    ? 'Username'
-    : isSchoolPortal
-      ? 'School ID'
-      : 'Email Address';
-
-  const identifierPlaceholder = isAdminPortal || isInstructorMode
-    ? 'Enter your username'
-    : isSchoolPortal
-      ? 'Enter your school ID'
-      : 'Enter your email';
+  const identifierLabel = usesUsername ? 'Username' : 'Email Address';
+  const identifierPlaceholder = usesUsername ? 'Enter your username' : 'Enter your email';
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      if (isInstructorMode) {
+      if (isSchoolPortal) {
         await loginInstructor(identifier, password);
         navigate(ROUTES.login.schoolInstructorSelect);
         return;
@@ -66,8 +55,6 @@ const RoleLogin = ({ expectedRole }) => {
       let userData;
       if (isAdminPortal) {
         userData = await loginAdmin(identifier, password);
-      } else if (isSchoolPortal) {
-        userData = await loginSchool(identifier, password);
       } else {
         userData = await login(identifier, password);
       }
@@ -86,13 +73,6 @@ const RoleLogin = ({ expectedRole }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const switchMode = (mode) => {
-    setLoginMode(mode);
-    setIdentifier('');
-    setPassword('');
-    setError('');
   };
 
   return (
@@ -195,36 +175,11 @@ const RoleLogin = ({ expectedRole }) => {
                   {welcomeHeading}
                 </h2>
                 <p className="mt-1.5 text-sm text-slate-500">
-                  Sign in to continue your journey
+                  {isSchoolPortal
+                    ? 'Sign in with your WizKlub instructor account'
+                    : 'Sign in to continue your journey'}
                 </p>
               </div>
-
-              {isSchoolPortal && (
-                <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
-                  <button
-                    type="button"
-                    onClick={() => switchMode('school')}
-                    className={`rounded-lg px-3 py-2.5 text-xs font-bold uppercase tracking-wide transition-all ${
-                      loginMode === 'school'
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    School ID
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => switchMode('instructor')}
-                    className={`rounded-lg px-3 py-2.5 text-xs font-bold uppercase tracking-wide transition-all ${
-                      loginMode === 'instructor'
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    Instructor
-                  </button>
-                </div>
-              )}
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="flex flex-col gap-1.5">
@@ -271,7 +226,11 @@ const RoleLogin = ({ expectedRole }) => {
                   <button
                     type="button"
                     className="text-sm font-medium text-slate-500 hover:text-[#F15A24] transition-colors"
-                    onClick={() => setError('Contact your administrator to reset your password.')}
+                    onClick={() => setError(
+                      isSchoolPortal
+                        ? 'Use your WizKlub instructor password, or contact your administrator to reset it.'
+                        : 'Contact your administrator to reset your password.',
+                    )}
                   >
                     Forgot Password?
                   </button>
@@ -295,8 +254,8 @@ const RoleLogin = ({ expectedRole }) => {
 
               <div className="mt-8 flex flex-col items-center gap-3 border-t border-slate-100 pt-5">
                 <p className="text-center text-xs text-slate-400">
-                  {isInstructorMode
-                    ? 'Instructor access for school inventory'
+                  {isSchoolPortal
+                    ? 'Teachers sign in with their WizKlub instructor account'
                     : `Signing in to the ${portal.label} portal`}
                 </p>
                 <Link

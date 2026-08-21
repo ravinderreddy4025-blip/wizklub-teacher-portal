@@ -25,56 +25,59 @@ function getRefId(ref) {
 
 function getDivisionsForAm(am, divisions) {
   const amId = String(am._id);
-  const seen = new Set();
-  const assigned = [];
+  return divisions
+    .filter((division) => {
+      const rmId = getRefId(division.regionalManagerId);
+      if (rmId) return rmId === amId;
+      return getRefId(am.divisionId) === String(division._id);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
 
-  divisions.forEach((division) => {
-    const rmId = getRefId(division.regionalManagerId);
-    const legacyDivId = getRefId(am.divisionId);
-    const isAssigned =
-      (rmId && rmId === amId) ||
-      (legacyDivId && legacyDivId === String(division._id));
+function divisionOwnerId(division, ams) {
+  const rmId = getRefId(division.regionalManagerId);
+  if (rmId) return rmId;
+  const holder = ams.find((am) => getRefId(am.divisionId) === String(division._id));
+  return holder ? String(holder._id) : null;
+}
 
-    if (isAssigned && !seen.has(division._id)) {
-      seen.add(division._id);
-      assigned.push(division);
-    }
-  });
-
-  return assigned.sort((a, b) => a.name.localeCompare(b.name));
+function ownerNameForDivision(division, ams, excludeAmId = null) {
+  const ownerId = divisionOwnerId(division, ams);
+  if (!ownerId || ownerId === String(excludeAmId || '')) return null;
+  const owner = ams.find((am) => String(am._id) === ownerId);
+  return owner?.name || division.regionalManagerId?.name || null;
 }
 
 function divisionHasAm(division, ams) {
-  if (getRefId(division.regionalManagerId)) return true;
-  return ams.some((am) => getRefId(am.divisionId) === String(division._id));
+  return Boolean(divisionOwnerId(division, ams));
 }
 
-import { filterProductionAms } from '../../utils/testData';
-
 const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRefresh, onShowPassword }) => {
-  const productionAms = useMemo(() => filterProductionAms(ams), [ams]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form, setForm] = useState({ id: null, name: '', email: '', divisionId: '' });
+  const [form, setForm] = useState({ id: null, name: '', email: '', divisionIds: [] });
   const [saving, setSaving] = useState(false);
   const [regeneratingId, setRegeneratingId] = useState(null);
   const [viewingId, setViewingId] = useState(null);
   const [revealedPasswords, setRevealedPasswords] = useState({});
   const [search, setSearch] = useState('');
 
-  const divisionsWithoutAM = divisions.filter((d) => !divisionHasAm(d, ams));
+  const sortedDivisions = useMemo(
+    () => [...divisions].sort((a, b) => a.name.localeCompare(b.name)),
+    [divisions],
+  );
 
   const amDivisionMap = useMemo(() => {
     const map = new Map();
-    productionAms.forEach((am) => {
+    ams.forEach((am) => {
       map.set(am._id, getDivisionsForAm(am, divisions));
     });
     return map;
-  }, [productionAms, divisions]);
+  }, [ams, divisions]);
 
   const filteredAms = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return productionAms;
-    return productionAms.filter((am) => {
+    if (!q) return ams;
+    return ams.filter((am) => {
       const assigned = amDivisionMap.get(am._id) || [];
       return (
         am.name?.toLowerCase().includes(q) ||
@@ -82,7 +85,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
         assigned.some((d) => d.name?.toLowerCase().includes(q))
       );
     });
-  }, [productionAms, amDivisionMap, search]);
+  }, [ams, amDivisionMap, search]);
 
   const openModal = (am = null) => {
     if (am) {
@@ -90,20 +93,39 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
         id: am._id,
         name: am.name,
         email: am.email,
-        divisionId: am.divisionId?._id || am.divisionId || '',
+        divisionIds: getDivisionsForAm(am, divisions).map((d) => String(d._id)),
       });
     } else {
-      setForm({ id: null, name: '', email: '', divisionId: divisionsWithoutAM[0]?._id || '' });
+      setForm({ id: null, name: '', email: '', divisionIds: [] });
     }
     setIsModalOpen(true);
   };
 
+  const toggleDivision = (id, locked) => {
+    if (locked) return;
+    const divisionId = String(id);
+    setForm((prev) => {
+      const selected = new Set(prev.divisionIds.map(String));
+      if (selected.has(divisionId)) selected.delete(divisionId);
+      else selected.add(divisionId);
+      return { ...prev, divisionIds: [...selected] };
+    });
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!form.divisionIds.length) {
+      toast.error('Select at least one division');
+      return;
+    }
     setSaving(true);
     try {
       if (form.id) {
-        await api.put(`/admin/ams/${form.id}`, { name: form.name, email: form.email });
+        await api.put(`/admin/ams/${form.id}`, {
+          name: form.name,
+          email: form.email,
+          divisionIds: form.divisionIds,
+        });
         toast.success('Account Manager updated');
         setIsModalOpen(false);
         onRefresh();
@@ -111,7 +133,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
         const res = await api.post('/admin/ams', {
           name: form.name,
           email: form.email,
-          divisionId: form.divisionId,
+          divisionIds: form.divisionIds,
         });
         setIsModalOpen(false);
         onRefresh();
@@ -122,7 +144,11 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
           email: res.data.accountManager?.email || form.email,
           credentialType: 'am',
         });
-        toast.success(res.data.emailSent ? 'AM created — credentials emailed' : 'AM created — see password');
+        toast.success(
+          res.data.emailSent
+            ? 'AM created — credentials emailed'
+            : `AM created — email not sent${res.data.emailNote ? `: ${res.data.emailNote}` : ''}`,
+        );
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save AM');
@@ -155,7 +181,11 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
         credentialType: 'am',
       });
       setRevealedPasswords((prev) => ({ ...prev, [id]: res.data.generatedPassword }));
-      toast.success(res.data.emailSent ? 'Password regenerated — email sending' : 'Password regenerated');
+      toast.success(
+        res.data.emailSent
+          ? 'Password regenerated — credentials emailed'
+          : `Password regenerated — email not sent${res.data.emailNote ? `: ${res.data.emailNote}` : ''}`,
+      );
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to regenerate password');
     } finally {
@@ -216,9 +246,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
         <button
           type="button"
           onClick={() => openModal()}
-          disabled={divisionsWithoutAM.length === 0}
-          title={divisionsWithoutAM.length === 0 ? 'All divisions already have an Account Manager' : undefined}
-          className="stitch-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+          className="stitch-btn-primary"
         >
           + Add Account Manager
         </button>
@@ -365,7 +393,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
               {filteredAms.length === 0 && (
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center text-[#6B7280]">
-                    {productionAms.length === 0
+                    {ams.length === 0
                       ? 'No Account Managers yet. Create a division first, then add an AM.'
                       : 'No managers match your search.'}
                   </td>
@@ -375,7 +403,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
           </table>
         </div>
         <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-3 text-sm text-[#6B7280]">
-          Showing {filteredAms.length} of {productionAms.length} Account Managers
+          Showing {filteredAms.length} of {ams.length} Account Managers
           {' · '}
           {divisions.filter((d) => divisionHasAm(d, ams)).length} of {divisions.length} divisions assigned
         </div>
@@ -418,54 +446,53 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
               required
             />
           </div>
-          {!form.id && (
-            <div className="space-y-2">
-              <label className={labelClass}>Division</label>
-              <select
-                className={fieldClass}
-                value={form.divisionId}
-                onChange={(e) => setForm({ ...form, divisionId: e.target.value })}
-                required
-              >
-                <option value="">Select division</option>
-                {divisionsWithoutAM.map((d) => (
-                  <option key={d._id} value={d._id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-2">
+            <label className={labelClass}>Divisions</label>
+            <div className="max-h-56 space-y-1 overflow-y-auto rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-2">
+              {sortedDivisions.map((division) => {
+                const checked = form.divisionIds.map(String).includes(String(division._id));
+                const currentOwner = ownerNameForDivision(division, ams, form.id);
+                const locked = Boolean(currentOwner) && !checked;
+                return (
+                  <label
+                    key={division._id}
+                    className={`flex items-start gap-2.5 rounded-lg px-2.5 py-2 text-sm transition ${
+                      locked
+                        ? 'cursor-not-allowed opacity-60'
+                        : checked
+                          ? 'cursor-pointer bg-white shadow-sm'
+                          : 'cursor-pointer hover:bg-white/70'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={checked}
+                      disabled={locked}
+                      onChange={() => toggleDivision(division._id, locked)}
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-[#1F2937]">{division.name}</span>
+                      {locked && (
+                        <span className="block text-[11px] text-[#6B7280]">Assigned to {currentOwner}</span>
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
+              {sortedDivisions.length === 0 && (
+                <p className="px-2 py-3 text-xs text-[#6B7280]">Create a division first, then assign it here.</p>
+              )}
             </div>
-          )}
+            <p className="text-xs text-[#6B7280]">
+              One AM can handle multiple divisions. A division can belong to only one AM. To move a division, uncheck it on the current AM first.
+            </p>
+          </div>
           {!form.id && (
             <p className="rounded-xl border border-[#F89C28]/15 bg-[#F89C28]/5 px-3 py-3 text-xs text-[#6B7280]">
               A secure password will be generated and emailed. Admins can view it anytime from this page.
             </p>
           )}
-          {form.id && (() => {
-            const assigned = getDivisionsForAm(
-              { _id: form.id, divisionId: form.divisionId },
-              divisions,
-            );
-            if (assigned.length === 0) return null;
-            return (
-              <div className="space-y-2">
-                <label className={labelClass}>Assigned divisions</label>
-                <div className="flex flex-wrap gap-1.5 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-3">
-                  {assigned.map((d) => (
-                    <span
-                      key={d._id}
-                      className="inline-flex rounded-full border border-[#F89C28]/20 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#F89C28]"
-                    >
-                      {d.name}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-[#6B7280]">
-                  Division assignments are managed via Divisions or Assign operational AMs.
-                </p>
-              </div>
-            );
-          })()}
         </form>
       </Modal>
     </>

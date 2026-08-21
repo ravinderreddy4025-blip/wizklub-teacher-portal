@@ -55,7 +55,7 @@ const Sidebar = ({ collapsed = false, mobileOpen = false, onMobileClose, onToggl
         >
           {!collapsed ? (
             <div className="hidden md:flex min-w-0 items-center gap-2.5">
-              <BrandLogo className="h-8 w-auto max-w-[36px]" />
+              <BrandLogo className="h-8 w-auto max-w-[140px]" />
               <div className="min-w-0">
                 {isAdmin ? (
                   <>
@@ -96,7 +96,9 @@ const Sidebar = ({ collapsed = false, mobileOpen = false, onMobileClose, onToggl
           </button>
         </div>
 
-        <div className={clsx('md:hidden px-4 py-3 border-b border-[var(--stitch-border)]', collapsed && 'hidden')}>
+        <div className={clsx('md:hidden px-4 py-3 border-b border-[var(--stitch-border)] flex items-center gap-3', collapsed && 'hidden')}>
+          <BrandLogo className="h-8 w-auto max-w-[120px] shrink-0" />
+          <div className="min-w-0">
           {isAdmin ? (
             <>
               <p className="text-sm font-black text-[#1F2937]">Command Shell</p>
@@ -110,6 +112,7 @@ const Sidebar = ({ collapsed = false, mobileOpen = false, onMobileClose, onToggl
               </p>
             </>
           )}
+          </div>
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-4">

@@ -45,7 +45,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
             <Menu size={22} />
           </button>
         )}
-        <BrandLogo className="hidden h-8 w-auto max-w-[120px] sm:block lg:max-w-[132px]" />
+        <BrandLogo className="h-8 w-auto max-w-[132px] shrink-0" />
         <span className="hidden shrink-0 items-center rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--stitch-primary)] sm:inline-flex">
           {user?.role}
         </span>

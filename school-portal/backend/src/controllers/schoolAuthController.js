@@ -39,37 +39,10 @@ async function ensureSchoolPortalUser(school) {
   });
 }
 
-const authSchoolUser = async (req, res) => {
-  try {
-    const { schoolCode, password } = req.body;
-    const loginId = preserveSchoolLoginId(schoolCode);
-
-    if (!loginId.trim() || !password) {
-      return res.status(400).json({ message: 'School ID and password are required' });
-    }
-
-    const school = await School.findOne({ code: loginId });
-    if (!school) {
-      return res.status(401).json({ message: 'Invalid school ID or password' });
-    }
-
-    const user = await User.findOne({ role: 'School', schoolId: school._id });
-
-    if (user && (await bcrypt.compare(password, user.password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        schoolCode: school.code,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid school ID or password' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+const authSchoolUser = async (_req, res) => {
+  return res.status(403).json({
+    message: 'School ID login is no longer available. Sign in with your instructor (teacher) account.',
+  });
 };
 
 const authInstructor = async (req, res) => {

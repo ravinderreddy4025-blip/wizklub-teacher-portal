@@ -12,7 +12,10 @@ const ReceiptIssue = require('../models/ReceiptIssue');
 const ReplacementRequest = require('../models/ReplacementRequest');
 const { formatAuditMonth } = require('../utils/auditMonth');
 const { buildIssueMonthMatch } = require('../utils/dispatchHub');
+const { fulfillmentFromDispatches } = require('../utils/operationsKpi');
 const { closeExpiredAuditWindows } = require('./auditCloseoutService');
+
+const MIN_SHIPPED_FOR_RATE_RANK = 10;
 
 function currentMonth() {
   return formatAuditMonth(new Date());
@@ -56,13 +59,20 @@ function emptySchoolStats(school) {
     scheduledKits: 0,
     sentKits: 0,
     dispatchedKits: 0,
+    replacedKits: 0,
     lostKits: 0,
+    notReceivedKits: 0,
     damagedKits: 0,
     mismatchKits: 0,
+    affectedKits: 0,
     acknowledgedKits: 0,
     rejectedKits: 0,
     rejectedByAm: 0,
     rejectedByAdmin: 0,
+    auditLostKits: 0,
+    auditDamagedKits: 0,
+    fulfillment: { eligibleDsps: 0, fulfilledDsps: 0, rate: 0 },
+    issueRate: 0,
     dispatchCount: 0,
     auditSubmitted: false,
   };
@@ -75,13 +85,20 @@ function emptySummary(month) {
     scheduledKits: 0,
     sentKits: 0,
     dispatchedKits: 0,
+    replacedKits: 0,
     lostKits: 0,
+    notReceivedKits: 0,
     damagedKits: 0,
     mismatchKits: 0,
+    affectedKits: 0,
     acknowledgedKits: 0,
     rejectedKits: 0,
     rejectedByAm: 0,
     rejectedByAdmin: 0,
+    auditLostKits: 0,
+    auditDamagedKits: 0,
+    fulfillment: { eligibleDsps: 0, fulfilledDsps: 0, rate: 0 },
+    issueRate: 0,
     schoolsWithActivity: 0,
   };
 }
@@ -91,13 +108,18 @@ const KPI_FIELDS = [
   'scheduledKits',
   'sentKits',
   'dispatchedKits',
+  'replacedKits',
   'lostKits',
+  'notReceivedKits',
   'damagedKits',
   'mismatchKits',
+  'affectedKits',
   'acknowledgedKits',
   'rejectedKits',
   'rejectedByAm',
   'rejectedByAdmin',
+  'auditLostKits',
+  'auditDamagedKits',
 ];
 
 function addRejection(stats, qty, doc) {
@@ -131,6 +153,24 @@ function originalSentThisMonth(dispatch, start, end) {
   return inRange(dispatch.createdAt, start, end) ? originalSentQuantity(dispatch) : 0;
 }
 
+function cycleQtyInMonth(dispatch, start, end, movementType) {
+  const cycles = Array.isArray(dispatch.cycles) ? dispatch.cycles : [];
+  if (!cycles.length) return null;
+  return cycles.reduce((sum, cycle) => {
+    if (movementType && cycle.movementType !== movementType) return sum;
+    if (!inRange(cycle.dispatchedAt, start, end)) return sum;
+    return sum + (Number(cycle.quantityDispatched) || 0);
+  }, 0);
+}
+
+function acknowledgedFromCycles(dispatch, start, end) {
+  const cycles = Array.isArray(dispatch.cycles) ? dispatch.cycles : [];
+  return cycles.reduce((sum, cycle) => {
+    if (!inRange(cycle.acknowledgedAt, start, end)) return sum;
+    return sum + (Number(cycle.quantityAcknowledged) || 0);
+  }, 0);
+}
+
 function dispatchedUnitsInMonth(dispatch, start, end) {
   if (dispatch.status === 'Pending') return 0;
 
@@ -148,14 +188,14 @@ function dispatchedUnitsInMonth(dispatch, start, end) {
 function receivedOkQuantity(dispatch) {
   const received = Number(dispatch.quantityReceived);
   if (Number.isFinite(received) && received >= 0) return received;
-  if (['Received', 'Delivery Completed'].includes(dispatch.status)) {
+  if (['Received', 'Delivery Completed', 'Completed'].includes(dispatch.status)) {
     return dispatch.quantity || 0;
   }
   return 0;
 }
 
 function isCleanReceiptStatus(status) {
-  return status === 'Received' || status === 'Delivery Completed';
+  return status === 'Received' || status === 'Delivery Completed' || status === 'Completed';
 }
 
 const CLOSED_ISSUE_STATUSES = new Set(['Approved', 'Resolved', 'Superseded']);
@@ -165,6 +205,27 @@ function accumulateDispatchStats(stats, dispatch, start, end, receiptState) {
     const pendingQty = dispatch.quantity || 0;
     stats.pendingKits += pendingQty;
     stats.scheduledKits += pendingQty;
+  }
+
+  const initialThisMonth = cycleQtyInMonth(dispatch, start, end, 'INITIAL');
+  if (initialThisMonth != null) {
+    const replacedThisMonth = cycleQtyInMonth(dispatch, start, end, 'REPLACEMENT') || 0;
+    if (initialThisMonth > 0) {
+      stats.sentKits += initialThisMonth;
+      stats.dispatchedKits += initialThisMonth;
+      stats.scheduledKits += initialThisMonth;
+      stats.dispatchCount += 1;
+    }
+    if (replacedThisMonth > 0) stats.replacedKits += replacedThisMonth;
+
+    const ackThisMonth = acknowledgedFromCycles(dispatch, start, end);
+    if (ackThisMonth > 0) {
+      const dispatchId = String(dispatch._id);
+      stats.acknowledgedKits += ackThisMonth;
+      receiptState.ackFromDispatchIds.add(dispatchId);
+      receiptState.liveReceiptDispatchIds.add(dispatchId);
+    }
+    return;
   }
 
   const sentThisMonth = dispatchedUnitsInMonth(dispatch, start, end);
@@ -188,8 +249,6 @@ function accumulateDispatchStats(stats, dispatch, start, end, receiptState) {
       stats.acknowledgedKits += receivedOk;
       receiptState.ackFromDispatchIds.add(dispatchId);
     }
-    stats.lostKits += dispatch.lostOnReceipt || 0;
-    stats.damagedKits += dispatch.damagedOnReceipt || 0;
     return;
   }
 
@@ -205,8 +264,8 @@ function accumulateAuditStats(stats, audit) {
   stats.auditSubmitted = true;
   if (audit.assumedIntact) return;
   for (const item of audit.items || []) {
-    stats.lostKits += item.lostQuantity || 0;
-    stats.damagedKits += item.damagedQuantity || 0;
+    stats.auditLostKits += item.lostQuantity || 0;
+    stats.auditDamagedKits += item.damagedQuantity || 0;
   }
 }
 
@@ -214,10 +273,22 @@ function accumulateReceiptIssueStats(stats, issue, receiptState) {
   const receivedOk = issue.quantityReceived || 0;
   const affected = issue.quantityAffected || 0;
 
+  const dispatchHasCycles = Array.isArray(issue.dispatch?.cycles) && issue.dispatch.cycles.length > 0;
+
+  if (affected > 0) {
+    stats.affectedKits += affected;
+    if (issue.status !== 'Rejected') {
+      if (issue.issueType === 'Quantity Mismatch') stats.mismatchKits += affected;
+      else if (issue.issueType === 'Damaged Product') stats.damagedKits += affected;
+      else if (issue.issueType === 'Shipment Not Received') stats.notReceivedKits += affected;
+      else if (issue.issueType === 'Missing Product') stats.lostKits += affected;
+    }
+  }
+
   // Rejected = replacement claim denied. Kits already received stay in the school
   // warehouse, so they still count as acknowledged.
   if (issue.status === 'Rejected') {
-    if (receivedOk > 0) stats.acknowledgedKits += receivedOk;
+    if (receivedOk > 0 && !dispatchHasCycles) stats.acknowledgedKits += receivedOk;
     addRejection(stats, affected || receivedOk, issue);
     return;
   }
@@ -227,19 +298,11 @@ function accumulateReceiptIssueStats(stats, issue, receiptState) {
   const isLiveCycleIssue = receiptState.liveReceiptDispatchIds.has(dispatchId)
     && currentIssueId === String(issue._id);
 
-  if (affected > 0) {
-    if (issue.issueType === 'Quantity Mismatch') stats.mismatchKits += affected;
-    else if (issue.issueType === 'Damaged Product') stats.damagedKits += affected;
-    else if (issue.issueType === 'Missing Product' || issue.issueType === 'Shipment Not Received') {
-      stats.lostKits += affected;
-    }
-  }
-
   // 12 sent / 4 affected => 8 acknowledged, for mismatch, damage, or missing.
   const alreadyCountedOpenIssue = isLiveCycleIssue
     && receiptState.ackFromDispatchIds.has(dispatchId)
     && !CLOSED_ISSUE_STATUSES.has(issue.status);
-  if (receivedOk > 0 && !alreadyCountedOpenIssue) {
+  if (receivedOk > 0 && !alreadyCountedOpenIssue && !dispatchHasCycles) {
     stats.acknowledgedKits += receivedOk;
   }
 }
@@ -267,12 +330,40 @@ function hasReportActivity(row) {
   return row.scheduledKits > 0
     || row.sentKits > 0
     || row.dispatchedKits > 0
+    || row.affectedKits > 0
     || row.lostKits > 0
+    || row.notReceivedKits > 0
     || row.damagedKits > 0
     || row.mismatchKits > 0
     || row.acknowledgedKits > 0
+    || row.replacedKits > 0
     || row.rejectedKits > 0
     || row.auditSubmitted;
+}
+
+function computeIssueRate(shippedKits, affectedKits) {
+  const shipped = Number(shippedKits) || 0;
+  const affected = Number(affectedKits) || 0;
+  if (shipped <= 0) return 0;
+  return Math.round((affected / shipped) * 1000) / 10;
+}
+
+function enrichReportRow(row, fulfillment) {
+  row.fulfillment = fulfillment || row.fulfillment || { eligibleDsps: 0, fulfilledDsps: 0, rate: 0 };
+  row.issueRate = computeIssueRate(row.sentKits, row.affectedKits);
+  row.shippedKits = row.sentKits;
+  row.receivedKits = row.acknowledgedKits;
+  row.pendingDispatchKits = row.pendingKits;
+  return row;
+}
+
+function buildComposition(stats) {
+  const mismatch = stats.mismatchKits || 0;
+  const notReceived = stats.notReceivedKits || 0;
+  const damaged = stats.damagedKits || 0;
+  const lost = stats.lostKits || 0;
+  const totalAffected = stats.affectedKits || mismatch + notReceived + damaged + lost;
+  return { mismatch, notReceived, damaged, lost, totalAffected };
 }
 
 function schoolFilter(schoolIds) {
@@ -312,7 +403,7 @@ async function getMonthlyReport(monthInput, options = {}) {
     ReceiptIssue.find({ ...issueMonthMatch, ...dispatchMatch })
       .populate('school', 'name code divisionId')
       .populate('kit', 'name kitId')
-      .populate('dispatch', 'dispatchId status receiptIssue quantityReceived')
+      .populate('dispatch', 'dispatchId status receiptIssue quantityReceived cycles')
       .lean(),
     ReplacementRequest.find(replacementMatch).lean(),
   ]);
@@ -353,6 +444,16 @@ async function getMonthlyReport(monthInput, options = {}) {
     accumulateReplacementRejection(stats, request);
   });
 
+  const dispatchesBySchool = new Map();
+  dispatches.forEach((dispatch) => {
+    const schoolId = String(dispatch.school?._id || dispatch.school || '');
+    if (!schoolId) return;
+    if (!dispatchesBySchool.has(schoolId)) dispatchesBySchool.set(schoolId, []);
+    dispatchesBySchool.get(schoolId).push(dispatch);
+  });
+
+  const summaryFulfillment = fulfillmentFromDispatches(dispatches, start, end);
+
   const schoolBreakdown = [...schoolMap.values()]
     .map((row) => {
       const hasActivity = hasReportActivity(row);
@@ -360,10 +461,18 @@ async function getMonthlyReport(monthInput, options = {}) {
       KPI_FIELDS.forEach((field) => {
         summary[field] += row[field] || 0;
       });
+      const schoolDispatches = dispatchesBySchool.get(String(row.schoolId)) || [];
+      enrichReportRow(row, fulfillmentFromDispatches(schoolDispatches, start, end));
       return { ...row, hasActivity };
     })
     .filter((row) => row.hasActivity)
     .sort((a, b) => (a.schoolName || '').localeCompare(b.schoolName || ''));
+
+  summary.fulfillment = summaryFulfillment;
+  summary.issueRate = computeIssueRate(summary.sentKits, summary.affectedKits);
+  summary.shippedKits = summary.sentKits;
+  summary.receivedKits = summary.acknowledgedKits;
+  summary.pendingDispatchKits = summary.pendingKits;
 
   return { summary, schools: schoolBreakdown };
 }
@@ -392,7 +501,7 @@ async function getSchoolReportData(schoolId, monthInput) {
       .lean(),
     ReceiptIssue.find({ school: schoolId, ...issueMonthMatch })
       .populate('kit', 'name kitId')
-      .populate('dispatch', 'dispatchId status trackingId receiptIssue quantityReceived')
+      .populate('dispatch', 'dispatchId status trackingId receiptIssue quantityReceived cycles')
       .sort({ createdAt: -1 })
       .lean(),
     ReplacementRequest.find({
@@ -437,10 +546,13 @@ async function getSchoolReportData(schoolId, monthInput) {
     accumulateReplacementRejection(stats, request);
   });
 
+  enrichReportRow(stats, fulfillmentFromDispatches(dispatches, start, end));
+
   return {
     month,
     school,
     stats,
+    composition: buildComposition(stats),
     dispatches: dispatchesInMonth,
     receiptIssues,
     audit,
@@ -452,4 +564,8 @@ module.exports = {
   parseMonth,
   getMonthlyReport,
   getSchoolReportData,
+  computeIssueRate,
+  buildComposition,
+  enrichReportRow,
+  MIN_SHIPPED_FOR_RATE_RANK,
 };

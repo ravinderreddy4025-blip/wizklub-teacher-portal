@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck, CalendarClock, CheckCircle2, Scale, PackageX, ShieldAlert, Ban } from 'lucide-react';
+import { Truck, Clock, CalendarClock, CheckCircle2, Scale, PackageX, ShieldAlert, Ban } from 'lucide-react';
 import StatCard from '../admin/StatCard';
 
 export function rejectedHint(summary) {
@@ -10,21 +10,29 @@ export function rejectedHint(summary) {
 
 export default function OperationsKpiStrip({ summary, className = '' }) {
   const sent = summary?.sentKits ?? summary?.dispatchedKits ?? 0;
-  const scheduled = summary?.scheduledKits ?? sent;
+  const pending = summary?.pendingKits ?? 0;
+  const scheduled = summary?.scheduledKits ?? sent + pending;
 
   return (
-    <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7 ${className}`}>
+    <div className={`grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8 ${className}`}>
       <StatCard
         label="Sent till date"
         value={sent}
-        hint="Actually shipped — excludes pending/scheduled"
+        hint="Actually shipped — excludes pending"
         accent="primary"
         icon={Truck}
       />
       <StatCard
+        label="Pending"
+        value={pending}
+        hint="Created this month, not yet shipped"
+        accent="warning"
+        icon={Clock}
+      />
+      <StatCard
         label="Scheduled"
         value={scheduled}
-        hint={`Includes sent (${sent}) plus still pending`}
+        hint={`Sent (${sent}) + pending (${pending})`}
         accent="slate"
         icon={CalendarClock}
       />
@@ -45,7 +53,7 @@ export default function OperationsKpiStrip({ summary, className = '' }) {
       <StatCard
         label="Lost"
         value={summary?.lostKits ?? 0}
-        hint="Missing / not received remainder"
+        hint="Received, later reported missing"
         accent="slate"
         icon={PackageX}
       />

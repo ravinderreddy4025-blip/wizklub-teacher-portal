@@ -51,6 +51,18 @@ const receiptIssueSchema = new mongoose.Schema({
   adminApprovedAt: { type: Date },
   replacementDispatch: { type: mongoose.Schema.Types.ObjectId, ref: 'Dispatch' },
   replacementRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ReplacementRequest' },
+  claimHistory: [{
+    issueType: { type: String },
+    quantitySent: { type: Number, min: 0 },
+    quantityReceived: { type: Number, min: 0 },
+    quantityAffected: { type: Number, min: 0 },
+    remarks: { type: String },
+    damageDescription: { type: String },
+    severity: { type: String },
+    photoUrls: [{ type: String }],
+    submittedAt: { type: Date },
+    submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  }],
 }, { timestamps: true });
 
 receiptIssueSchema.index({ school: 1, status: 1 });

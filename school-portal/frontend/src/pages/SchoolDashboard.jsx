@@ -20,7 +20,12 @@ const SchoolDashboard = () => {
     if (path.includes('/warehouse')) return 'warehouse';
     if (path.includes('/audit')) return 'audit';
     if (path.includes('/replacements') || path.includes('/replacement')) return 'replacement';
-    if (path === ROUTES.school.dispatches || path === `${ROUTES.school.dispatches}/`) return 'dispatches';
+    if (
+      path === ROUTES.school.root
+      || path === `${ROUTES.school.root}/`
+      || path === ROUTES.school.dispatches
+      || path.startsWith(`${ROUTES.school.dispatches}/`)
+    ) return 'dispatches';
     return 'invalid';
   }, [location.pathname]);
 
@@ -290,6 +295,10 @@ const SchoolDashboard = () => {
     return <Navigate to={ROUTES.school.dispatches} replace />;
   }
 
+  if (location.pathname === ROUTES.school.root || location.pathname === `${ROUTES.school.root}/`) {
+    return <Navigate to={ROUTES.school.dispatches} replace />;
+  }
+
   const warehouseRows = warehouse.filter((row) => (row.quantity || 0) > 0);
 
   const headerCopy = {
@@ -304,7 +313,7 @@ const SchoolDashboard = () => {
       ),
     },
     audit: { title: 'Monthly Audit', subtitle: 'Verify inventory counts for all assigned kits to maintain system accuracy.' },
-    replacement: { title: 'Replacements', subtitle: 'Lost and damaged kits from monthly audits — tracked here after you submit your audit.' },
+    replacement: { title: 'Replacements', subtitle: 'Replacement kits in progress and history. This month’s replacement total is on Dispatches — not a separate KPI card.' },
   }[activeView];
 
   return (
@@ -497,7 +506,7 @@ const SchoolDashboard = () => {
                           <Badge type={
                             r.status === 'Dispatched' ? 'success'
                               : r.status === 'Rejected' ? 'error'
-                                : r.status === 'Awaiting dispatch' ? 'info'
+                                : r.status === 'Waiting for Replacement' || r.status === 'Awaiting dispatch' ? 'info'
                                   : 'pending'
                           }>
                             {r.status}

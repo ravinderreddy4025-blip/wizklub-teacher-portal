@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Package, History, PackageX, Scale, ShieldAlert } from 'lucide-react';
+import { Package, History, AlertCircle } from 'lucide-react';
 import api from '@inventory/utils/api';
 import Button from '@inventory/components/ui/Button';
 import Badge from '@inventory/components/ui/Badge';
@@ -7,13 +7,20 @@ import Pagination from '@inventory/components/shared/Pagination';
 import { DispatchIdCell, KitDetailsCell, QuantityCell, IssueShipmentDetailsCell } from '@inventory/components/shared/DispatchRedispatchCells';
 import { canAcknowledgeDispatch, canEditSchoolReceipt, canUpgradeNotReceivedReport } from '@inventory/utils/schoolDispatch';
 import SchoolOperationsKpis from './SchoolOperationsKpis';
+import toast from '@inventory/utils/toast';
+import { downloadDispatchInvoicePdf } from '@inventory/utils/downloadPdfBlob';
+import {
+  schoolIssueStatusLabel,
+  schoolIssueStatusBadge,
+  schoolIssueTypeLabel,
+  SCHOOL_ISSUE_STATUS_FILTERS,
+  SCHOOL_ISSUE_TYPE_FILTERS,
+} from '@inventory/utils/schoolIssueStatus';
 
-const SECTIONS = [
-  { id: 'incoming', label: 'Incoming', subtitle: 'In transit or awaiting your acknowledgment', icon: Package, accent: '', activeAccent: true },
-  { id: 'past', label: 'Completed', subtitle: 'Completed or closed shipments', icon: History, accent: '' },
-  { id: 'lost', label: 'Lost / not received', subtitle: 'Devices reported missing', icon: PackageX, accent: '' },
-  { id: 'mismatch', label: 'Mismatch', subtitle: 'Quantity does not match', icon: Scale, accent: 'border-t-4 border-t-yellow-400' },
-  { id: 'damaged', label: 'Damaged', subtitle: 'Devices reported damaged', icon: ShieldAlert, accent: 'border-t-4 border-t-purple-500' },
+const ACTIVITY_SECTIONS = [
+  { id: 'incoming', label: 'Incoming', subtitle: 'In transit or awaiting your acknowledgment', icon: Package },
+  { id: 'past', label: 'Completed', subtitle: 'Responded with at least one OK kit', icon: History },
+  { id: 'history', label: 'History', subtitle: 'Every dispatch this month, including Not Received', icon: History },
 ];
 
 export function defaultDispatchMonth() {
@@ -24,7 +31,7 @@ export function defaultDispatchMonth() {
 function dispatchStatusBadge(status, receiptIssue) {
   if (receiptIssue?.status === 'Pending AM Approval') return 'warning';
   if (receiptIssue?.status === 'Pending Admin Approval') return 'pending';
-  if (status === 'Delivery Completed' || status === 'Received') return 'success';
+  if (status === 'Delivery Completed' || status === 'Received' || status === 'Completed') return 'success';
   if (['missing_dispatch', 'damaged_dispatch', 'mismatch_dispatch', 'not_received_dispatch'].includes(status)) return 'warning';
   if (['Damage Under Review', 'Missing Item Under Review', 'Received with Issues'].includes(status)) return 'warning';
   if (status === 'Replacement Pending') return 'pending';
@@ -35,15 +42,22 @@ function dispatchStatusBadge(status, receiptIssue) {
 
 function formatDispatchStatus(item) {
   const issue = item.receiptIssue;
-  if (issue?.status === 'Pending AM Approval') return 'AM Review';
-  if (issue?.status === 'Pending Admin Approval') return 'Admin Review';
-  if (issue?.status === 'Clarification Requested') return 'Clarification Needed';
+  if (issue?.status) {
+    const label = schoolIssueStatusLabel(issue.status);
+    if (item.status === 'Completed' || item.status === 'Dispatched') {
+      if (issue.status === 'Approved' && item.status === 'Dispatched') return 'Waiting for Replacement';
+      if (item.status === 'Completed') return Number(item.outstandingQuantity) > 0 ? `Cycle completed · ${label}` : 'Fulfilled';
+    }
+  }
   const labels = {
-    missing_dispatch: 'Missing Dispatch',
-    damaged_dispatch: 'Damaged Dispatch',
-    mismatch_dispatch: 'Mismatch Dispatch',
+    missing_dispatch: 'Completed',
+    damaged_dispatch: 'Completed',
+    mismatch_dispatch: 'Completed',
     not_received_dispatch: 'Not Received',
   };
+  if (item.status === 'Completed') {
+    return Number(item.outstandingQuantity) > 0 ? 'Cycle completed' : 'Fulfilled';
+  }
   if (labels[item.status]) return labels[item.status];
   if (item.status === 'Dispatched') return 'Dispatched';
   return item.status;
@@ -73,7 +87,9 @@ function SummaryTile({ section, summary, active, onClick }) {
           <Icon size={18} />
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold text-[var(--stitch-text)]">{stats.units}</p>
+      <p className="text-2xl font-bold text-[var(--stitch-text)]">
+        {section.id === 'history' ? (stats.count || 0) : (stats.units || 0)}
+      </p>
           <p className="text-[10px] font-bold uppercase text-[var(--stitch-muted)]">Units</p>
         </div>
       </div>
@@ -85,7 +101,7 @@ function SummaryTile({ section, summary, active, onClick }) {
   );
 }
 
-function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade }) {
+function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade, onDownloadInvoice }) {
   return (
     <div className="flex flex-col items-end gap-2">
       <Button
@@ -94,6 +110,13 @@ function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade
         onClick={() => onTrack(item)}
       >
         Track dispatch
+      </Button>
+      <Button
+        variant="outline"
+        className="max-w-[140px] rounded-full px-4 py-1.5 text-xs font-semibold"
+        onClick={() => onDownloadInvoice(item)}
+      >
+        Invoice PDF
       </Button>
       {canAcknowledgeDispatch(item) && (
         <Button
@@ -140,8 +163,8 @@ function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade
           Complete not-received report
         </Button>
       )}
-      {item.status === 'not_received_dispatch' && item.receiptIssue?.status === 'Pending AM Approval' && (
-        <p className="text-[10px] font-semibold text-error-600">Not received — AM review</p>
+      {item.status === 'not_received_dispatch' && item.receiptIssue?.status && (
+        <p className="text-[10px] font-semibold text-error-600">Not received — {schoolIssueStatusLabel(item.receiptIssue.status)}</p>
       )}
       {item.status === 'Pending' && (
         <span className="text-xs font-medium italic text-slate-400">Awaiting shipment</span>
@@ -150,7 +173,7 @@ function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade
   );
 }
 
-function DispatchTable({ rows, onTrack, onAcknowledge, onEdit, onUpgrade }) {
+function DispatchTable({ rows, onTrack, onAcknowledge, onEdit, onUpgrade, onDownloadInvoice }) {
   if (!rows.length) {
     return <p className="py-12 text-center text-[var(--stitch-muted)]">No dispatches in this section for the selected month.</p>;
   }
@@ -178,17 +201,12 @@ function DispatchTable({ rows, onTrack, onAcknowledge, onEdit, onUpgrade }) {
                 <Badge type={dispatchStatusBadge(item.status, item.receiptIssue)}>
                   {formatDispatchStatus(item)}
                 </Badge>
-                {['missing_dispatch', 'damaged_dispatch', 'mismatch_dispatch', 'not_received_dispatch', 'Received with Issues'].includes(item.status)
-                  && item.receiptIssue?.status === 'Pending AM Approval' && (
-                  <p className="mt-1 text-[10px] font-semibold text-warning-700">Awaiting AM review</p>
-                )}
-                {['missing_dispatch', 'damaged_dispatch', 'mismatch_dispatch', 'not_received_dispatch'].includes(item.status)
-                  && item.receiptIssue?.status === 'Pending Admin Approval' && (
-                  <p className="mt-1 text-[10px] text-slate-500">AM approved — with admin</p>
-                )}
-                {item.receiptIssue?.status === 'Approved'
-                  && ['missing_dispatch', 'damaged_dispatch', 'mismatch_dispatch', 'not_received_dispatch'].includes(item.status) && (
-                  <p className="mt-1 text-[10px] text-slate-500">Replacement sent — acknowledge when received</p>
+                {item.receiptIssue?.status && (
+                  <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                    {schoolIssueStatusLabel(item.receiptIssue.status)}
+                    {item.receiptIssue.issueType === 'Shipment Not Received' ? ' · Not Received' : ''}
+                    {item.receiptIssue.issueType === 'Missing Product' ? ' · Lost' : ''}
+                  </p>
                 )}
               </td>
               <td className="px-5 py-5 text-right">
@@ -198,6 +216,7 @@ function DispatchTable({ rows, onTrack, onAcknowledge, onEdit, onUpgrade }) {
                   onAcknowledge={onAcknowledge}
                   onEdit={onEdit}
                   onUpgrade={onUpgrade}
+                  onDownloadInvoice={onDownloadInvoice}
                 />
               </td>
             </tr>
@@ -243,7 +262,7 @@ function IssueTable({ rows }) {
                   <td className="px-5 py-4"><Badge type="warning">{req.type}</Badge></td>
                   <td className="px-5 py-4 font-bold">{req.quantity}</td>
                   <td className="px-5 py-4 font-mono text-xs">{req.replacementId || '—'}</td>
-                  <td className="px-5 py-4"><Badge type="info">{req.status}</Badge></td>
+                  <td className="px-5 py-4"><Badge type={schoolIssueStatusBadge(req.status)}>{schoolIssueStatusLabel(req.status)}</Badge></td>
                   <td className="px-5 py-4">{new Date(req.createdAt).toLocaleDateString()}</td>
                 </tr>
               );
@@ -253,13 +272,13 @@ function IssueTable({ rows }) {
               <tr key={`issue-${issue._id}`} className="transition-colors hover:bg-gray-50">
                 <td className="px-5 py-4"><Badge type="info">Receipt report</Badge></td>
                 <td className="px-5 py-4 font-bold text-slate-900">{issue.kit?.name || '—'}</td>
-                <td className="px-5 py-4"><Badge type={issueBadgeType(issue.issueType)}>{issue.issueType}</Badge></td>
+                  <td className="px-5 py-4"><Badge type={issueBadgeType(issue.issueType)}>{schoolIssueTypeLabel(issue.issueType)}</Badge></td>
                 <td className="px-5 py-4 font-bold">{issue.quantityAffected}</td>
                 <td className="px-5 py-4">
                   <p className="font-mono text-xs">{issue.sourceDispatchRef || issue.dispatch?.dispatchId || '—'}</p>
                   <IssueShipmentDetailsCell issue={issue} />
                 </td>
-                <td className="px-5 py-4"><Badge type="warning">{issue.status}</Badge></td>
+                <td className="px-5 py-4"><Badge type={schoolIssueStatusBadge(issue.status)}>{schoolIssueStatusLabel(issue.status)}</Badge></td>
                 <td className="px-5 py-4">{new Date(issue.receivedAt || issue.createdAt).toLocaleDateString()}</td>
               </tr>
             );
@@ -270,13 +289,37 @@ function IssueTable({ rows }) {
   );
 }
 
+function FilterPills({ options, value, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((option) => (
+        <button
+          key={option.id || 'all'}
+          type="button"
+          onClick={() => onChange(option.id)}
+          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+            value === option.id
+              ? 'border-[#F89C28] bg-[#F89C28] text-white'
+              : 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#F89C28]/40'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function SchoolDispatchHub({
   refreshKey = 0,
   onOpenReceipt,
   onOpenTrack,
 }) {
   const [month, setMonth] = useState(defaultDispatchMonth());
+  const [hubTab, setHubTab] = useState('activity');
   const [section, setSection] = useState('incoming');
+  const [issueType, setIssueType] = useState('');
+  const [issueStatus, setIssueStatus] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -294,7 +337,7 @@ export default function SchoolDispatchHub({
 
   useEffect(() => {
     setPage(1);
-  }, [month, section, debouncedSearch]);
+  }, [month, section, hubTab, issueType, issueStatus, debouncedSearch]);
 
   const fetchHub = useCallback(async () => {
     try {
@@ -302,10 +345,12 @@ export default function SchoolDispatchHub({
       const res = await api.get('/school/dispatch-hub', {
         params: {
           month,
-          section,
+          section: hubTab === 'issues' ? 'issues' : section,
           page,
           limit: 20,
           ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          ...(hubTab === 'issues' && issueType ? { issueType } : {}),
+          ...(hubTab === 'issues' && issueStatus ? { issueStatus } : {}),
         },
       });
       setSummary(res.data.summary);
@@ -320,13 +365,13 @@ export default function SchoolDispatchHub({
     } finally {
       setLoading(false);
     }
-  }, [month, section, page, debouncedSearch, refreshKey]);
+  }, [month, section, page, debouncedSearch, refreshKey, hubTab, issueType, issueStatus]);
 
   useEffect(() => {
     fetchHub();
   }, [fetchHub]);
 
-  const activeSection = SECTIONS.find((s) => s.id === section) || SECTIONS[0];
+  const activeSection = ACTIVITY_SECTIONS.find((s) => s.id === section) || ACTIVITY_SECTIONS[0];
 
   return (
     <section className="stitch-card overflow-hidden">
@@ -342,17 +387,35 @@ export default function SchoolDispatchHub({
               onChange={(e) => setMonth(e.target.value)}
             />
           </div>
-          <p className="pb-2 text-sm text-[var(--stitch-muted)]">
-            Viewing <span className="font-semibold text-[var(--stitch-text)]">{activeSection.label}</span> for{' '}
-            <span className="font-semibold text-[var(--stitch-text)]">{month}</span>
-          </p>
         </div>
 
         <SchoolOperationsKpis month={month} />
 
-        {summary && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {SECTIONS.map((s) => (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setHubTab('activity')}
+            className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider ${
+              hubTab === 'activity' ? 'bg-[#F89C28] text-white' : 'bg-[#F1F5F9] text-[#6B7280]'
+            }`}
+          >
+            Dispatch activity
+          </button>
+          <button
+            type="button"
+            onClick={() => setHubTab('issues')}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider ${
+              hubTab === 'issues' ? 'bg-[#F89C28] text-white' : 'bg-[#F1F5F9] text-[#6B7280]'
+            }`}
+          >
+            <AlertCircle size={12} />
+            Issues{summary?.issues ? ` · ${summary.issues.count}` : ''}
+          </button>
+        </div>
+
+        {hubTab === 'activity' && summary && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {ACTIVITY_SECTIONS.map((s) => (
               <SummaryTile
                 key={s.id}
                 section={s}
@@ -363,9 +426,19 @@ export default function SchoolDispatchHub({
             ))}
           </div>
         )}
+
+        {hubTab === 'issues' && (
+          <div className="space-y-3">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF]">
+              Not Received and Lost are different — filter by type
+            </p>
+            <FilterPills options={SCHOOL_ISSUE_STATUS_FILTERS} value={issueStatus} onChange={setIssueStatus} />
+            <FilterPills options={SCHOOL_ISSUE_TYPE_FILTERS} value={issueType} onChange={setIssueType} />
+          </div>
+        )}
       </div>
 
-      {(section === 'incoming' || section === 'past') && (
+      {(hubTab === 'activity' || hubTab === 'issues') && (
         <div className="border-b border-[var(--stitch-border)] bg-white p-6">
           <div className="relative max-w-md">
             <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -376,7 +449,7 @@ export default function SchoolDispatchHub({
             <input
               type="search"
               className="stitch-input w-full pl-10"
-              placeholder="Search dispatch ID or tracking..."
+              placeholder={hubTab === 'issues' ? 'Search remarks or tracking...' : 'Search dispatch ID or tracking...'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -386,9 +459,13 @@ export default function SchoolDispatchHub({
 
       <div className="bg-gray-50 px-6 py-4">
         <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--stitch-primary)]">
-          {activeSection.label}
+          {hubTab === 'issues' ? 'Issues' : activeSection.label}
         </h4>
-        <p className="mt-0.5 text-xs text-[var(--stitch-muted)]">{activeSection.subtitle}</p>
+        <p className="mt-0.5 text-xs text-[var(--stitch-muted)]">
+          {hubTab === 'issues'
+            ? 'Lost, mismatch, damaged, and not received live here as issue types.'
+            : activeSection.subtitle}
+        </p>
       </div>
 
       <div className="bg-white">
@@ -401,6 +478,15 @@ export default function SchoolDispatchHub({
             onAcknowledge={onOpenReceipt}
             onEdit={(item) => onOpenReceipt(item, { edit: true })}
             onUpgrade={onOpenReceipt}
+            onDownloadInvoice={async (item) => {
+              if (!item?._id) return;
+              try {
+                await downloadDispatchInvoicePdf(api, `/school/dispatches/${item._id}/invoice`);
+                toast.success('Invoice PDF downloaded');
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'Failed to download invoice PDF');
+              }
+            }}
           />
         ) : (
           <IssueTable rows={rows} />

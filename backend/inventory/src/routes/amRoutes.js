@@ -10,6 +10,7 @@ const {
   getDashboard,
   getOperationsReport,
   downloadSchoolReportPdf,
+  downloadDispatchInvoice,
 } = require('../controllers/amController');
 const { approveAudit, rejectAudit } = require('../controllers/auditController');
 
@@ -19,6 +20,7 @@ router.use(authorize('AM'));
 router.get('/dashboard', getDashboard);
 router.get('/reports/monthly', getOperationsReport);
 router.get('/reports/school/:schoolId/pdf', downloadSchoolReportPdf);
+router.get('/dispatches/:id/invoice', downloadDispatchInvoice);
 router.put('/replacement/:id/approve', approveLostRequest);
 router.put('/replacement/:id/reject', rejectLostRequest);
 router.put('/receipt-issue/:id/approve', approveReceiptIssue);

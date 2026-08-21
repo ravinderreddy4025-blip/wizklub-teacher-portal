@@ -4,17 +4,14 @@ const School = require('../models/School');
 const Dispatch = require('../models/Dispatch');
 const ReceiptIssue = require('../models/ReceiptIssue');
 const { formatSchoolDisplayName } = require('../utils/schoolName');
-const {
-  buildAndSendReceiptAcknowledgmentEmails,
-  sendDeliveryConfirmationEmailsAsync,
-} = require('./emailService');
 
 const CATEGORY_LABELS = {
   all_received: 'Delivery Completed',
   report_issue: 'Received with Issues',
   not_received: 'Shipment Not Received',
   issue_am_approved: 'Issue Approved by AM',
-  issue_admin_approved: 'Replacement Dispatched',
+  issue_admin_approved: 'Replacement Approved',
+  issue_replacement_shipped: 'Replacement Dispatched',
   issue_rejected: 'Receipt Issue Rejected',
   issue_clarification: 'Clarification Requested',
 };
@@ -93,13 +90,7 @@ const notifyReceiptAcknowledgment = async ({
   const schoolDisplayName = formatSchoolDisplayName(school?.name);
   const recipients = await getAdminAndAmRecipients(school);
 
-  let issues = [];
-  if (issueIds.length > 0) {
-    issues = await ReceiptIssue.find({ _id: { $in: issueIds } }).populate('kit');
-  }
-
   const categoryLabel = CATEGORY_LABELS[receiptCategory] || dispatches[0].status;
-  const consignmentNo = dispatches[0].consignmentNo || dispatches[0].trackingId;
   const kitSummary = dispatches.map((d) => `${d.kit?.name || 'Kit'} (${d.status})`).join(', ');
 
   const message = `${schoolDisplayName} — ${categoryLabel}. ${kitSummary}. Receiver: ${receiverName || '—'}.`;
@@ -114,29 +105,11 @@ const notifyReceiptAcknowledgment = async ({
   if (notifications.length > 0) {
     await Notification.insertMany(notifications);
   }
-
-  sendDeliveryConfirmationEmailsAsync(() =>
-    buildAndSendReceiptAcknowledgmentEmails({
-      receiptCategory,
-      dispatches,
-      issues,
-      schoolName: schoolDisplayName,
-      schoolCode: school?.code || '—',
-      divisionName: school?.divisionId?.name || '—',
-      consignmentNo,
-      receiverName,
-      receivedAt,
-      receiptNotes,
-      recipients,
-    })
-  ).catch((err) => {
-    console.error('[receipt] Email notification failed:', err.message);
-  });
 };
 
 const notifyDeliveryConfirmation = async (dispatch, options = {}) => {
   const receiptCategory = options.receiptCategory
-    || (dispatch.status === 'Delivery Completed' ? 'all_received'
+    || (dispatch.status === 'Delivery Completed' || dispatch.status === 'Completed' ? 'all_received'
       : dispatch.status === 'Not Received' ? 'not_received'
         : 'report_issue');
 
@@ -166,6 +139,7 @@ const WORKFLOW_EVENT_CATEGORIES = {
   am_approved: 'issue_am_approved',
   am_rejected: 'issue_rejected',
   admin_approved: 'issue_admin_approved',
+  admin_shipped: 'issue_replacement_shipped',
   admin_rejected: 'issue_rejected',
   clarification_requested: 'issue_clarification',
 };
@@ -185,13 +159,6 @@ const notifyReceiptIssueWorkflow = async (issueId, event, extra = {}) => {
   const schoolDisplayName = formatSchoolDisplayName(school?.name);
   const recipients = await getAdminAndAmRecipients(school);
 
-  let dispatches = [issue.dispatch];
-  if (event === 'admin_approved' && extra.replacementDispatchId) {
-    const replacement = await Dispatch.findById(extra.replacementDispatchId).populate('kit');
-    if (replacement) dispatches = [replacement];
-  }
-
-  const consignmentNo = dispatches[0].consignmentNo || dispatches[0].trackingId;
   const categoryLabel = CATEGORY_LABELS[receiptCategory];
   const message = `${schoolDisplayName} — ${categoryLabel}. ${issue.kit?.name || 'Kit'}: ${issue.issueType}.`;
 
@@ -205,35 +172,6 @@ const notifyReceiptIssueWorkflow = async (issueId, event, extra = {}) => {
   if (notifications.length > 0) {
     await Notification.insertMany(notifications);
   }
-
-  const workflowNote = extra.workflowNote
-    || issue.amNotes
-    || issue.adminNotes
-    || issue.remarks
-    || '';
-
-  sendDeliveryConfirmationEmailsAsync(() =>
-    buildAndSendReceiptAcknowledgmentEmails({
-      receiptCategory,
-      dispatches,
-      issues: [issue],
-      schoolName: schoolDisplayName,
-      schoolCode: school?.code || '—',
-      divisionName: school?.divisionId?.name || '—',
-      consignmentNo,
-      receiverName: issue.receiverName,
-      receivedAt: issue.receivedAt,
-      receiptNotes: workflowNote,
-      recipients,
-      extraInfo: {
-        parentDispatchRef: extra.parentDispatchRef || issue.sourceDispatchRef || issue.dispatch?.dispatchId,
-        newConsignmentNo: extra.newConsignmentNo,
-        workflowNote,
-      },
-    })
-  ).catch((err) => {
-    console.error('[receipt-workflow] Email notification failed:', err.message);
-  });
 };
 
 module.exports = {

@@ -35,4 +35,9 @@ async function getStockMap(schoolId) {
   return rows.filter((row) => row.kit);
 }
 
-module.exports = { addStock, removeStock, getWarehouseForSchool, getStockMap };
+async function getOnHandKits(schoolId) {
+  const rows = await getStockMap(schoolId);
+  return rows.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0);
+}
+
+module.exports = { addStock, removeStock, getWarehouseForSchool, getStockMap, getOnHandKits };

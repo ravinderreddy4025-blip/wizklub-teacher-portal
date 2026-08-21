@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import IssueEvidencePanel from '../shared/IssueEvidencePanel';
 import { IssueShipmentDetailsCell } from '../shared/DispatchRedispatchCells';
 import { formatSchoolDisplayName } from '../../utils/schoolName';
+import { isReplacementInTransit } from '../../utils/schoolDispatch';
 import { AmApprovalSection, AmApprovalTile } from '../am/AmApprovalSections';
 
 function issueBadgeType(issueType) {
@@ -12,7 +13,14 @@ function issueBadgeType(issueType) {
   return 'warning';
 }
 
-export function AdminReceiptIssueTable({ issues, onReject, onAuthorize }) {
+function issueStatusBadge(status) {
+  if (status === 'Approved' || status === 'Resolved') return 'success';
+  if (status === 'Rejected') return 'error';
+  return 'warning';
+}
+
+export function AdminReceiptIssueTable({ issues, onReject, onApprove, onAuthorize, onShip }) {
+  const approveIssue = onApprove || onAuthorize;
   if (!issues.length) {
     return <p className="text-center py-10 text-slate-500">No receipt issues in this category.</p>;
   }
@@ -42,7 +50,7 @@ export function AdminReceiptIssueTable({ issues, onReject, onAuthorize }) {
               <td className="font-bold">{issue.quantityAffected}</td>
               <td className="hidden font-mono text-xs md:table-cell">{issue.sourceDispatchRef || issue.dispatch?.dispatchId || '—'}</td>
               <td className="hidden lg:table-cell"><IssueShipmentDetailsCell issue={issue} /></td>
-              <td><Badge type="warning">{issue.status}</Badge></td>
+              <td><Badge type={issueStatusBadge(issue.status)}>{issue.status}</Badge></td>
               <td className="hidden max-w-[220px] xl:table-cell">
                 {issue.issueType === 'Shipment Not Received' ? (
                   <p className="text-xs text-slate-500">No evidence required</p>
@@ -57,8 +65,16 @@ export function AdminReceiptIssueTable({ issues, onReject, onAuthorize }) {
               </td>
               <td className="text-right">
                 <div className="flex justify-end gap-2 flex-wrap">
-                  <Button variant="danger" className="text-xs py-1.5 px-2" onClick={() => onReject(issue._id)}>Reject</Button>
-                  <Button variant="gradient" className="text-xs py-1.5 px-2" onClick={() => onAuthorize(issue)}>Authorize qty</Button>
+                  {issue.status === 'Approved' && !isReplacementInTransit(issue) ? (
+                    <Button variant="gradient" className="text-xs py-1.5 px-2" onClick={() => onShip?.(issue)}>Ship</Button>
+                  ) : issue.status === 'Approved' ? (
+                    <p className="text-xs font-semibold text-slate-500">In transit</p>
+                  ) : (
+                    <>
+                      <Button variant="danger" className="text-xs py-1.5 px-2" onClick={() => onReject(issue._id)}>Reject</Button>
+                      <Button variant="gradient" className="text-xs py-1.5 px-2" onClick={() => approveIssue?.(issue)}>Approve</Button>
+                    </>
+                  )}
                 </div>
               </td>
             </tr>

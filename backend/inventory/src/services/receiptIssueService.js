@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const schoolInventoryService = require('./schoolInventoryService');
 const { formatComponentId } = require('../utils/componentId');
+const dispatchCycle = require('../utils/dispatchCycle');
 
 const DEBUG_LOG = path.join(__dirname, '../../../debug-89ca70.log');
 
@@ -172,7 +173,7 @@ async function repairStrayReplacementDispatch(issue) {
   const qty = issue.quantityAffected || stray.quantity;
   original.quantity = qty;
   original.consignmentNo = stray.consignmentNo;
-  original.status = dispatchStatusForIssueType(issue.issueType);
+  original.status = 'Dispatched';
   original.category = stray.category || replacementCategory(issue.issueType);
   original.dispatchedAt = stray.dispatchedAt || original.dispatchedAt || new Date();
   original.dispatchedBy = stray.dispatchedBy || original.dispatchedBy;
@@ -211,7 +212,7 @@ async function repairInPlaceApprovedIssues() {
     if (!dispatchRef || dispatchRef !== replacementRef) continue;
 
     const original = await Dispatch.findById(dispatchRef);
-    if (!original || original.status === 'Delivery Completed') continue;
+    if (!original || original.status === 'Delivery Completed' || original.status === 'Completed') continue;
 
     const expectedStatus = dispatchStatusForIssueType(issue.issueType);
     const expectedCategory = replacementCategory(issue.issueType);
@@ -222,7 +223,7 @@ async function repairInPlaceApprovedIssues() {
     if (original.status !== desiredStatus && original.status === expectedStatus) {
       original.status = desiredStatus;
       changed = true;
-    } else if (!['Dispatched', 'Delivery Completed', 'Received'].includes(original.status)
+    } else if (!['Dispatched', 'Delivery Completed', 'Received', 'Completed'].includes(original.status)
       && original.status !== expectedStatus) {
       original.status = desiredStatus;
       changed = true;
@@ -300,6 +301,10 @@ async function createReceiptIssues({ issues, schoolId, reportedBy, receiverName,
       receiverName,
       receivedAt,
       status: PENDING_AM,
+      claimHistory: [dispatchCycle.snapshotClaim({
+        ...issue,
+        reportedBy,
+      })],
     };
   }));
 }
@@ -338,6 +343,12 @@ async function rejectReceiptIssue(issueId, notes, role = 'admin') {
   if (role === 'am') issue.amNotes = notes;
   else issue.adminNotes = notes;
   await issue.save();
+  const dispatch = await Dispatch.findById(issue.dispatch);
+  if (dispatch) {
+    dispatchCycle.hydrateCyclesIfNeeded(dispatch);
+    dispatchCycle.applyOrderTotals(dispatch);
+    await dispatch.save();
+  }
   return issue;
 }
 
@@ -355,8 +366,8 @@ async function requestClarification(issueId, adminNotes) {
   return issue;
 }
 
-async function approveReceiptIssueByAdmin(issueId, { adminNotes, consignmentNo, reportingManager, createdBy }) {
-  debugLog('H1', 'receiptIssueService.js:approveReceiptIssueByAdmin:entry', 'authorize entry', { issueId, codePath: 'in-place-missing-dispatch-v3' });
+async function approveReceiptIssueByAdmin(issueId, { adminNotes } = {}) {
+  debugLog('H1', 'receiptIssueService.js:approveReceiptIssueByAdmin:entry', 'approve without ship', { issueId });
   const issue = await ReceiptIssue.findById(issueId).populate('kit');
   if (!issue) {
     const err = new Error('Receipt issue not found');
@@ -370,8 +381,62 @@ async function approveReceiptIssueByAdmin(issueId, { adminNotes, consignmentNo, 
     throw err;
   }
 
-  // Tracking optional at authorize; Admin can add within 24h via PATCH tracking.
+  const original = await Dispatch.findById(issue.dispatch);
+  if (!original) {
+    const err = new Error('Original dispatch not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const previousKitId = original.kitId || original.componentId || issue.originalKitId || '';
+  const previousCategory = original.category || issue.originalCategory || 'New Dispatch';
+  if (previousKitId && !original.originalKitId) original.originalKitId = previousKitId;
+  if (!issue.originalKitId && previousKitId) issue.originalKitId = previousKitId;
+  if (!original.originalCategory) original.originalCategory = previousCategory;
+  if (!issue.originalCategory) issue.originalCategory = previousCategory;
+  if (original.consignmentNo && !original.originalConsignmentNo) {
+    original.originalConsignmentNo = original.consignmentNo;
+  }
+
+  dispatchCycle.hydrateCyclesIfNeeded(original);
+  original.status = dispatchCycle.LIFECYCLE.COMPLETED;
+  dispatchCycle.applyOrderTotals(original);
+  await original.save();
+
+  issue.status = 'Approved';
+  issue.adminNotes = adminNotes;
+  issue.adminApprovedAt = new Date();
+  issue.replacementDispatch = original._id;
+  await issue.save();
+
+  debugLog('H1', 'receiptIssueService.js:approveReceiptIssueByAdmin:exit', 'approved, not shipped', {
+    dispatchId: original.dispatchId,
+    status: original.status,
+    outstanding: original.outstandingQuantity,
+  });
+
+  return { issue, dispatch: original };
+}
+
+async function shipReceiptIssueReplacement(issueId, { consignmentNo, reportingManager, createdBy, adminNotes } = {}) {
+  const issue = await ReceiptIssue.findById(issueId).populate('kit');
+  if (!issue) {
+    const err = new Error('Receipt issue not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (issue.status !== 'Approved') {
+    const err = new Error('Replacement is not approved for shipping');
+    err.statusCode = 400;
+    throw err;
+  }
+
   const trimmedConsignment = consignmentNo?.trim() || '';
+  if (!trimmedConsignment) {
+    const err = new Error('Tracking ID (consignment no.) is required to ship a replacement');
+    err.statusCode = 400;
+    throw err;
+  }
 
   const original = await Dispatch.findById(issue.dispatch);
   if (!original) {
@@ -380,16 +445,13 @@ async function approveReceiptIssueByAdmin(issueId, { adminNotes, consignmentNo, 
     throw err;
   }
 
-  const strayReplacementId = issue.replacementDispatch
-    && String(issue.replacementDispatch) !== String(original._id)
-    ? issue.replacementDispatch
-    : null;
-
-  debugLog('H3', 'receiptIssueService.js:approveReceiptIssueByAdmin:dispatch', 'target dispatch', {
-    originalId: String(original._id),
-    originalDispatchId: original.dispatchId,
-    strayReplacementId: strayReplacementId ? String(strayReplacementId) : null,
-  });
+  dispatchCycle.hydrateCyclesIfNeeded(original);
+  const live = dispatchCycle.currentCycle(original);
+  if (live?.status === dispatchCycle.CYCLE_OPEN && live?.movementType === dispatchCycle.MOVEMENT_REPLACEMENT) {
+    const err = new Error('A replacement cycle is already in transit for this dispatch');
+    err.statusCode = 400;
+    throw err;
+  }
 
   const kitDoc = issue.kit?._id ? issue.kit : await Kit.findById(issue.kit);
   if (!kitDoc) {
@@ -412,6 +474,8 @@ async function approveReceiptIssueByAdmin(issueId, { adminNotes, consignmentNo, 
   const sourceRef = issue.sourceDispatchRef || original.dispatchId;
   const previousConsignment = original.consignmentNo;
   const previousQuantity = original.quantity;
+  const previousKitId = original.kitId || original.componentId || issue.originalKitId || '';
+  const previousCategory = original.category || issue.originalCategory || 'New Dispatch';
 
   const componentId = formatComponentId({
     schoolCode: schoolDoc?.code,
@@ -420,28 +484,8 @@ async function approveReceiptIssueByAdmin(issueId, { adminNotes, consignmentNo, 
     quantity: qty,
   });
 
-  const previousKitId = original.kitId || original.componentId || issue.originalKitId || '';
-  const previousCategory = original.category || issue.originalCategory || 'New Dispatch';
-  if (previousKitId && !original.originalKitId) {
-    original.originalKitId = previousKitId;
-  }
-  if (!issue.originalKitId && previousKitId) {
-    issue.originalKitId = previousKitId;
-  }
-  if (!original.originalCategory) {
-    original.originalCategory = previousCategory;
-  }
-  if (!issue.originalCategory) {
-    issue.originalCategory = previousCategory;
-  }
-  if (previousConsignment && !original.originalConsignmentNo) {
-    original.originalConsignmentNo = previousConsignment;
-  }
-
   const cycleNumber = Number(issue.cycle) || ((original.redispatchCycles?.length || 0) + 1);
-  if (!Array.isArray(original.redispatchCycles)) {
-    original.redispatchCycles = [];
-  }
+  if (!Array.isArray(original.redispatchCycles)) original.redispatchCycles = [];
   original.redispatchCycles.push({
     cycle: cycleNumber,
     issue: issue._id,
@@ -454,60 +498,46 @@ async function approveReceiptIssueByAdmin(issueId, { adminNotes, consignmentNo, 
     authorizedBy: createdBy,
   });
 
-  original.quantity = qty;
-  original.kitId = componentId;
-  original.componentId = componentId;
-  original.consignmentNo = trimmedConsignment;
-  // Back to Dispatched so school can ack OK or report issues again (multi-cycle).
-  original.status = 'Dispatched';
-  original.category = replacementCategory(issue.issueType);
-  original.dispatchedAt = now;
-  original.dispatchedBy = createdBy;
+  dispatchCycle.openReplacementCycle(original, {
+    quantity: qty,
+    kitId: componentId,
+    consignmentNo: trimmedConsignment,
+    category: replacementCategory(issue.issueType),
+    dispatchedAt: now,
+    dispatchedBy: createdBy,
+    issueId: issue._id,
+  });
   original.parentDispatchRef = sourceRef;
-  original.quantityReceived = null;
   original.lostOnReceipt = 0;
   original.damagedOnReceipt = 0;
-  original.receiverName = null;
-  original.receivedAt = null;
-  original.receiptNotes = null;
   original.deliveryPhotoUrl = null;
   original.receiptIssue = issue._id;
   original.dispatchDetails = [
     `Replacement for ${issue.issueType} — ${qty} kit(s) under dispatch ${sourceRef} (cycle ${cycleNumber}).`,
     `Previous shipment: ${previousQuantity} kit(s), tracking ${previousConsignment || '—'}.`,
-    adminNotes || '',
+    adminNotes || issue.adminNotes || '',
   ].filter(Boolean).join(' ');
 
-  if (reportingManager) {
-    original.reportingManager = reportingManager;
-  }
+  if (reportingManager) original.reportingManager = reportingManager;
 
   original.markModified('redispatchCycles');
+  original.markModified('cycles');
   await original.save();
-
-  if (strayReplacementId) {
-    await Dispatch.deleteOne({ _id: strayReplacementId });
-  }
 
   const kitBefore = await Kit.findById(kitDoc._id).select('warehouseQuantity name').lean();
   await Kit.findByIdAndUpdate(kitDoc._id, { $inc: { warehouseQuantity: -qty } });
   const kitAfter = await Kit.findById(kitDoc._id).select('warehouseQuantity').lean();
 
-  issue.status = 'Approved';
-  issue.adminNotes = adminNotes;
-  issue.adminApprovedAt = new Date();
   issue.replacementDispatch = original._id;
   await issue.save();
 
-  debugLog('H1-H5', 'receiptIssueService.js:approveReceiptIssueByAdmin:exit', 'authorize complete in-place', {
+  debugLog('H1', 'receiptIssueService.js:shipReceiptIssueReplacement', 'shipped', {
     dispatchId: original.dispatchId,
     status: original.status,
-    category: original.category,
     consignmentNo: original.consignmentNo,
     qty,
     warehouseBefore: kitBefore?.warehouseQuantity,
     warehouseAfter: kitAfter?.warehouseQuantity,
-    deletedStray: !!strayReplacementId,
   });
 
   return { issue, dispatch: original };
@@ -523,7 +553,9 @@ async function completeReplacementReceipt(dispatch) {
   issue.status = 'Resolved';
   await issue.save();
 
-  dispatch.status = 'Delivery Completed';
+  dispatchCycle.hydrateCyclesIfNeeded(dispatch);
+  dispatch.status = dispatchCycle.LIFECYCLE.COMPLETED;
+  dispatchCycle.applyOrderTotals(dispatch);
   await dispatch.save();
 
   return issue;
@@ -608,6 +640,7 @@ module.exports = {
   createReceiptIssues,
   approveReceiptIssueByAm,
   approveReceiptIssueByAdmin,
+  shipReceiptIssueReplacement,
   approveReceiptIssue,
   rejectReceiptIssue,
   requestClarification,

@@ -21,7 +21,7 @@ function DispatchStatusLine({ label, dispatch, pendingLabel }) {
   if (!dispatch && !pendingLabel) return null;
   const status = dispatch?.status || 'Dispatched';
   const category = dispatch?.category || label;
-  const isDone = ['Dispatched', 'Delivery Completed', 'Received'].includes(status);
+  const isDone = ['Dispatched', 'Delivery Completed', 'Received', 'Completed'].includes(status);
   return (
     <p className="font-medium text-[var(--stitch-text)]">
       {category} -{' '}

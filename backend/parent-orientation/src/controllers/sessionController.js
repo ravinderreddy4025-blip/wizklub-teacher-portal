@@ -9,6 +9,7 @@ const {
   insertSession,
   upsertSessionById,
   deleteSessionById,
+  findSessionById,
   replaceAllByPmo,
   replaceAllBySpeakerMerged,
   appendStudentIdToSession,
@@ -21,6 +22,21 @@ const {
   validateSpeakerMergedPayload,
 } = require('../services/sessionMutationService');
 const { validateSessionId } = require('../domain/sessions');
+const {
+  sessionCreatedSummary,
+  sessionUpdatedSummary,
+  sessionDeletedSummary,
+} = require('../utils/auditSummary');
+
+function auditActor(req) {
+  if (req.authUser) {
+    return { username: req.authUser.username, role: req.authUser.role };
+  }
+  return {
+    username: req.authUser?.username || req.userRole || 'unknown',
+    role: req.userRole || 'unknown',
+  };
+}
 
 function mongoDisabledOrMissingConfig() {
   const dis =
@@ -91,7 +107,8 @@ async function createSession(req, res) {
       action: 'session.created',
       resourceType: 'session',
       resourceId: String(req.body.id || ''),
-      summary: `Created session ${req.body.id || ''}`,
+      summary: sessionCreatedSummary(req.body, auditActor(req)),
+      after: req.body,
     });
     return res.status(201).end();
   } catch (err) {
@@ -119,7 +136,8 @@ async function updateSession(req, res) {
       action: 'session.updated',
       resourceType: 'session',
       resourceId: String(id),
-      summary: `Updated session ${id}`,
+      summary: sessionUpdatedSummary(body, auditActor(req)),
+      after: body,
     });
     return res.status(204).end();
   } catch (err) {
@@ -134,13 +152,15 @@ async function deleteSession(req, res) {
   try {
     const id = req.params.id;
     if (!validateSessionId(id)) return res.status(400).send('Invalid id.');
+    const existing = await findSessionById(id);
     const r = await deleteSessionById(id);
     if (r.deletedCount === 0) return res.status(404).type('text/plain').send('Not found.');
     await recordAudit(req, {
       action: 'session.deleted',
       resourceType: 'session',
       resourceId: String(id),
-      summary: `Deleted session ${id}`,
+      summary: sessionDeletedSummary(existing || { id }, auditActor(req)),
+      before: existing || null,
     });
     return res.status(204).end();
   } catch (err) {

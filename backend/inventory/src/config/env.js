@@ -33,6 +33,19 @@ const env = {
       Math.max(60, Number(process.env.INVENTORY_S3_SIGNED_URL_TTL || 3600) || 3600)
     ),
   },
+  ses: {
+    region: String(process.env.SES_REGION || process.env.AWS_REGION || process.env.INVENTORY_S3_REGION || '').trim(),
+    from: String(process.env.SES_FROM_EMAIL || process.env.SES_FROM || '').trim(),
+    amCreatedTemplate: String(
+      process.env.SES_AM_CREATED_TEMPLATE || 'WIZ_INVENTORY_AM_CREDENTIALS_TEMPLATE'
+    ).trim(),
+    amResetTemplate: String(
+      process.env.SES_AM_REGENERATED_TEMPLATE || 'WIZ_INVENTORY_AM_PASSWORD_RESET_TEMPLATE'
+    ).trim(),
+    accessKeyId: String(process.env.AWS_NOTIF_ACCESS_KEY || process.env.AWS_ACCESS_KEY_ID || '').trim() || undefined,
+    secretAccessKey: String(process.env.AWS_NOTIF_SECRET_KEY || process.env.AWS_SECRET_ACCESS_KEY || '').trim() || undefined,
+    logoUrl: String(process.env.WIZKLUB_LOGO_PATH || '').trim(),
+  },
 };
 
 if (!env.mongoUri) {

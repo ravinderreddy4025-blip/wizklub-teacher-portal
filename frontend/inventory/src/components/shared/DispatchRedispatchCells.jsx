@@ -96,6 +96,51 @@ export function KitDetailsCell({ item, showShippedDate = true }) {
 
 /** Compact quantity: current only; optional muted original if different. */
 export function QuantityCell({ item }) {
+  if (item?.quantityInitial != null || item?.quantityAcknowledged != null) {
+    const initial = Number(item.quantityInitial ?? item.quantity) || 0;
+    const ack = Number(item.quantityAcknowledged ?? item.acknowledgedUnits) || 0;
+    const affected = Number(item.quantityAffected) || 0;
+    const replaced = Number(item.quantityReplaced) || 0;
+    const outstanding = item.outstandingQuantity != null
+      ? Number(item.outstandingQuantity)
+      : Math.max(0, initial - ack);
+    return (
+      <div className="space-y-0.5 text-[11px] font-semibold text-slate-800">
+        <p>sent {initial} · ok {ack}</p>
+        {affected > 0 && (
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            affected {affected}
+            {replaced > 0 ? ` · repl ${replaced}` : outstanding > 0 ? ' · repl pending' : ''}
+          </p>
+        )}
+        {item.status === 'Completed' && (
+          outstanding > 0 ? (
+            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600">
+              Cycle completed · outstanding {outstanding}
+            </p>
+          ) : (
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">
+              Fulfilled
+            </p>
+          )
+        )}
+      </div>
+    );
+  }
+  if (item?.acknowledgedUnits != null) {
+    const ack = Number(item.acknowledgedUnits) || 0;
+    const cycleQty = Number(item.quantity) || 0;
+    return (
+      <div className="space-y-0.5 text-sm font-semibold text-slate-800">
+        <p>x{ack}</p>
+        {cycleQty > 0 && cycleQty !== ack && (
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            this cycle x{cycleQty}
+          </p>
+        )}
+      </div>
+    );
+  }
   const qty = getDispatchQuantityDisplay(item);
   if (qty.mode === 'single') {
     return <span className="font-semibold text-slate-800">x{qty.quantity}</span>;

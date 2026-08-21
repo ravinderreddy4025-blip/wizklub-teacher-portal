@@ -55,7 +55,7 @@ async function postUser(req, res) {
       action: 'user.created',
       resourceType: 'user',
       resourceId: user.id,
-      summary: `Created ${role} user ${username}`,
+      summary: `Created ${role.replace('_', ' ')} account`,
       after: user,
     });
     return res.status(201).json({ user });
@@ -95,7 +95,7 @@ async function putUser(req, res) {
       action: 'user.updated',
       resourceType: 'user',
       resourceId: id,
-      summary: `Updated user ${user.username}`,
+      summary: 'Updated account details',
       before,
       after: user,
     });
@@ -122,7 +122,7 @@ async function putUserPassword(req, res) {
     action: 'user.password_reset',
     resourceType: 'user',
     resourceId: id,
-    summary: `Password reset for ${user.username}`,
+    summary: 'Reset password',
   });
   return res.json({ ok: true });
 }
@@ -138,7 +138,7 @@ async function deleteUser(req, res) {
     action: 'user.deactivated',
     resourceType: 'user',
     resourceId: id,
-    summary: `Deactivated user ${before.username}`,
+    summary: 'Deactivated account',
     before,
     after: user,
   });
