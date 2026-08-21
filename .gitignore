@@ -47,7 +47,7 @@ _local/
 _mongo_relay.cjs
 test-mongo.js
 desktop.ini
-Inventory/
+/Inventory/
 docs/
 qa/
 
