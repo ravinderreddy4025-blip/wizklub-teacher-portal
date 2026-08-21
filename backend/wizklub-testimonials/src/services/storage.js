@@ -21,17 +21,34 @@ const MIME_TO_EXT = {
 let storage = null
 let bucket = null
 
+function parseGcsCredentials() {
+  if (config.gcs.credentialsBase64) {
+    try {
+      return JSON.parse(Buffer.from(config.gcs.credentialsBase64, 'base64').toString('utf8'))
+    } catch {
+      throw new Error('[GCS] Failed to parse GCS_CREDENTIALS_BASE64. Use base64-encoded service account JSON.')
+    }
+  }
+
+  if (config.gcs.credentials) {
+    try {
+      return JSON.parse(config.gcs.credentials)
+    } catch {
+      throw new Error('[GCS] Failed to parse GCS_CREDENTIALS JSON. Paste minified service account JSON in .env.')
+    }
+  }
+
+  return null
+}
+
 function getBucket() {
   if (!bucket) {
-    const opts = {}
-    if (config.gcs.credentials) {
-      try {
-        opts.credentials = JSON.parse(config.gcs.credentials)
-      } catch {
-        console.error('[GCS] Failed to parse GCS_CREDENTIALS JSON. Falling back to default auth.')
-      }
+    const credentials = parseGcsCredentials()
+    if (!credentials) {
+      throw new Error('[GCS] Missing credentials. Set GCS_CREDENTIALS or GCS_CREDENTIALS_BASE64 in .env.')
     }
-    storage = new Storage(opts)
+
+    storage = new Storage({ credentials })
     bucket = storage.bucket(config.gcs.bucketName)
   }
   return bucket

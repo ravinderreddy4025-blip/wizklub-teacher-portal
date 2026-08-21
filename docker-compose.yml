@@ -50,7 +50,7 @@ services:
       GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
       GCS_FOLDER: ${GCS_FOLDER:-wizklub}
       GCS_CREDENTIALS: ${GCS_CREDENTIALS:-}
-      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcs-credentials.json
+      GCS_CREDENTIALS_BASE64: ${GCS_CREDENTIALS_BASE64:-}
 
       # Inventory / school portal (port 5002)
       INVENTORY_PORT: ${INVENTORY_PORT:-5002}
@@ -78,8 +78,6 @@ services:
       SES_AM_CREATED_TEMPLATE: ${SES_AM_CREATED_TEMPLATE:-WIZ_INVENTORY_AM_CREDENTIALS_TEMPLATE}
       SES_AM_REGENERATED_TEMPLATE: ${SES_AM_REGENERATED_TEMPLATE:-WIZ_INVENTORY_AM_PASSWORD_RESET_TEMPLATE}
       WIZKLUB_LOGO_PATH: ${WIZKLUB_LOGO_PATH:-backend/inventory/assets/wizklub-futurz-logo.png}
-    volumes:
-      - ./gcs-credentials.json:/run/secrets/gcs-credentials.json:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     expose:

@@ -16,9 +16,10 @@ export const config = {
   inventoryApiBaseUrl: String(process.env.INVENTORY_API_BASE_URL || 'http://127.0.0.1:5002/api').replace(/\/$/, ''),
   internalBridgeSecret: String(process.env.INTERNAL_BRIDGE_SECRET || '').trim(),
   gcs: {
-    bucketName: process.env.GCS_BUCKET_NAME ?? '',
-    folder: process.env.GCS_FOLDER ?? 'wizklub',
-    credentials: process.env.GCS_CREDENTIALS ?? '',
+    bucketName: String(process.env.GCS_BUCKET_NAME || '').trim(),
+    folder: String(process.env.GCS_FOLDER || 'wizklub').trim(),
+    credentials: String(process.env.GCS_CREDENTIALS || '').trim(),
+    credentialsBase64: String(process.env.GCS_CREDENTIALS_BASE64 || '').trim(),
   },
   lms: {
     baseUrl: String(process.env.LMS_BASE_URL || '').trim().replace(/\/$/, ''),
