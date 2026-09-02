@@ -5,12 +5,16 @@ import GroupPhotoSheet from '../components/GroupPhotoSheet'
 import QuickUploadSheet from '../components/QuickUploadSheet'
 import AppShell from '../components/layout/AppShell'
 import LoadingScreen from '../components/ui/LoadingScreen'
-import { IconCamera, IconChevronRight, IconSearch, IconUpload } from '../components/icons/Icons'
+import { IconCamera, IconChevronRight, IconSearch } from '../components/icons/Icons'
 import { useNavigate } from '../router'
 import '../styles/app.css'
 import './pages.css'
 
 const filters = ['all', 'uploaded', 'pending']
+const pageViews = [
+  { id: 'students', label: 'Students' },
+  { id: 'assessments', label: 'Assessments' },
+]
 
 const INITIALS_COLORS = [
   '#E57373', '#F06292', '#BA68C8', '#9575CD',
@@ -27,6 +31,33 @@ function getInitialsColor(name) {
   let hash = 0
   for (let i = 0; i < (name ?? '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
   return INITIALS_COLORS[Math.abs(hash) % INITIALS_COLORS.length]
+}
+
+function formatAssessmentDate(value) {
+  if (!value) return 'Not scheduled'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Not scheduled'
+  return date.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function formatAssessmentStatus(status) {
+  const normalized = String(status || '').trim().toUpperCase()
+  if (!normalized) return 'Unknown'
+  return normalized
+    .split('_')
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(' ')
+}
+
+function assessmentStatusClass(status) {
+  const normalized = String(status || '').trim().toUpperCase()
+  if (normalized === 'COMPLETED' || normalized === 'DONE') return 'assessment-status--done'
+  if (normalized === 'IN_PROGRESS' || normalized === 'STARTED') return 'assessment-status--active'
+  return 'assessment-status--pending'
 }
 
 function Avatar({ image, name, size = 40 }) {
@@ -60,9 +91,13 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
     () => new URLSearchParams(window.location.search).get('school_id') ?? '',
   )
   const schoolId = schoolIdProp || schoolIdFromQuery
+  const [pageView, setPageView] = useState('students')
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [data, setData] = useState(null)
+  const [assessments, setAssessments] = useState(null)
+  const [assessmentsError, setAssessmentsError] = useState('')
+  const [assessmentsLoading, setAssessmentsLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [uploadStudent, setUploadStudent] = useState(null)
   const [fabPickerOpen, setFabPickerOpen] = useState(false)
@@ -85,9 +120,33 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
     })
   }, [batchId, filter, schoolId])
 
+  const loadAssessments = useCallback(() => {
+    setAssessmentsLoading(true)
+    setAssessmentsError('')
+    return api.getBatchAssessments(batchId).then((result) => {
+      setAssessmentsLoading(false)
+      if (!result) {
+        setAssessmentsError('Unable to load assessments for this batch.')
+        setAssessments({ batch_id: batchId, sessions: [] })
+        return
+      }
+      if (result.forbidden) {
+        setAssessmentsError('You do not have access to this batch.')
+        setAssessments({ batch_id: batchId, sessions: [] })
+        return
+      }
+      setAssessments(result)
+    })
+  }, [batchId])
+
   useEffect(() => {
     loadStudents()
   }, [loadStudents])
+
+  useEffect(() => {
+    if (pageView !== 'assessments' || assessments !== null || assessmentsLoading) return
+    loadAssessments()
+  }, [pageView, assessments, assessmentsLoading, loadAssessments])
 
   if (!data) {
     return (
@@ -102,11 +161,15 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
   )
 
   const sheetOpen = Boolean(uploadStudent) || fabPickerOpen
+  const showStudents = pageView === 'students'
+  const assessmentSessions = (assessments?.sessions ?? []).filter(
+    (session) => session?.type === 'assessment' && session?.is_scannable !== false,
+  )
 
   return (
     <AppShell
       topBarVariant="back"
-      showFab
+      showFab={showStudents}
       fabIcon="camera"
       onFabClick={() => setFabPickerOpen(true)}
       activeTab="schools"
@@ -119,104 +182,178 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
             <span className="breadcrumb__sep">›</span>
             <span className="breadcrumb__active">{data.batch.name}</span>
           </nav>
-          <h1 className="page__title">Students</h1>
-          {loadError ? (
-            <p className="page__subtitle" style={{ color: '#b45309' }}>{loadError}</p>
+          <h1 className="page__title">{showStudents ? 'Students' : 'Assessments'}</h1>
+          {showStudents ? (
+            loadError ? (
+              <p className="page__subtitle" style={{ color: '#b45309' }}>{loadError}</p>
+            ) : (
+              <p className="page__subtitle" style={{ fontSize: 12, marginBottom: 4 }}>
+                Upload group photo / video or tap a student camera for individual media.
+              </p>
+            )
           ) : (
             <p className="page__subtitle" style={{ fontSize: 12, marginBottom: 4 }}>
-              Upload group photo / video or tap a student camera for individual media.
+              Batch assessment sessions from the curriculum schedule.
             </p>
           )}
         </div>
 
-        <section className="group-photo-card" aria-label={BATCH_GROUP_PHOTO_LABEL}>
-          <div className="group-photo-card__header">
-            <h2 className="group-photo-card__title">{BATCH_GROUP_PHOTO_LABEL}</h2>
-          </div>
-
-          <div className="group-photo-card__actions">
+        <div className="chip-row batch-page-tabs">
+          {pageViews.map((view) => (
             <button
+              key={view.id}
               type="button"
-              className="group-photo-card__btn group-photo-card__btn--camera"
-              onClick={() => setGroupPhotoOpen(true)}
+              className={`chip ${pageView === view.id ? 'chip--active' : ''}`}
+              onClick={() => setPageView(view.id)}
             >
-              <IconCamera size={16} />
-              Add / View Media
+              {view.label}
             </button>
-          </div>
-        </section>
-
-        <div className="sticky-filters">
-          <div className="search-input-wrap">
-            <IconSearch className="search-icon" />
-            <input
-              type="search"
-              className="search-input"
-              placeholder="Search by student name…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="chip-row">
-            {filters.map((f) => (
-              <button
-                key={f}
-                type="button"
-                className={`chip ${filter === f ? 'chip--active' : ''}`}
-                onClick={() => setFilter(f)}
-              >
-                {f === 'all' ? 'All' : f === 'uploaded' ? 'Uploaded' : 'Pending'}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
 
-        <div className="student-list">
-          {filtered.length === 0 ? (
-            <div className="empty-state">
-              <p className="empty-state__title">No students found</p>
-              <p className="empty-state__text">Try a different filter or search term.</p>
-            </div>
-          ) : (
-            filtered.map((student) => (
-              <div key={student.id} className="list-row-wrap">
+        {showStudents ? (
+          <>
+            <section className="group-photo-card" aria-label={BATCH_GROUP_PHOTO_LABEL}>
+              <div className="group-photo-card__header">
+                <h2 className="group-photo-card__title">{BATCH_GROUP_PHOTO_LABEL}</h2>
+              </div>
+
+              <div className="group-photo-card__actions">
                 <button
                   type="button"
-                  className="list-row list-row__main"
-                  onClick={() => navigate(`/students/${student.id}`)}
+                  className="group-photo-card__btn group-photo-card__btn--camera"
+                  onClick={() => setGroupPhotoOpen(true)}
                 >
-                  <div className="list-row__avatar">
-                    <Avatar image={student.image} name={student.full_name} size={40} />
-                  </div>
-                  <div className="list-row__info">
-                    <p className="list-row__name">{student.full_name}</p>
-                    <p className="list-row__meta">
-                      Roll {student.roll_number} · {student.categories_done}/{student.categories_total}{' '}
-                      categories
-                    </p>
-                  </div>
-                  <div className="list-row__right">
-                    <CompletionRing value={student.completion_pct} />
-                    <span className="chevron-btn" aria-hidden="true">
-                      <IconChevronRight size={12} />
-                    </span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className="list-row__upload-btn"
-                  aria-label={`Quick upload for ${student.full_name}`}
-                  onClick={() => {
-                    setFabPickerOpen(false)
-                    setUploadStudent(student)
-                  }}
-                >
-                  <IconCamera size={18} />
+                  <IconCamera size={16} />
+                  Add / View Media
                 </button>
               </div>
-            ))
-          )}
-        </div>
+            </section>
+
+            <div className="sticky-filters">
+              <div className="search-input-wrap">
+                <IconSearch className="search-icon" />
+                <input
+                  type="search"
+                  className="search-input"
+                  placeholder="Search by student name…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="chip-row">
+                {filters.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`chip ${filter === f ? 'chip--active' : ''}`}
+                    onClick={() => setFilter(f)}
+                  >
+                    {f === 'all' ? 'All' : f === 'uploaded' ? 'Uploaded' : 'Pending'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="student-list">
+              {filtered.length === 0 ? (
+                <div className="empty-state">
+                  <p className="empty-state__title">No students found</p>
+                  <p className="empty-state__text">Try a different filter or search term.</p>
+                </div>
+              ) : (
+                filtered.map((student) => (
+                  <div key={student.id} className="list-row-wrap">
+                    <button
+                      type="button"
+                      className="list-row list-row__main"
+                      onClick={() => navigate(`/students/${student.id}`)}
+                    >
+                      <div className="list-row__avatar">
+                        <Avatar image={student.image} name={student.full_name} size={40} />
+                      </div>
+                      <div className="list-row__info">
+                        <p className="list-row__name">{student.full_name}</p>
+                        <p className="list-row__meta">
+                          Roll {student.roll_number} · {student.categories_done}/{student.categories_total}{' '}
+                          categories
+                        </p>
+                      </div>
+                      <div className="list-row__right">
+                        <CompletionRing value={student.completion_pct} />
+                        <span className="chevron-btn" aria-hidden="true">
+                          <IconChevronRight size={12} />
+                        </span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className="list-row__upload-btn"
+                      aria-label={`Quick upload for ${student.full_name}`}
+                      onClick={() => {
+                        setFabPickerOpen(false)
+                        setUploadStudent(student)
+                      }}
+                    >
+                      <IconCamera size={18} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        ) : assessmentsLoading && !assessments ? (
+          <LoadingScreen message="Loading assessments…" />
+        ) : (
+          <div className="assessment-list">
+            {assessmentsError ? (
+              <p className="page__subtitle" style={{ color: '#b45309', marginBottom: 12 }}>
+                {assessmentsError}
+              </p>
+            ) : null}
+            {assessmentSessions.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-state__title">No assessments found</p>
+                <p className="empty-state__text">
+                  This batch has no assessment sessions in the curriculum schedule.
+                </p>
+              </div>
+            ) : (
+              assessmentSessions.map((session) => {
+                const sessionId = String(session.session_id || '').trim()
+                const conductPath = schoolId
+                  ? `/schools/${schoolId}/batches/${batchId}/assessments/${sessionId}`
+                  : `/batches/${batchId}/assessments/${sessionId}`
+                const appBase = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+                const conductHref = `${appBase}${conductPath}`
+                return (
+                  <a
+                    key={sessionId || session.title}
+                    href={conductHref}
+                    className="assessment-card assessment-card--clickable"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      if (!sessionId) return
+                      navigate(conductPath)
+                    }}
+                  >
+                    <div className="assessment-card__main">
+                      <p className="assessment-card__title">{session.title}</p>
+                      <p className="assessment-card__meta">
+                        {formatAssessmentDate(session.scheduled_date)}
+                        {session.duration ? ` · ${session.duration} min` : ''}
+                      </p>
+                    </div>
+                    <span className={`assessment-status ${assessmentStatusClass(session.status)}`}>
+                      {formatAssessmentStatus(session.status)}
+                    </span>
+                    <IconChevronRight className="assessment-card__chevron" size={18} />
+                  </a>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
 
       <QuickUploadSheet

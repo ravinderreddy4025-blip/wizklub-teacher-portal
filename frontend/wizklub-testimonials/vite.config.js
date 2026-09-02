@@ -10,10 +10,21 @@ const inventoryFrontendRoot = path.join(repoRoot, 'frontend/inventory')
 const schoolPortalRoot = path.join(repoRoot, 'school-portal/frontend/src')
 const inventoryPkg = require(path.join(inventoryFrontendRoot, 'package.json'))
 
-const inventoryDependencyAliases = Object.keys(inventoryPkg.dependencies || {}).reduce((acc, dep) => {
-  acc[dep] = path.join(inventoryFrontendRoot, 'node_modules', dep)
-  return acc
-}, {})
+// Keep React (and friends) on the testimonials install. Aliasing them into
+// inventory/node_modules breaks Docker builds when that install is incomplete.
+const SHARED_INVENTORY_DEPS = new Set([
+  'react',
+  'react-dom',
+  'react-router-dom',
+  'react-is',
+])
+
+const inventoryDependencyAliases = Object.keys(inventoryPkg.dependencies || {})
+  .filter((dep) => !SHARED_INVENTORY_DEPS.has(dep))
+  .reduce((acc, dep) => {
+    acc[dep] = path.join(inventoryFrontendRoot, 'node_modules', dep)
+    return acc
+  }, {})
 
 function normalizeAppBase(raw) {
   const s = String(raw || '/').trim() || '/'
@@ -112,12 +123,23 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
+          // OpenCV.js is ~10MB — cache on demand instead of precaching it.
+          globIgnores: ['**/vendor/opencv/**'],
           navigateFallback: `${base}index.html`,
           navigateFallbackDenylist: [/\/api\//, /\/inventory-api\//, /\/uploads\//, /\/health(?:\/|$)/],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: false,
           runtimeCaching: [
+            {
+              urlPattern: /\/vendor\/opencv\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'opencv-js-assets',
+                expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',

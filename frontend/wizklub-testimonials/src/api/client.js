@@ -4,10 +4,23 @@
  */
 
 import { validateGroupPhotoFile, validateUploadFile } from '../lib/uploads'
+import {
+  batchAssessmentSessionsPath,
+  batchSessionConductPath,
+  batchSessionLevelMediaPath,
+  batchSessionLevelResponsesPath,
+  batchSessionSubmitPath,
+} from './batchSessionPaths'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 const API_BASE =
   import.meta.env.VITE_API_URL ?? (import.meta.env.BASE_URL || '').replace(/\/$/, '')
+const WIZKLUB_API_BASE = String(
+  import.meta.env.VITE_WIZKLUB_API_BASE_URL || 'https://api.wizklub.com',
+)
+  .trim()
+  .replace(/\/$/, '')
+  .replace(/\/v1$/i, '')
 
 let authToken = null
 let refreshToken = null
@@ -89,7 +102,7 @@ async function tryRefresh() {
   return refreshPromise
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, base = API_BASE) {
   const headers = { ...(options.headers ?? {}) }
 
   if (authToken) {
@@ -100,7 +113,7 @@ async function request(path, options = {}) {
     headers['Content-Type'] = 'application/json'
   }
 
-  let response = await fetch(`${API_BASE}${path}`, {
+  let response = await fetch(`${base}${path}`, {
     ...options,
     headers,
   })
@@ -109,7 +122,7 @@ async function request(path, options = {}) {
     const refreshed = await tryRefresh()
     if (refreshed) {
       headers.Authorization = `Bearer ${authToken}`
-      response = await fetch(`${API_BASE}${path}`, { ...options, headers })
+      response = await fetch(`${base}${path}`, { ...options, headers })
     }
   }
 
@@ -302,6 +315,104 @@ export const api = {
     if (result.status === 403) return { forbidden: true }
     if (!result.ok) return null
     return result.data
+  },
+
+  async getBatchAssessments(batchId) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      const assessmentResult = mockStore.getBatchAssessments(batchId)
+      if (!assessmentResult) return null
+      if (assessmentResult.forbidden) return { forbidden: true }
+      return assessmentResult
+    }
+
+    const path = batchAssessmentSessionsPath(batchId)
+    const result = await request(path, {}, WIZKLUB_API_BASE)
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) return null
+    const payload = result.data
+    return payload?.data ?? payload
+  },
+
+  async getAssessmentConduct(batchId, sessionId) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      const conductResult = mockStore.getAssessmentConduct(batchId, sessionId)
+      if (!conductResult) return null
+      if (conductResult.forbidden) return { forbidden: true }
+      return conductResult
+    }
+
+    const path = batchSessionConductPath(batchId, sessionId)
+    const result = await request(path, {}, WIZKLUB_API_BASE)
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) {
+      return {
+        error: true,
+        status: result.status,
+        message: result.data?.message || result.data?.error || 'Failed to load assessment conduct context.',
+      }
+    }
+    const payload = result.data
+    return payload?.data ?? payload
+  },
+
+  async getAssessmentQuestionMedia(batchId, sessionId, questionId) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      const conductResult = mockStore.getAssessmentConduct(batchId, sessionId)
+      if (!conductResult || conductResult.forbidden) return null
+      const questions = conductResult.questions || []
+      return questions.find((q) => q.question_id === questionId) || null
+    }
+
+    const path = batchSessionLevelMediaPath(batchId, sessionId, questionId)
+    const result = await request(path, {}, WIZKLUB_API_BASE)
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) return null
+    const payload = result.data
+    return payload?.data ?? payload
+  },
+
+  async getQuestionResponses(batchId, sessionId, questionId) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.getQuestionResponses(batchId, sessionId, questionId)
+    }
+
+    const path = batchSessionLevelResponsesPath(batchId, sessionId, questionId)
+    const result = await request(path, {}, WIZKLUB_API_BASE)
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) return null
+    const payload = result.data
+    return payload?.data ?? payload
+  },
+
+  async submitAssessment(batchId, sessionId, body) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.submitAssessment(batchId, sessionId, body)
+    }
+
+    const path = batchSessionSubmitPath(batchId, sessionId)
+    const result = await request(
+      path,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+      WIZKLUB_API_BASE,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) {
+      return {
+        ok: false,
+        status: result.status,
+        error: result.message || result.error || 'Failed to submit assessment.',
+      }
+    }
+    const payload = result.data
+    return { ok: true, data: payload?.data ?? payload }
   },
 
   async getStudent(studentId) {

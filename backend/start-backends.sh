@@ -77,7 +77,7 @@ TESTIMONIALS_PID=$!
   export NODE_ENV="${INVENTORY_NODE_ENV:-${NODE_ENV:-production}}"
   export PORT="${INVENTORY_PORT:-5002}"
   export JWT_SECRET="${JWT_SECRET:?JWT_SECRET is required for inventory auth}"
-  export WIZKLUB_API_BASE_URL="${WIZKLUB_API_BASE_URL:-https://api.wizklub.com/v1}"
+  export WIZKLUB_API_BASE_URL="${WIZKLUB_API_BASE_URL:-https://api.wizklub.com}"
   export INTERNAL_BRIDGE_SECRET="${INTERNAL_BRIDGE_SECRET:?INTERNAL_BRIDGE_SECRET is required}"
   export NODE_PATH="/app/backend/inventory/node_modules${NODE_PATH:+:$NODE_PATH}"
   if [ -n "${INVENTORY_MONGODB_URI:-}" ]; then

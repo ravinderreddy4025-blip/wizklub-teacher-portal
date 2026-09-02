@@ -43,7 +43,7 @@ services:
       # WizKlub Teachers Portal backend
       TESTIMONIALS_NODE_ENV: ${TESTIMONIALS_NODE_ENV:-production}
       TESTIMONIALS_PORT: ${TESTIMONIALS_PORT:-3001}
-      WIZKLUB_API_BASE_URL: ${WIZKLUB_API_BASE_URL:-https://api.wizklub.com/v1}
+      WIZKLUB_API_BASE_URL: ${WIZKLUB_API_BASE_URL:-https://api.wizklub.com}
       LMS_BASE_URL: ${LMS_BASE_URL:-}
       LMS_API_KEY: ${LMS_API_KEY:-}
       LMS_API_SECRET: ${LMS_API_SECRET:-}
@@ -107,6 +107,10 @@ services:
         TESTIMONIALS_BASE_PATH: /wizklub-testimonials/
         INVENTORY_BASE_PATH: /inventory/
         VITE_USE_MOCK: "false"
+        # Baked into the SPA at build time. Browser calls wizklub_api directly (not nginx :8080).
+        # Prod default: https://api.wizklub.com — override in .env for local API on the host:
+        #   VITE_WIZKLUB_API_BASE_URL=http://127.0.0.1:8000
+        VITE_WIZKLUB_API_BASE_URL: ${VITE_WIZKLUB_API_BASE_URL:-https://api.wizklub.com}
     restart: unless-stopped
     depends_on:
       backend:

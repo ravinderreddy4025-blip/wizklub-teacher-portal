@@ -1,16 +1,17 @@
-const WIZKLUB_BASE = String(process.env.WIZKLUB_API_BASE_URL || 'https://api.wizklub.com/v1')
+const WIZKLUB_API_BASE = String(process.env.WIZKLUB_API_BASE_URL || 'https://api.wizklub.com')
   .trim()
   .replace(/\/$/, '')
+  .replace(/\/v1$/i, '')
 
 export const WIZKLUB_URLS = {
-  login: `${WIZKLUB_BASE}/auth/login`,
-  refresh: `${WIZKLUB_BASE}/auth/refresh`,
-  logout: `${WIZKLUB_BASE}/auth/logout`,
-  schoolDetails: `${WIZKLUB_BASE}/school-details`,
-  batches: `${WIZKLUB_BASE}/batches`,
-  batchStudents: `${WIZKLUB_BASE}/batches/students`,
+  login: `${WIZKLUB_API_BASE}/v1/auth/login`,
+  refresh: `${WIZKLUB_API_BASE}/v1/auth/refresh`,
+  logout: `${WIZKLUB_API_BASE}/v1/auth/logout`,
+  schoolDetails: `${WIZKLUB_API_BASE}/v1/school-details`,
+  batches: `${WIZKLUB_API_BASE}/v1/batches`,
+  batchStudents: `${WIZKLUB_API_BASE}/v1/batches/students`,
   batchFeedbackSummary: (batchId) =>
-    `${WIZKLUB_BASE}/batches/${encodeURIComponent(batchId)}/feedback-summary`,
+    `${WIZKLUB_API_BASE}/v1/batches/${encodeURIComponent(batchId)}/feedback-summary`,
   batchProgressOverview: (batchId) =>
-    `${WIZKLUB_BASE}/batches/${encodeURIComponent(batchId)}/progress-overview`,
+    `${WIZKLUB_API_BASE}/v1/batches/${encodeURIComponent(batchId)}/progress-overview`,
 }

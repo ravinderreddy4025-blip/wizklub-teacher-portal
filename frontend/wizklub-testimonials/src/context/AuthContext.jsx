@@ -66,14 +66,20 @@ export function AuthProvider({ children }) {
 
     const saved = loadSession()
     if (saved) {
-      api.restoreSession(saved).then((restored) => {
-        if (restored) setTeacher(restored)
-        else {
+      api
+        .restoreSession(saved)
+        .then((restored) => {
+          if (restored) setTeacher(restored)
+          else {
+            clearSession()
+            toast.warning('Session expired. Please log in again.')
+          }
+        })
+        .catch(() => {
           clearSession()
           toast.warning('Session expired. Please log in again.')
-        }
-        setLoading(false)
-      })
+        })
+        .finally(() => setLoading(false))
       return
     }
     setLoading(false)

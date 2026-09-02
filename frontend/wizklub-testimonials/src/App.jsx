@@ -4,6 +4,7 @@ import InventorySection from './inventory/InventorySection'
 import Login from './components/Login'
 import PwaInstallBanner from './components/PwaInstallBanner'
 import { RequireAuth } from './context/AuthContext.jsx'
+import AssessmentConduct from './pages/AssessmentConduct'
 import Analytics from './pages/Analytics'
 import Dashboard from './pages/Dashboard'
 import BatchSelection from './pages/BatchSelection'
@@ -31,7 +32,12 @@ function AppRoutes() {
 
   const batchRoute = matchPath(path, '/schools/:schoolId/batches')
   const schoolStudentsRoute = matchPath(path, '/schools/:schoolId/batches/:batchId/students')
+  const schoolAssessmentRoute = matchPath(
+    path,
+    '/schools/:schoolId/batches/:batchId/assessments/:sessionId',
+  )
   const studentsRoute = matchPath(path, '/batches/:batchId/students')
+  const assessmentRoute = matchPath(path, '/batches/:batchId/assessments/:sessionId')
   const studentRoute = matchPath(path, '/students/:studentId')
   const feedbackDetailRoute = matchPath(path, '/feedback/:feedbackId')
 
@@ -48,7 +54,9 @@ function AppRoutes() {
     path === '/' ||
     batchRoute ||
     schoolStudentsRoute ||
+    schoolAssessmentRoute ||
     studentsRoute ||
+    assessmentRoute ||
     studentRoute ||
     (feedbackDetailRoute && feedbackDetailRoute.feedbackId !== 'new')
 
@@ -72,6 +80,19 @@ function AppRoutes() {
       )}
       {!schoolStudentsRoute && studentsRoute && (
         <StudentList batchId={studentsRoute.batchId} />
+      )}
+      {schoolAssessmentRoute && (
+        <AssessmentConduct
+          schoolId={schoolAssessmentRoute.schoolId}
+          batchId={schoolAssessmentRoute.batchId}
+          sessionId={schoolAssessmentRoute.sessionId}
+        />
+      )}
+      {!schoolAssessmentRoute && assessmentRoute && (
+        <AssessmentConduct
+          batchId={assessmentRoute.batchId}
+          sessionId={assessmentRoute.sessionId}
+        />
       )}
       {studentRoute && <StudentProfile studentId={studentRoute.studentId} />}
       {path === '/profile' && <Profile />}

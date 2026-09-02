@@ -93,6 +93,61 @@ let batchUploads = {
   },
 }
 
+/** Static mock Question Conduct State fixtures (API-shaped only; no domain rules). */
+const MOCK_CONDUCT_STUDENTS = [
+  {
+    student_id: 'rahul',
+    username: 'rahul',
+    name: 'Rahul',
+    has_sr_card: true,
+    sr_code_id: 40,
+    response: {
+      selected_answer: null,
+      verified: false,
+      submitted: false,
+      score: null,
+      timestamp: null,
+    },
+  },
+  {
+    student_id: 'priya',
+    username: 'priya',
+    name: 'Priya',
+    has_sr_card: true,
+    sr_code_id: 41,
+    response: {
+      selected_answer: null,
+      verified: false,
+      submitted: false,
+      score: null,
+      timestamp: null,
+    },
+  },
+  {
+    student_id: 'amit',
+    username: 'amit',
+    name: 'Amit',
+    has_sr_card: false,
+    sr_code_id: null,
+    response: {
+      selected_answer: null,
+      verified: false,
+      submitted: false,
+      score: null,
+      timestamp: null,
+    },
+  },
+]
+
+const MOCK_CONDUCT_SUMMARY = {
+  responses_received: 0,
+  responses_expected: 3,
+  verified_students: 0,
+  missing_sr_card_count: 1,
+  completed: false,
+}
+
+
 function getTeacher() {
   return teachers.find((teacher) => teacher.id === sessionTeacherId) ?? null
 }
@@ -332,6 +387,180 @@ export const mockStore = {
       batch: { id: batch.id, name: batch.name, school_id: batch.school_id },
       batch_upload: getBatchUpload(batchId),
       students: filtered,
+    }
+  },
+
+  getBatchAssessments(batchId) {
+    const teacher = getTeacher()
+    if (!teacher) return null
+
+    const batch = getBatchById(batchId)
+    if (!batch) return null
+    if (!getAssignedSchoolIds(teacher.id).includes(batch.school_id)) return { forbidden: true }
+
+    return {
+      batch_id: batchId,
+      sessions: [
+        {
+          session_id: 'assessment-1',
+          title: '1. Assessment - I',
+          type: 'assessment',
+          is_scannable: true,
+          status: 'NOT_STARTED',
+          scheduled_date: null,
+          duration: 45,
+        },
+        {
+          session_id: 'assessment-2',
+          title: '2. Assessment - II',
+          type: 'assessment',
+          is_scannable: true,
+          status: 'COMPLETED',
+          scheduled_date: new Date(Date.now() - 7 * 86400000).toISOString(),
+          duration: 45,
+        },
+        {
+          session_id: 'assessment-3',
+          title: '3. Assessment - III',
+          type: 'assessment',
+          is_scannable: true,
+          status: 'NOT_STARTED',
+          scheduled_date: new Date(Date.now() + 14 * 86400000).toISOString(),
+          duration: 45,
+        },
+      ],
+    }
+  },
+
+  getAssessmentConduct(batchId, sessionId) {
+    const teacher = getTeacher()
+    if (!teacher) return null
+
+    const batch = getBatchById(batchId)
+    if (!batch) return null
+    if (!getAssignedSchoolIds(teacher.id).includes(batch.school_id)) return { forbidden: true }
+
+    const assessments = this.getBatchAssessments(batchId)
+    const session = (assessments?.sessions || []).find((item) => item.session_id === sessionId)
+    if (!session) return null
+
+    return {
+      batch: {
+        id: batchId,
+        name: batch.name || batchId,
+      },
+      assessment: {
+        session_id: sessionId,
+        title: session.title,
+        duration: session.duration ?? 45,
+        status: session.status || 'NOT_STARTED',
+        total_questions: 3,
+      },
+      current_question_index: 0,
+      questions: [
+        {
+          question_id: 'level-1',
+          sequence: 1,
+          question: 'Which shape has three sides?',
+          options: [
+            { id: 'A', text: 'Square' },
+            { id: 'B', text: 'Triangle' },
+            { id: 'C', text: 'Circle' },
+            { id: 'D', text: 'Rectangle' },
+          ],
+          correct_answer: 'B',
+          explanation: 'A triangle has three sides.',
+          marks: 1,
+        },
+        {
+          question_id: 'level-2',
+          sequence: 2,
+          question: 'What is 7 + 5?',
+          options: [
+            { id: 'A', text: '10' },
+            { id: 'B', text: '11' },
+            { id: 'C', text: '12' },
+            { id: 'D', text: '13' },
+          ],
+          correct_answer: 'C',
+          explanation: '7 + 5 = 12.',
+          marks: 1,
+        },
+        {
+          question_id: 'level-3',
+          sequence: 3,
+          question: 'Which planet is known as the Red Planet?',
+          options: [
+            { id: 'A', text: 'Venus' },
+            { id: 'B', text: 'Mars' },
+            { id: 'C', text: 'Jupiter' },
+            { id: 'D', text: 'Mercury' },
+          ],
+          correct_answer: 'B',
+          explanation: 'Mars appears reddish due to iron oxide.',
+          marks: 1,
+        },
+      ],
+      students: MOCK_CONDUCT_STUDENTS.map((student) => ({
+        ...student,
+        response: { ...student.response },
+      })),
+      summary: { ...MOCK_CONDUCT_SUMMARY },
+    }
+  },
+
+  getQuestionResponses(batchId, sessionId, questionId) {
+    const teacher = getTeacher()
+    if (!teacher) return null
+    const batch = getBatchById(batchId)
+    if (!batch) return null
+    if (!getAssignedSchoolIds(teacher.id).includes(batch.school_id)) return { forbidden: true }
+
+    return {
+      question_id: questionId,
+      students: MOCK_CONDUCT_STUDENTS.map((student) => ({
+        ...student,
+        response: { ...student.response },
+      })),
+      summary: { ...MOCK_CONDUCT_SUMMARY },
+    }
+  },
+
+  submitAssessment(batchId, sessionId, body) {
+    const teacher = getTeacher()
+    if (!teacher) return { ok: false, error: 'Not authenticated' }
+    const batch = getBatchById(batchId)
+    if (!batch) return { ok: false, error: 'Batch not found' }
+    if (!getAssignedSchoolIds(teacher.id).includes(batch.school_id)) return { forbidden: true }
+
+    const responses = Array.isArray(body?.responses) ? body.responses : []
+    const byStudent = new Map()
+    for (const row of responses) {
+      const studentId = row?.student_id
+      if (!studentId) continue
+      if (!byStudent.has(studentId)) byStudent.set(studentId, [])
+      byStudent.get(studentId).push(row)
+    }
+
+    const students = [...byStudent.keys()].map((studentId) => ({
+      student_id: studentId,
+      status: 'COMPLETED',
+      score_total: byStudent.get(studentId).length,
+      score_percentage: 100,
+      points_awarded: 10,
+      failure_stage: null,
+    }))
+
+    return {
+      ok: true,
+      data: {
+        batch_id: batchId,
+        session_id: sessionId,
+        submitted_count: students.length,
+        skipped_count: 0,
+        failed_count: 0,
+        students,
+      },
     }
   },
 

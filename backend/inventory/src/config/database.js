@@ -36,7 +36,12 @@ async function syncUserEmailIndex() {
 
   }
 
-  await User.syncIndexes();
+  try {
+    await User.syncIndexes();
+  } catch (error) {
+    // Older MongoDB (e.g. remote/dev) may reject partialFilterExpression with $in.
+    console.warn('Could not sync User indexes:', error.message);
+  }
 
 }
 
@@ -128,7 +133,11 @@ async function syncDispatchIndexes() {
 
   }
 
-  await Dispatch.syncIndexes();
+  try {
+    await Dispatch.syncIndexes();
+  } catch (error) {
+    console.warn('Could not sync Dispatch indexes:', error.message);
+  }
 
 }
 
