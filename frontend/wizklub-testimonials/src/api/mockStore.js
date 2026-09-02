@@ -1,5 +1,8 @@
-import { UPLOAD_STATUS } from './constants'
-import { assetUrl } from '../lib/assets.js'
+const conductDraftResponses = new Map()
+
+function conductDraftKey(batchId, sessionId, questionId, studentId) {
+  return `${batchId}:${sessionId}:${questionId}:${studentId}`
+}
 
 const teachers = [
   {
@@ -516,14 +519,66 @@ export const mockStore = {
     if (!batch) return null
     if (!getAssignedSchoolIds(teacher.id).includes(batch.school_id)) return { forbidden: true }
 
+    const students = MOCK_CONDUCT_STUDENTS.map((student) => {
+      const studentId = student.student_id || student.username
+      const draft = conductDraftResponses.get(
+        conductDraftKey(batchId, sessionId, questionId, studentId),
+      )
+      return {
+        ...student,
+        response: draft
+          ? {
+              selected_answer: draft.selected_answer,
+              verified: true,
+              submitted: true,
+              score: null,
+              timestamp: draft.updated_at,
+            }
+          : { ...student.response },
+      }
+    })
+
+    const responsesReceived = students.filter(
+      (student) => student.response?.selected_answer != null && student.response.selected_answer !== '',
+    ).length
+
     return {
       question_id: questionId,
-      students: MOCK_CONDUCT_STUDENTS.map((student) => ({
-        ...student,
-        response: { ...student.response },
-      })),
-      summary: { ...MOCK_CONDUCT_SUMMARY },
+      students,
+      summary: {
+        ...MOCK_CONDUCT_SUMMARY,
+        responses_received: responsesReceived,
+      },
     }
+  },
+
+  saveQuestionResponses(batchId, sessionId, questionId, responses) {
+    const teacher = getTeacher()
+    if (!teacher) return { ok: false, error: 'Not authenticated' }
+    const batch = getBatchById(batchId)
+    if (!batch) return { ok: false, error: 'Batch not found' }
+    if (!getAssignedSchoolIds(teacher.id).includes(batch.school_id)) return { forbidden: true }
+
+    const now = new Date().toISOString()
+    let saved = 0
+    for (const row of responses || []) {
+      const studentId = row?.student_id
+      const selectedAnswer = row?.selected_answer
+      if (!studentId || !selectedAnswer) continue
+      conductDraftResponses.set(conductDraftKey(batchId, sessionId, questionId, studentId), {
+        student_id: studentId,
+        question_id: questionId,
+        selected_answer: selectedAnswer,
+        updated_at: now,
+      })
+      saved += 1
+    }
+    return { ok: true, data: { question_id: questionId, saved } }
+  },
+
+  deleteQuestionResponse(batchId, sessionId, questionId, studentId) {
+    conductDraftResponses.delete(conductDraftKey(batchId, sessionId, questionId, studentId))
+    return { ok: true }
   },
 
   submitAssessment(batchId, sessionId, body) {

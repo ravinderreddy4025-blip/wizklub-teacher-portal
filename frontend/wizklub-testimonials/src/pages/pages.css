@@ -1098,6 +1098,10 @@
   grid-area: finish;
 }
 
+.conduct-bottom-bar--nav-only {
+  grid-template-areas: "prev scan next";
+}
+
 .conduct-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1423,5 +1427,10 @@
   .conduct-bottom-bar {
     grid-template-columns: 1fr 1.6fr 1fr 1.2fr;
     grid-template-areas: "prev scan next finish";
+  }
+
+  .conduct-bottom-bar--nav-only {
+    grid-template-columns: 1fr 1.6fr 1fr;
+    grid-template-areas: "prev scan next";
   }
 }

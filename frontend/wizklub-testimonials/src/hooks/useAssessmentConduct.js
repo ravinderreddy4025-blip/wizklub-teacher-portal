@@ -42,17 +42,18 @@ function countPendingResponses(pendingResponses) {
 }
 
 function isSuccessfulSubmitStatus(status) {
-  return status === 'COMPLETED' || status === 'SKIPPED_ALREADY_COMPLETED'
+  return status === 'COMPLETED' || status === 'IN_PROGRESS' || status === 'SKIPPED_ALREADY_COMPLETED'
 }
 
-function removeSubmittedStudentsFromPending(pendingResponses, successfulStudentIds) {
-  if (!successfulStudentIds.size) return pendingResponses
+function removeSubmittedResponsesFromPending(pendingResponses, submittedResponses) {
+  if (!submittedResponses?.length) return pendingResponses
   const next = { ...pendingResponses }
-  for (const [questionId, byStudent] of Object.entries(next)) {
-    const remaining = { ...byStudent }
-    for (const studentId of successfulStudentIds) {
-      delete remaining[studentId]
-    }
+  for (const row of submittedResponses) {
+    const questionId = row?.question_id
+    const studentId = row?.student_id
+    if (!questionId || !studentId || !next[questionId]?.[studentId]) continue
+    const remaining = { ...next[questionId] }
+    delete remaining[studentId]
     if (Object.keys(remaining).length === 0) {
       delete next[questionId]
     } else {
@@ -81,6 +82,73 @@ function overlaySubmitResults(students, submitResultsByStudentId) {
 
 function pendingCount(pendingResponses) {
   return countPendingResponses(pendingResponses)
+}
+
+function pendingEntriesFromQuestionState(payload) {
+  const byStudent = {}
+  for (const student of payload?.students || []) {
+    const answer = student.response?.selected_answer
+    if (answer == null || answer === '') continue
+    const studentId = student.student_id || student.username
+    if (!studentId) continue
+    byStudent[studentId] = {
+      studentQrCodeId: student.sr_code_id ?? null,
+      studentId,
+      answer: String(answer),
+      capturedAt: student.response?.timestamp || new Date().toISOString(),
+    }
+  }
+  return byStudent
+}
+
+function mergePendingMaps(...maps) {
+  const merged = {}
+  for (const map of maps) {
+    for (const [questionId, byStudent] of Object.entries(map || {})) {
+      if (!merged[questionId]) merged[questionId] = {}
+      for (const [studentId, entry] of Object.entries(byStudent || {})) {
+        const prev = merged[questionId][studentId]
+        if (!prev || String(entry.capturedAt || '') >= String(prev.capturedAt || '')) {
+          merged[questionId][studentId] = entry
+        }
+      }
+    }
+  }
+  return merged
+}
+
+function localPendingStorageKey(batchId, sessionId) {
+  return `wizklub-conduct-pending:${batchId}:${sessionId}`
+}
+
+function readLocalPending(batchId, sessionId) {
+  try {
+    const raw = localStorage.getItem(localPendingStorageKey(batchId, sessionId))
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeLocalPending(batchId, sessionId, pendingResponses) {
+  try {
+    localStorage.setItem(
+      localPendingStorageKey(batchId, sessionId),
+      JSON.stringify(pendingResponses || {}),
+    )
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+async function hydratePendingForQuestion(batchId, sessionId, questionId) {
+  if (!questionId) return { entries: {}, state: null }
+  const state = await api.getQuestionResponses(batchId, sessionId, questionId)
+  if (!state || state.forbidden) return { entries: {}, state: null }
+  return {
+    entries: pendingEntriesFromQuestionState(state),
+    state,
+  }
 }
 
 function mark(name) {
@@ -166,7 +234,6 @@ export function useAssessmentConduct(batchId, sessionId) {
     mediaLoadedRef.current = new Set()
     mediaInFlightRef.current = new Set()
     setMediaByQuestionId({})
-    setPendingResponses({})
     setSubmitResultsByStudentId({})
     renderMarkedRef.current = false
 
@@ -176,6 +243,7 @@ export function useAssessmentConduct(batchId, sessionId) {
     measure('conduct-fetch', 'conduct-fetch-start', 'conduct-fetch-end')
 
     if (!result) {
+      setPendingResponses({})
       setContext(null)
       setStudents([])
       setSummary(null)
@@ -204,10 +272,27 @@ export function useAssessmentConduct(batchId, sessionId) {
     mark('conduct-render-start')
     setContext(result)
     applyQuestionState(result)
+    const questionIds = (result.questions || []).map((question) => question.question_id).filter(Boolean)
     const startIndex = Number.isInteger(result.current_question_index)
       ? result.current_question_index
       : 0
-    setQuestionIndex(Math.max(0, startIndex))
+    const safeIndex = Math.max(0, Math.min(startIndex, Math.max(questionIds.length - 1, 0)))
+    const currentId = questionIds[safeIndex] || ''
+
+    const localPending = readLocalPending(batchId, sessionId)
+    let restoredPending = localPending
+
+    if (currentId) {
+      const { entries, state } = await hydratePendingForQuestion(batchId, sessionId, currentId)
+      if (state) applyQuestionState(state)
+      if (Object.keys(entries).length) {
+        restoredPending = mergePendingMaps(restoredPending, { [currentId]: entries })
+      }
+    }
+
+    setPendingResponses(restoredPending)
+    writeLocalPending(batchId, sessionId, restoredPending)
+    setQuestionIndex(safeIndex)
     setLoading(false)
   }, [batchId, sessionId, applyQuestionState])
 
@@ -265,6 +350,19 @@ export function useAssessmentConduct(batchId, sessionId) {
     const result = await api.getQuestionResponses(batchId, sessionId, currentQuestionId)
     if (!result || result.forbidden) return
     applyQuestionState(result)
+    const entries = pendingEntriesFromQuestionState(result)
+    if (!Object.keys(entries).length) return
+    setPendingResponses((prev) => {
+      const next = {
+        ...prev,
+        [currentQuestionId]: {
+          ...(prev[currentQuestionId] || {}),
+          ...entries,
+        },
+      }
+      writeLocalPending(batchId, sessionId, next)
+      return next
+    })
   }, [batchId, sessionId, currentQuestionId, applyQuestionState])
 
   const hydrateQuestionMedia = useCallback(async () => {
@@ -317,6 +415,11 @@ export function useAssessmentConduct(batchId, sessionId) {
     refreshQuestionState()
   }, [currentQuestionId, refreshQuestionState])
 
+  useEffect(() => {
+    if (!batchId || !sessionId || loading) return
+    writeLocalPending(batchId, sessionId, pendingResponses)
+  }, [batchId, sessionId, loading, pendingResponses])
+
   const addCapturedResponse = useCallback(
     (scan) => {
       const studentQrCodeId = Number(scan?.studentQrCodeId)
@@ -325,20 +428,37 @@ export function useAssessmentConduct(batchId, sessionId) {
       const resolved = resolveStudentFromSrCodeId(studentQrCodeId, studentLookup)
       const studentId = scan?.studentId || resolved?.studentId
       if (!studentId) return
-      setPendingResponses((prev) => ({
-        ...prev,
-        [currentQuestionId]: {
-          ...(prev[currentQuestionId] || {}),
-          [studentId]: {
-            studentQrCodeId,
-            studentId,
-            answer: scan.answer,
-            capturedAt: new Date().toISOString(),
+
+      const capturedAt = new Date().toISOString()
+      setPendingResponses((prev) => {
+        const next = {
+          ...prev,
+          [currentQuestionId]: {
+            ...(prev[currentQuestionId] || {}),
+            [studentId]: {
+              studentQrCodeId,
+              studentId,
+              answer: scan.answer,
+              capturedAt,
+            },
           },
-        },
-      }))
+        }
+        writeLocalPending(batchId, sessionId, next)
+        return next
+      })
+
+      if (!batchId || !sessionId) return
+      void api
+        .saveQuestionResponses(batchId, sessionId, currentQuestionId, [
+          { student_id: studentId, selected_answer: scan.answer },
+        ])
+        .then((saveResult) => {
+          if (saveResult?.ok) return
+          if (saveResult?.forbidden) return
+          // Server save failed — localStorage + pendingResponses still hold the scan.
+        })
     },
-    [currentQuestionId, studentLookup],
+    [batchId, sessionId, currentQuestionId, studentLookup],
   )
 
   const submitAssessment = useCallback(async () => {
@@ -377,6 +497,7 @@ export function useAssessmentConduct(batchId, sessionId) {
     const successfulStudentIds = new Set()
     const failedResults = []
     const nextSubmitResults = { ...submitResultsByStudentId }
+    const submittedResponses = []
 
     for (const row of studentResults) {
       if (!row?.student_id) continue
@@ -388,8 +509,24 @@ export function useAssessmentConduct(batchId, sessionId) {
       }
     }
 
+    for (const row of body.responses) {
+      if (row?.student_id && successfulStudentIds.has(row.student_id)) {
+        submittedResponses.push(row)
+      }
+    }
+
     setSubmitResultsByStudentId(nextSubmitResults)
-    setPendingResponses((prev) => removeSubmittedStudentsFromPending(prev, successfulStudentIds))
+    const nextPending = removeSubmittedResponsesFromPending(pendingResponses, submittedResponses)
+    setPendingResponses(nextPending)
+    writeLocalPending(batchId, sessionId, nextPending)
+
+    if (submittedResponses.length && batchId && sessionId) {
+      await Promise.all(
+        submittedResponses.map((row) =>
+          api.deleteQuestionResponse(batchId, sessionId, row.question_id, row.student_id),
+        ),
+      )
+    }
 
     return {
       ok: true,

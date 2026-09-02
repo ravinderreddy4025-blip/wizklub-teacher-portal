@@ -164,6 +164,7 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
         disableNav={totalQuestions === 0 || submitting}
         submitting={submitting}
         pendingCount={pendingCount}
+        showSubmit={totalQuestions > 0 && !canGoNext}
         onPrevious={goPrevious}
         onNext={goNext}
         onScan={() => setScannerOpen(true)}

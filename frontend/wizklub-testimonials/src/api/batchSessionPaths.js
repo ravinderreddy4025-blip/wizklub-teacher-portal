@@ -30,3 +30,10 @@ export function batchSessionLevelResponsesPath(batchId, sessionId, levelId) {
 export function batchSessionSubmitPath(batchId, sessionId) {
   return `${sessionBase(batchId, sessionId)}/submit`
 }
+
+export function batchSessionLevelResponseDeletePath(batchId, sessionId, levelId, studentId) {
+  return (
+    `${sessionBase(batchId, sessionId)}/levels/${encodeURIComponent(levelId)}` +
+    `/responses/${encodeURIComponent(studentId)}`
+  )
+}

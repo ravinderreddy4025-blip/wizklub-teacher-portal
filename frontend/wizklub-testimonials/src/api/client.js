@@ -9,6 +9,7 @@ import {
   batchSessionConductPath,
   batchSessionLevelMediaPath,
   batchSessionLevelResponsesPath,
+  batchSessionLevelResponseDeletePath,
   batchSessionSubmitPath,
 } from './batchSessionPaths'
 
@@ -386,6 +387,45 @@ export const api = {
     if (!result.ok) return null
     const payload = result.data
     return payload?.data ?? payload
+  },
+
+  async saveQuestionResponses(batchId, sessionId, questionId, responses) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.saveQuestionResponses(batchId, sessionId, questionId, responses)
+    }
+
+    const path = batchSessionLevelResponsesPath(batchId, sessionId, questionId)
+    const result = await request(
+      path,
+      {
+        method: 'POST',
+        body: JSON.stringify({ responses }),
+      },
+      WIZKLUB_API_BASE,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) {
+      return {
+        ok: false,
+        status: result.status,
+        error: result.message || result.error || 'Failed to save scan.',
+      }
+    }
+    const payload = result.data
+    return { ok: true, data: payload?.data ?? payload }
+  },
+
+  async deleteQuestionResponse(batchId, sessionId, questionId, studentId) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.deleteQuestionResponse(batchId, sessionId, questionId, studentId)
+    }
+
+    const path = batchSessionLevelResponseDeletePath(batchId, sessionId, questionId, studentId)
+    const result = await request(path, { method: 'DELETE' }, WIZKLUB_API_BASE)
+    if (result.status === 403) return { forbidden: true }
+    return { ok: result.ok }
   },
 
   async submitAssessment(batchId, sessionId, body) {
