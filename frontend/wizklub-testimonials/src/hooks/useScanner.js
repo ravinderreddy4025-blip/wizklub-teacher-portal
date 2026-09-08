@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArUcoMarkerCodec } from '../utils/scanner/markerCodec/arucoMarkerCodec'
 import { loadOpenCv } from '../utils/scanner/loadOpenCv'
 import { resolveStudentFromSrCodeId } from '../utils/scanner/studentLookup'
 import { optionFromRotation } from '../utils/scanner/orientation'
 
-const READ_ERROR = 'Unable to read SR code.\nPlease rescan.'
+const SCAN_INTERVAL_MS = 200
 
 function maxSrCodeIdFromLookup(lookup) {
   if (!lookup?.size) return 0
@@ -23,6 +23,19 @@ function cameraError(err) {
     return 'No camera was found on this device.'
   }
   return err?.message || 'Unable to start the camera.'
+}
+
+function scanKey(questionId, studentId) {
+  return `${questionId}:${studentId}`
+}
+
+function mergeSessionDetections(previous, incoming) {
+  if (!incoming.length) return previous
+  const byId = new Map(previous.map((item) => [item.studentId || item.studentQrCodeId, item]))
+  for (const item of incoming) {
+    byId.set(item.studentId || item.studentQrCodeId, item)
+  }
+  return [...byId.values()]
 }
 
 function drawOverlay(canvas, detections, width, height) {
@@ -55,32 +68,34 @@ function drawOverlay(canvas, detections, width, height) {
   }
 }
 
-export function useScanner({ studentLookup, onCaptured } = {}) {
+// Survives scanner close/reopen for the current question. Cleared only when
+// the teacher changes question (Next/Previous) via clearAlreadyScanned().
+const alreadyScanned = new Set()
+
+export function clearAlreadyScanned() {
+  alreadyScanned.clear()
+}
+
+export function useScanner({ studentLookup, onCaptured, questionId } = {}) {
   const videoRef = useRef(null)
   const overlayRef = useRef(null)
-  const runCapture = useRef(() => {})
-  const capturingRef = useRef(false)
+  const busyRef = useRef(false)
   const studentLookupRef = useRef(studentLookup)
   const onCapturedRef = useRef(onCaptured)
+  const questionIdRef = useRef(questionId)
   const [status, setStatus] = useState('starting')
   const [detections, setDetections] = useState([])
-  const [captureNotice, setCaptureNotice] = useState('')
   const [error, setError] = useState('')
-  const [capturing, setCapturing] = useState(false)
 
-  useEffect(() => {
-    studentLookupRef.current = studentLookup
-    onCapturedRef.current = onCaptured
-  })
-
-  const capture = useCallback(() => {
-    if (capturingRef.current) return
-    runCapture.current()
-  }, [])
+  studentLookupRef.current = studentLookup
+  onCapturedRef.current = onCaptured
+  questionIdRef.current = questionId
 
   useEffect(() => {
     let stopped = false
     let stream = null
+    let rafId = 0
+    let lastScanAt = 0
     const markerCodec = new ArUcoMarkerCodec()
 
     const frame = document.createElement('canvas')
@@ -88,10 +103,18 @@ export function useScanner({ studentLookup, onCaptured } = {}) {
 
     function stop() {
       stopped = true
-      runCapture.current = () => {}
+      if (rafId) {
+        window.cancelAnimationFrame(rafId)
+        rafId = 0
+      }
       stream?.getTracks().forEach((track) => track.stop())
       if (videoRef.current?.srcObject === stream) videoRef.current.srcObject = null
       stream = null
+      const overlay = overlayRef.current
+      if (overlay) {
+        const ctx = overlay.getContext('2d')
+        ctx?.clearRect(0, 0, overlay.width, overlay.height)
+      }
       markerCodec.dispose()
     }
 
@@ -105,68 +128,83 @@ export function useScanner({ studentLookup, onCaptured } = {}) {
       }
     }
 
-    function detect() {
-      if (stopped || capturingRef.current) return
-      capturingRef.current = true
-      setCapturing(true)
+    function detectFrame() {
+      if (stopped || busyRef.current) return
 
-      window.requestAnimationFrame(() => {
-        const video = videoRef.current
-        const cv = window.cv
-        if (stopped || !cv?.Mat || !video?.videoWidth) {
-          capturingRef.current = false
-          setCapturing(false)
-          return
-        }
+      const video = videoRef.current
+      const cv = window.cv
+      if (!cv?.Mat || !video?.videoWidth) return
 
+      busyRef.current = true
+      let src
+      let gray
+      try {
         frame.width = video.videoWidth
         frame.height = video.videoHeight
         frameCtx.drawImage(video, 0, 0, frame.width, frame.height)
 
-        const src = cv.imread(frame)
-        const gray = new cv.Mat()
+        src = cv.imread(frame)
+        gray = new cv.Mat()
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
+        const lookup = studentLookupRef.current
+        const activeQuestionId = questionIdRef.current
+        const decoded = markerCodec.decode(cv, gray)
+        const visible = []
+        const newlyRecorded = []
 
-        try {
-          cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
-          const lookup = studentLookupRef.current
-          const decoded = markerCodec.decode(cv, gray)
-          const found = []
+        for (const item of decoded) {
+          const studentQrCodeId = Number(item.id)
+          const resolved = resolveStudentFromSrCodeId(studentQrCodeId, lookup)
+          if (!resolved) continue
 
-          for (const item of decoded) {
-            const studentQrCodeId = Number(item.id)
-            const resolved = resolveStudentFromSrCodeId(studentQrCodeId, lookup)
-            if (!resolved) continue
+          const answer = optionFromRotation(item.rotation)
+          if (!answer) continue
 
-            const answer = optionFromRotation(item.rotation)
-            if (!answer) continue
-
-            const scan = {
-              studentQrCodeId,
-              answer,
-              confidence: item.confidence,
-              studentId: resolved.studentId,
-            }
-            onCapturedRef.current?.(scan)
-            found.push({
-              ...scan,
-              displayName: resolved.displayName,
-              username: resolved.username,
-              corners: item.corners,
-            })
+          const studentId = resolved.studentId
+          const scan = {
+            studentQrCodeId,
+            answer,
+            confidence: item.confidence,
+            studentId,
           }
+          const overlayItem = {
+            ...scan,
+            displayName: resolved.displayName,
+            username: resolved.username,
+            corners: item.corners,
+          }
+          visible.push(overlayItem)
 
-          setDetections(found)
-          setCaptureNotice(found.length === 0 ? READ_ERROR : '')
-          drawOverlay(overlayRef.current, found, frame.width, frame.height)
-        } catch (err) {
-          fail(err)
-        } finally {
-          gray.delete()
-          src.delete()
-          capturingRef.current = false
-          setCapturing(false)
+          if (!activeQuestionId || !studentId) continue
+
+          const key = scanKey(activeQuestionId, studentId)
+          if (alreadyScanned.has(key)) continue
+
+          alreadyScanned.add(key)
+          onCapturedRef.current?.(scan)
+          newlyRecorded.push(overlayItem)
         }
-      })
+
+        if (newlyRecorded.length > 0) {
+          setDetections((prev) => mergeSessionDetections(prev, newlyRecorded))
+        }
+        drawOverlay(overlayRef.current, visible, frame.width, frame.height)
+      } catch (err) {
+        fail(err)
+      } finally {
+        gray?.delete()
+        src?.delete()
+        busyRef.current = false
+      }
+    }
+
+    function tick(now) {
+      if (stopped) return
+      rafId = window.requestAnimationFrame(tick)
+      if (busyRef.current) return
+      if (now - lastScanAt < SCAN_INTERVAL_MS) return
+      lastScanAt = now
+      detectFrame()
     }
 
     async function start() {
@@ -193,8 +231,9 @@ export function useScanner({ studentLookup, onCaptured } = {}) {
         const maxStudentQrCodeId = maxSrCodeIdFromLookup(studentLookupRef.current)
         markerCodec.init(window.cv, { maxId: maxStudentQrCodeId })
 
-        runCapture.current = detect
         setStatus('ready')
+        lastScanAt = 0
+        rafId = window.requestAnimationFrame(tick)
       } catch (err) {
         fail(err)
       }
@@ -204,5 +243,5 @@ export function useScanner({ studentLookup, onCaptured } = {}) {
     return stop
   }, [])
 
-  return { videoRef, overlayRef, status, detections, captureNotice, error, capture, capturing }
+  return { videoRef, overlayRef, status, detections, error }
 }

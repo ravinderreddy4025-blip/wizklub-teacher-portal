@@ -1,8 +1,9 @@
 import { useScanner } from '../../hooks/useScanner'
 
-export default function AssessmentScanner({ studentLookup, onCaptured, onClose }) {
-  const { videoRef, overlayRef, status, detections, captureNotice, error, capture, capturing } = useScanner({
+export default function AssessmentScanner({ studentLookup, questionId, onCaptured, onClose }) {
+  const { videoRef, overlayRef, status, detections, error } = useScanner({
     studentLookup,
+    questionId,
     onCaptured,
   })
 
@@ -21,7 +22,8 @@ export default function AssessmentScanner({ studentLookup, onCaptured, onClose }
               Scan SR Codes
             </h2>
             <p className="scanner-modal__subtitle">
-              Hold student cards in frame, then capture. Answers stay on this device until you submit.
+              Hold student cards in frame. Answers are recorded automatically and stay on this
+              device until you submit.
             </p>
           </div>
           <button
@@ -50,6 +52,12 @@ export default function AssessmentScanner({ studentLookup, onCaptured, onClose }
             </p>
           ) : null}
 
+          {status === 'ready' ? (
+            <p className="scanner-stage__note" role="status">
+              Scanning…
+            </p>
+          ) : null}
+
           {status === 'error' ? (
             <div className="scanner-stage__error" role="alert">
               <p className="scanner-stage__error-title">Scanner unavailable</p>
@@ -58,33 +66,15 @@ export default function AssessmentScanner({ studentLookup, onCaptured, onClose }
           ) : null}
         </div>
 
-        <div className="scanner-actions">
-          <button
-            type="button"
-            className="scanner-capture"
-            onClick={capture}
-            disabled={status !== 'ready' || capturing}
-            aria-busy={capturing}
-          >
-            {capturing ? 'Processing…' : status === 'live' ? 'Preparing detector…' : 'Capture'}
-          </button>
-        </div>
-
         <div className="scanner-results">
           <div className="scanner-results__header">
-            <h3 className="scanner-results__title">This capture</h3>
+            <h3 className="scanner-results__title">Scanned</h3>
             <span className="scanner-results__count">{detections.length}</span>
           </div>
 
-          {captureNotice ? (
-            <p className="scanner-results__fail" role="alert">
-              {captureNotice}
-            </p>
-          ) : null}
-
-          {detections.length === 0 && !captureNotice ? (
+          {detections.length === 0 ? (
             <p className="scanner-results__empty">
-              Captured answers appear here with the student and option (A–D).
+              Detected answers appear here with the student and option (A–D).
             </p>
           ) : null}
 

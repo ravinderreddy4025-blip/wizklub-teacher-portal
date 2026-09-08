@@ -1291,34 +1291,6 @@
   color: rgba(255, 255, 255, 0.82);
 }
 
-.scanner-actions {
-  display: flex;
-  justify-content: center;
-}
-
-.scanner-capture {
-  width: 100%;
-  min-height: 44px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: #c2410c;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.scanner-capture:hover:not(:disabled) {
-  background: #9a3412;
-}
-
-.scanner-capture:disabled {
-  background: #cbd5e1;
-  color: #64748b;
-  cursor: not-allowed;
-}
-
 .scanner-results {
   border: 1px solid var(--border-light);
   border-radius: 12px;
