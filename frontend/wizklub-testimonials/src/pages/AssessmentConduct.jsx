@@ -1,4 +1,4 @@
-import { Profiler, useState } from 'react'
+import { Profiler, useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import AssessmentHeader from '../components/assessment-conduct/AssessmentHeader'
 import AssessmentScanner from '../components/assessment-conduct/AssessmentScanner'
@@ -8,6 +8,7 @@ import QuestionCard from '../components/assessment-conduct/QuestionCard'
 import AppShell from '../components/layout/AppShell'
 import LoadingScreen from '../components/ui/LoadingScreen'
 import { useAssessmentConduct } from '../hooks/useAssessmentConduct'
+import { clearAlreadyScanned } from '../hooks/useScanner'
 import { useNavigate } from '../router'
 import { onConductProfilerRender } from '../utils/conductPerf'
 import '../styles/app.css'
@@ -44,6 +45,12 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
     canGoPrevious,
     canGoNext,
   } = useAssessmentConduct(batchId, sessionId)
+
+  const currentQuestionId = currentQuestion?.question_id || ''
+
+  useEffect(() => {
+    clearAlreadyScanned()
+  }, [currentQuestionId])
 
   const backPath = schoolId
     ? `/schools/${schoolId}/batches/${batchId}/students`
@@ -174,6 +181,7 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
       {scannerOpen ? (
         <AssessmentScanner
           studentLookup={studentLookup}
+          questionId={currentQuestionId}
           onCaptured={addCapturedResponse}
           onClose={() => setScannerOpen(false)}
         />
