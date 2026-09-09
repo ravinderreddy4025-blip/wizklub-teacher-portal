@@ -154,7 +154,7 @@ const createDispatch = async (req, res) => {
       const kitDoc = kitDocs[String(item.kit)];
       const componentId = formatComponentId({
         schoolCode: schoolDoc.code,
-        schoolId: schoolDoc._id,
+        joiningYear: schoolDoc.joiningYear,
         kitId: kitDoc.kitId,
         quantity: item.quantity,
         lineIndex: i + 1,

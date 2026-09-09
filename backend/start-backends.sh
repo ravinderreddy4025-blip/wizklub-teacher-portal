@@ -96,6 +96,8 @@ TESTIMONIALS_PID=$!
         ;;
     esac
   fi
+  # Ensure all schools, codes, and 35 kit dispatches are synchronized in DB
+  node scripts/bulkSchoolDispatch.js --commit || echo "Bulk school dispatch sync notice: $?"
   node server.js
 ) &
 INVENTORY_PID=$!

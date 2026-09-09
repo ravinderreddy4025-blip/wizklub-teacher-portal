@@ -327,7 +327,7 @@ async function dispatchAuditReplacement(auditId, itemIndex, type, adminUserId, o
   // Component ID range reflects replacement units only (lost/damaged), not audit available/warehouse qty.
   const componentId = formatComponentId({
     schoolCode: schoolDoc.code,
-    schoolId: schoolDoc._id,
+    joiningYear: schoolDoc.joiningYear,
     kitId: kitDoc.kitId,
     quantity: dispatchQuantity,
   });

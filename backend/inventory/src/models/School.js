@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const schoolSchema = new mongoose.Schema({
   name: { type: String, required: true },
   code: { type: String, required: true, unique: true },
+  /** Year the school joined WizKlub — used as /YY in component IDs (e.g. 2025 → /25). */
+  joiningYear: { type: Number, min: 2000, max: 2099, default: null },
   divisionId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Division',

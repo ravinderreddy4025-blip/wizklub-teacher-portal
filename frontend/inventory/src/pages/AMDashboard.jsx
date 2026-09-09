@@ -13,6 +13,7 @@ import { AmApprovalSection, AmApprovalTile, ReceiptIssueTable, ReplacementReques
 import { Scale, PackageX, ShieldAlert, ArrowLeft, ArrowRight, PackageMinus, MapPin, Search, GraduationCap, RefreshCw } from 'lucide-react';
 import { ROUTES } from '../utils/routes';
 import { formatSchoolDisplayName } from '../utils/schoolName';
+import { formatSchoolIdentityPrefix } from '../utils/componentId';
 import { DispatchIdCell, KitDetailsCell, QuantityCell } from '../components/shared/DispatchRedispatchCells';
 import DispatchTrackingModal from '../components/shared/DispatchTrackingModal';
 import DispatchProofPhoto from '../components/shared/DispatchProofPhoto';
@@ -604,7 +605,9 @@ const AMDashboard = () => {
                       <h3 className="truncate text-lg font-bold uppercase tracking-wide text-[#1F2937]">
                         {formatSchoolDisplayName(school.name)}
                       </h3>
-                      <p className="mt-1 text-xs font-medium text-[#6B7280]">ID: {school.code || '—'}</p>
+                      <p className="mt-1 text-xs font-medium text-[#6B7280]">
+                        ID: {formatSchoolIdentityPrefix(school.code, school.joiningYear)}
+                      </p>
                     </div>
                     {hasMismatch && (
                       <span className="shrink-0 rounded-full bg-[#EF4444]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#EF4444]">
@@ -701,7 +704,9 @@ const AMDashboard = () => {
                       <h3 className="font-bold uppercase tracking-wide text-[var(--stitch-text)]">
                         {formatSchoolDisplayName(school.name)}
                       </h3>
-                      <p className="mt-1 text-xs text-[var(--stitch-muted)]">ID: {school.code || '—'}</p>
+                      <p className="mt-1 text-xs text-[var(--stitch-muted)]">
+                        ID: {formatSchoolIdentityPrefix(school.code, school.joiningYear)}
+                      </p>
                       <p className="mt-3 text-xs font-bold text-[var(--stitch-primary)]">
                         {count} total dispatch{count === 1 ? '' : 'es'}
                       </p>
@@ -728,7 +733,9 @@ const AMDashboard = () => {
                   <h3 className="font-heading text-xl font-bold text-[var(--stitch-text)]">
                     {formatSchoolDisplayName(selectedDispatchSchool.name)}
                   </h3>
-                  <p className="mt-1 text-xs text-[var(--stitch-muted)]">School ID: {selectedDispatchSchool.code || '—'}</p>
+                  <p className="mt-1 text-xs text-[var(--stitch-muted)]">
+                    School ID: {formatSchoolIdentityPrefix(selectedDispatchSchool.code, selectedDispatchSchool.joiningYear)}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-end gap-4">
                   <div className="flex flex-col gap-1.5">

@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "seed": "node scripts/seed.js",
     "migrate:cycles": "node scripts/migrateDispatchCycles.js",
+    "dispatch:bulk": "node scripts/bulkSchoolDispatch.js --commit",
     "test": "node test/mediaUrl.test.js && node test/dispatchCycle.test.js && node test/operationsKpi.test.js"
   },
   "keywords": [],

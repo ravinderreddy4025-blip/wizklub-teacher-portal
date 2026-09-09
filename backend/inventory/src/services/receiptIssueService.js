@@ -479,7 +479,7 @@ async function shipReceiptIssueReplacement(issueId, { consignmentNo, reportingMa
 
   const componentId = formatComponentId({
     schoolCode: schoolDoc?.code,
-    schoolId: schoolDoc?._id || issue.school,
+    joiningYear: schoolDoc?.joiningYear,
     kitId: kitDoc.kitId,
     quantity: qty,
   });

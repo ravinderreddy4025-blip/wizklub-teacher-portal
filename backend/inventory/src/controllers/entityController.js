@@ -9,6 +9,7 @@ const { sendAccountManagerCredentialsEmail, sendCredentialsEmailAsync } = requir
 const { getDivisionManager, getAmDivisions } = require('../utils/divisionManager');
 const { normalizeBranchName, formatSchoolDisplayName } = require('../utils/schoolName');
 const { preserveSchoolLoginId } = require('../utils/schoolCode');
+const { normalizeJoiningYear } = require('../utils/componentId');
 
 async function hashPassword(plain) {
   const salt = await bcrypt.genSalt(10);
@@ -347,7 +348,7 @@ const createSchool = async (req, res) => {
   try {
     const {
       name, code, divisionId, address, contactEmail,
-      wizklubSchoolId, wizklubRegionId, wizklubRegionName,
+      wizklubSchoolId, wizklubRegionId, wizklubRegionName, joiningYear,
     } = req.body;
     const schoolLoginId = preserveSchoolLoginId(code);
 
@@ -371,9 +372,19 @@ const createSchool = async (req, res) => {
 
     const displayName = formatSchoolDisplayName(branchName);
 
+    let normalizedJoiningYear = null;
+    if (joiningYear !== undefined && joiningYear !== null && joiningYear !== '') {
+      try {
+        normalizedJoiningYear = normalizeJoiningYear(joiningYear);
+      } catch (err) {
+        return res.status(400).json({ message: err.message });
+      }
+    }
+
     const school = await School.create({
       name: branchName,
       code: schoolLoginId,
+      ...(normalizedJoiningYear != null ? { joiningYear: normalizedJoiningYear } : {}),
       divisionId,
       address,
       ...(normalizedEmail ? { contactEmail: normalizedEmail } : {}),
@@ -411,7 +422,7 @@ const createSchool = async (req, res) => {
 const updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, divisionId, address, contactEmail } = req.body;
+    const { name, code, divisionId, address, contactEmail, joiningYear } = req.body;
 
     const school = await School.findById(id);
     if (!school) return res.status(404).json({ message: 'School not found' });
@@ -449,6 +460,18 @@ const updateSchool = async (req, res) => {
           { role: 'School', schoolId: school._id },
           { $set: { email: normalized, name: formatSchoolDisplayName(school.name) } }
         );
+      }
+    }
+
+    if (joiningYear !== undefined) {
+      if (joiningYear === null || joiningYear === '') {
+        school.joiningYear = null;
+      } else {
+        try {
+          school.joiningYear = normalizeJoiningYear(joiningYear);
+        } catch (err) {
+          return res.status(400).json({ message: err.message });
+        }
       }
     }
 

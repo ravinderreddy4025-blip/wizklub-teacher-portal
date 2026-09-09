@@ -7,6 +7,8 @@ import { DispatchIdCell, KitDetailsCell, QuantityCell, IssueShipmentDetailsCell 
 import DispatchTrackingModal from '../shared/DispatchTrackingModal';
 import AdminEditTrackingModal from './AdminEditTrackingModal';
 import { formatSchoolDisplayName } from '../../utils/schoolName';
+import { formatSchoolIdentityPrefix } from '../../utils/componentId';
+import SchoolIdentityEditor from './SchoolIdentityEditor';
 import { canAdminEditTracking, getDispatchTrackingValue, isTrackingOverdue } from '../../utils/dispatchTracking';
 import toast from '../../utils/toast';
 import AdminOperationsBoard from './AdminOperationsBoard';
@@ -339,6 +341,7 @@ export default function AdminSchoolDispatchHub({
   division,
   onBack,
   onCreateDispatch,
+  onUpdateSchoolIdentity,
 }) {
   const [month, setMonth] = useState(defaultDispatchMonth());
   const [hubTab, setHubTab] = useState('activity');
@@ -506,9 +509,19 @@ export default function AdminSchoolDispatchHub({
             <h3 className="font-heading text-xl font-bold text-[var(--stitch-text)] md:text-2xl">
               {formatSchoolDisplayName(school?.name)}
             </h3>
-            <span className="mt-1.5 inline-block rounded-md bg-[#F1F5F9] px-2 py-0.5 font-mono text-xs text-[var(--stitch-muted)]">
-              School ID: {school?.code || '—'}
-            </span>
+            {onUpdateSchoolIdentity ? (
+              <div className="mt-3 max-w-md">
+                <SchoolIdentityEditor
+                  school={school}
+                  onSave={(updates) => onUpdateSchoolIdentity(school._id, updates)}
+                  compact
+                />
+              </div>
+            ) : (
+              <span className="mt-1.5 inline-block rounded-md bg-[#F1F5F9] px-2 py-0.5 font-mono text-xs text-[var(--stitch-muted)]">
+                {formatSchoolIdentityPrefix(school?.code, school?.joiningYear)}
+              </span>
+            )}
           </div>
           <button type="button" onClick={onCreateDispatch} className="stitch-btn-ghost">
             + Create dispatch
