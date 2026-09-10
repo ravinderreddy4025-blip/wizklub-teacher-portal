@@ -25,7 +25,10 @@ async function registerWizklubSchool(wizklubSchool, {
     return { ok: false, reason: 'missing_code', message: 'School code is required' };
   }
 
-  const existing = await School.findOne({ code: schoolLoginId });
+  const wizklubSchoolId = String(wizklubSchool.id || wizklubSchool.code || schoolLoginId);
+  const existing = await School.findOne({
+    $or: [{ code: schoolLoginId }, { wizklubSchoolId }],
+  });
   if (existing) {
     return { ok: false, reason: 'already_registered', message: 'School already registered', code: schoolLoginId };
   }
@@ -48,7 +51,6 @@ async function registerWizklubSchool(wizklubSchool, {
   }
 
   const displayName = formatSchoolDisplayName(branchName);
-  const wizklubSchoolId = String(wizklubSchool.id || wizklubSchool.code || schoolLoginId);
 
   const school = await School.create({
     name: branchName,

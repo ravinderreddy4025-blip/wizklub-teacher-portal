@@ -12,6 +12,8 @@
  *   4. Creates Dispatch + SchoolInventory records (qty 12 per kit per school)
  */
 
+const fs = require('fs');
+const path = require('path');
 const mongoose = require('mongoose');
 const { loadRootEnv, resolveInventoryMongoUri } = require('../src/config/loadEnv');
 
@@ -32,6 +34,15 @@ const dispatchCycle = require('../src/utils/dispatchCycle');
 // ---------------------------------------------------------------------------
 const COMMIT = process.argv.includes('--commit');
 const QUANTITY_PER_KIT = 12;
+
+const COMPONENT_KITS_PATH = path.join(__dirname, '../data/component-kits.json');
+let componentKitsCatalog = [];
+try {
+  componentKitsCatalog = JSON.parse(fs.readFileSync(COMPONENT_KITS_PATH, 'utf8'));
+} catch (_) {}
+const COMPONENT_KIT_MAP = new Map(
+  componentKitsCatalog.map((k) => [String(k.kitId || '').trim().toUpperCase(), k])
+);
 
 // All 35 kit type IDs (confirmed by user)
 const ALL_KIT_IDS = [
@@ -469,11 +480,12 @@ async function main() {
 
   if (missingKits.length > 0 && COMMIT) {
     for (const kitId of missingKits) {
+      const catalogItem = COMPONENT_KIT_MAP.get(kitId);
       const newKit = await Kit.create({
-        name: `Kit ${kitId}`,
+        name: catalogItem?.name || `Kit ${kitId}`,
         kitId,
-        type: 'General',
-        description: `Auto-created kit type ${kitId}`,
+        type: catalogItem?.type || 'General',
+        description: catalogItem?.description || '',
         warehouseQuantity: 0,
       });
       kitDocMap.set(kitId, newKit);
@@ -483,7 +495,8 @@ async function main() {
     log('    (will be created on --commit)');
     // Add placeholder entries for dry-run reporting
     for (const kitId of missingKits) {
-      kitDocMap.set(kitId, { _id: `<new-${kitId}>`, kitId, name: `Kit ${kitId}` });
+      const catalogItem = COMPONENT_KIT_MAP.get(kitId);
+      kitDocMap.set(kitId, { _id: `<new-${kitId}>`, kitId, name: catalogItem?.name || `Kit ${kitId}` });
     }
   }
 

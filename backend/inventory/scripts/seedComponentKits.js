@@ -54,6 +54,8 @@ async function main() {
       existing.type = type;
       if (row.description !== undefined) {
         existing.description = String(row.description || '').trim();
+      } else if (existing.description && existing.description.toLowerCase().includes('auto-created')) {
+        existing.description = '';
       }
       if (row.warehouseQuantity !== undefined) {
         existing.warehouseQuantity = warehouseQuantity;

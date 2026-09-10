@@ -1,26 +1,22 @@
-const SCHOOL_NAME_PREFIX = 'SHREE CHAITANYA';
+const SCHOOL_NAME_PREFIX = '';
 
 function normalizeBranchName(name) {
   if (!name) return '';
-  const trimmed = String(name).trim();
-  const prefix = `${SCHOOL_NAME_PREFIX} `;
-  if (trimmed.toUpperCase().startsWith(prefix.toUpperCase())) {
-    return trimmed.slice(prefix.length).trim();
+  let result = String(name).trim();
+  const pattern = /^(?:s[hr]+ee|sri)\s+chaitanya[\s-]*/i;
+  while (pattern.test(result)) {
+    result = result.replace(pattern, '').trim();
   }
-  return trimmed;
+  return result || String(name).trim();
 }
 
-/** Strip WizKlub catalog prefixes (e.g. "Sri Chaitanya-Banaswadi") to branch-only. */
+/** Strip catalog prefixes (e.g. "Sri Chaitanya-Banaswadi") to branch-only. */
 function wizklubSchoolNameToBranch(name) {
-  if (!name) return '';
-  const stripped = String(name).trim().replace(/^sri chaitanya[\s-]*/i, '').trim();
-  return normalizeBranchName(stripped) || stripped;
+  return normalizeBranchName(name);
 }
 
 function formatSchoolDisplayName(branchName) {
-  const branch = normalizeBranchName(branchName);
-  if (!branch) return SCHOOL_NAME_PREFIX;
-  return `${SCHOOL_NAME_PREFIX} ${branch}`;
+  return normalizeBranchName(branchName);
 }
 
 module.exports = {

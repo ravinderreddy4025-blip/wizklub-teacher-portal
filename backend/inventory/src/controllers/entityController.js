@@ -422,10 +422,14 @@ const createSchool = async (req, res) => {
 const updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, divisionId, address, contactEmail, joiningYear } = req.body;
+    const { name, code, divisionId, address, contactEmail, joiningYear, wizklubSchoolId } = req.body;
 
     const school = await School.findById(id);
     if (!school) return res.status(404).json({ message: 'School not found' });
+
+    if (wizklubSchoolId !== undefined) {
+      school.wizklubSchoolId = String(wizklubSchoolId || '').trim() || null;
+    }
 
     if (code !== undefined) {
       const nextLoginId = preserveSchoolLoginId(code);

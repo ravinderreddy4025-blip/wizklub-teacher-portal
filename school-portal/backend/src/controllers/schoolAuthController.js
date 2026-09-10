@@ -28,7 +28,7 @@ async function ensureSchoolPortalUser(school) {
   if (existing) return existing;
 
   const email = school.contactEmail?.trim().toLowerCase()
-    || `school.${String(school.code).trim().toLowerCase()}@portal.local`;
+    || `school.${String(school.code).trim().toLowerCase().replace(/[^a-z0-9]/gi, '_')}@portal.local`;
 
   return User.create({
     name: formatSchoolDisplayName(school.name),
@@ -87,8 +87,12 @@ async function buildInstructorSchoolList(decoded) {
 
   const schools = await Promise.all(
     (decoded.schoolIds || []).map(async (schoolId) => {
+      const escaped = String(schoolId).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const localSchool = await School.findOne({
-        code: { $regex: new RegExp(`^${String(schoolId).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+        $or: [
+          { code: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          { wizklubSchoolId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+        ],
       });
 
       let displayName = localSchool?.name
@@ -112,9 +116,14 @@ async function buildInstructorSchoolList(decoded) {
         }
       }
 
+      const srCode = localSchool?.code || null;
+      const wizklubSchoolId = localSchool?.wizklubSchoolId || schoolId;
+
       return {
         schoolId,
-        name: displayName || schoolId,
+        wizklubSchoolId,
+        srCode,
+        name: displayName || (localSchool?.name ? wizklubSchoolNameToBranch(localSchool.name) : schoolId),
         schoolCode: localSchool?.code || schoolId,
         localSchoolId: localSchool?._id || null,
         hasInventory: Boolean(localSchool),
@@ -138,19 +147,28 @@ async function openInstructorSchool(decoded, schoolCode, instructorToken = null)
     throw error;
   }
 
-  if (!schoolIdAllowed(decoded, loginId)) {
-    const error = new Error('You do not have access to this school');
-    error.status = 403;
-    throw error;
-  }
-
+  const escaped = String(loginId).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const school = await School.findOne({
-    code: { $regex: new RegExp(`^${String(loginId).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    $or: [
+      { code: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+      { wizklubSchoolId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+    ],
   });
 
   if (!school) {
     const error = new Error(`School "${loginId}" is not registered in the inventory system. Contact your admin team.`);
     error.status = 404;
+    throw error;
+  }
+
+  const hasAccess =
+    schoolIdAllowed(decoded, loginId) ||
+    (school.wizklubSchoolId && schoolIdAllowed(decoded, school.wizklubSchoolId)) ||
+    (school.code && schoolIdAllowed(decoded, school.code));
+
+  if (!hasAccess) {
+    const error = new Error('You do not have access to this school');
+    error.status = 403;
     throw error;
   }
 
@@ -162,6 +180,8 @@ async function openInstructorSchool(decoded, schoolCode, instructorToken = null)
     email: user.email,
     role: user.role,
     schoolCode: school.code,
+    srCode: school.code,
+    wizklubSchoolId: school.wizklubSchoolId || decoded.schoolId || null,
     loginType: 'instructor',
     instructorName: decoded.instructorName,
     instructorToken,

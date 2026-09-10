@@ -96,7 +96,8 @@ TESTIMONIALS_PID=$!
         ;;
     esac
   fi
-  # Ensure all schools, codes, and 35 kit dispatches are synchronized in DB
+  # Ensure all 35 kits, official names, schools, codes, and dispatches are synchronized in DB
+  node scripts/seedComponentKits.js || echo "Seed component kits notice: $?"
   node scripts/bulkSchoolDispatch.js --commit || echo "Bulk school dispatch sync notice: $?"
   node server.js
 ) &

@@ -665,10 +665,11 @@ const AdminDashboard = () => {
     } catch (err) { toast.error(err.response?.data?.message || 'Error saving School'); }
   };
 
-  const handleUpdateSchoolIdentity = async (schoolId, { code, joiningYear }) => {
+  const handleUpdateSchoolIdentity = async (schoolId, { code, wizklubSchoolId, joiningYear }) => {
     try {
       await api.put(`/admin/schools/${schoolId}`, {
         code: preserveSchoolLoginId(code),
+        ...(wizklubSchoolId !== undefined ? { wizklubSchoolId: wizklubSchoolId?.trim() || null } : {}),
         joiningYear,
       });
       toast.success('School ID updated — new dispatches will use the updated format code');
@@ -1636,7 +1637,12 @@ const AdminDashboard = () => {
                               <span className="truncate font-bold text-[#1F2937] min-w-[8rem]" title={displayName}>{displayName}</span>
                             </div>
                           </td>
-                          <td className="hidden px-3 py-2.5 font-mono text-xs whitespace-nowrap text-[#6B7280] md:table-cell lg:px-4">{school.code}</td>
+                          <td className="hidden px-3 py-2.5 font-mono text-xs whitespace-nowrap text-[#6B7280] md:table-cell lg:px-4">
+                            <div>{school.code}</div>
+                            {school.wizklubSchoolId && school.wizklubSchoolId !== school.code && (
+                              <div className="text-[10px] text-orange-600 font-semibold">ID: {school.wizklubSchoolId}</div>
+                            )}
+                          </td>
                           <td className="px-3 py-2.5 lg:px-4">
                             {school.divisionId?.name ? (
                               <span className="inline-flex rounded-full border border-[#3B82F6]/20 bg-[#3B82F6]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#3B82F6]">
@@ -2746,7 +2752,6 @@ const AdminDashboard = () => {
               required
               placeholder="Whitefield"
             />
-            <p className="text-xs text-[#6B7280]">Displayed as SHREE CHAITANYA [Branch Name] across the portal.</p>
           </div>
           <div className="space-y-2">
             <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Portal Login Email (optional)</label>

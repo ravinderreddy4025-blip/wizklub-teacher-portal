@@ -132,7 +132,20 @@ export default function InventorySchoolPicker() {
                           <p className="font-bold text-slate-900 truncate">
                             {formatSchoolDisplayName(school.name)}
                           </p>
-                          <p className="text-xs font-mono text-slate-500 mt-0.5">ID: {school.schoolId}</p>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs">
+                            {school.srCode && (
+                              <span className="inline-flex items-center gap-1 font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                <span className="font-semibold text-slate-500">SR Code:</span>
+                                <span className="font-bold text-slate-900">{school.srCode}</span>
+                              </span>
+                            )}
+                            {(school.wizklubSchoolId || school.schoolId) && (
+                              <span className="inline-flex items-center gap-1 font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                <span className="font-semibold text-slate-500">School ID:</span>
+                                <span className="font-bold text-slate-900">{school.wizklubSchoolId || school.schoolId}</span>
+                              </span>
+                            )}
+                          </div>
                           {!school.hasInventory && (
                             <p className="text-xs text-amber-700 mt-1.5 font-medium">
                               Not registered in inventory — contact admin to add this school.

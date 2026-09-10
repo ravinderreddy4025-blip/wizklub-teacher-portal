@@ -55,6 +55,8 @@ export function InventoryAuthBridge({ children }) {
       email: result.email,
       role: result.role,
       schoolCode: result.schoolCode,
+      srCode: result.srCode || result.schoolCode,
+      wizklubSchoolId: result.wizklubSchoolId || null,
       loginType: result.loginType || 'instructor',
       instructorName: result.instructorName,
       token: result.token,
