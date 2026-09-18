@@ -96,9 +96,12 @@ TESTIMONIALS_PID=$!
         ;;
     esac
   fi
-  # Ensure all 35 kits, official names, schools, codes, and dispatches are synchronized in DB
-  node scripts/seedComponentKits.js || echo "Seed component kits notice: $?"
-  node scripts/bulkSchoolDispatch.js --commit || echo "Bulk school dispatch sync notice: $?"
+  # Inventory bootstrap: kit catalog + two acknowledged spreadsheets (FINAL_DATA + combined 2026).
+  node scripts/ensureBootstrapAdmin.js
+  node scripts/seedComponentKits.js
+  node scripts/syncSchoolDivisionOverrides.js || echo "School division override sync notice: $?"
+  node scripts/ensureExcelInventorySync.js --commit
+  node scripts/syncWizklubSchoolMappings.js --commit || echo "WizKlub school mapping notice: $?"
   node server.js
 ) &
 INVENTORY_PID=$!

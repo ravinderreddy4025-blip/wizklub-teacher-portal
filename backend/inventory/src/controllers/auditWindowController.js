@@ -3,7 +3,7 @@ const DivisionAuditWindow = require('../models/DivisionAuditWindow');
 const {
   getNextAuditMonth,
   formatAuditMonthLabel,
-  isNextAuditMonth,
+  isValidAuditMonth,
 } = require('../utils/auditMonth');
 
 const listAuditWindows = async (req, res) => {
@@ -30,9 +30,9 @@ const upsertAuditWindow = async (req, res) => {
       return res.status(400).json({ message: 'Division, audit month, start date, and end date are required' });
     }
 
-    if (!isNextAuditMonth(auditMonth)) {
+    if (!isValidAuditMonth(auditMonth)) {
       return res.status(400).json({
-        message: `Audit windows can only be scheduled for the upcoming month (${formatAuditMonthLabel(getNextAuditMonth())})`,
+        message: 'Audit month must be a valid month in YYYY-M format',
       });
     }
 

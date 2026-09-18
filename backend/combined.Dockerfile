@@ -48,6 +48,20 @@ RUN sed -i 's/\r$//' /usr/local/bin/start-backends.sh \
 
 
 
+# Inventory seed data must be present in the image (synced to Mongo on container start).
+
+RUN test -f backend/inventory/data/component-kits.json \
+
+  && test -f backend/inventory/data/FINAL_DATA.xlsx \
+
+  && test -f backend/inventory/data/SC_WIZKLUB_Combined_Single_Sheet.xlsx
+
+
+
+RUN node backend/inventory/scripts/validateInventorySpreadsheets.js
+
+
+
 EXPOSE 8080 3001 5002
 
 

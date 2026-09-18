@@ -8,8 +8,7 @@ export function isTestEntity(name = '') {
     n.startsWith('test_') ||
     n.startsWith('test-') ||
     n.startsWith('test ') ||
-    /^test\d/.test(n) ||
-    n.startsWith('il school')
+    /^test\d/.test(n)
   );
 }
 

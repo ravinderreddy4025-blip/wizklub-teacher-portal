@@ -8,33 +8,54 @@ function isS3Configured() {
   return Boolean(env.s3.bucket && env.s3.region);
 }
 
+function hasS3Credentials() {
+  return Boolean(env.s3.accessKeyId && env.s3.secretAccessKey);
+}
+
 /** Explicit IAM secrets must be 40 chars or PutObject returns SignatureDoesNotMatch. */
 function isS3CredentialsUsable() {
   const key = env.s3.accessKeyId;
   const secret = env.s3.secretAccessKey;
-  if (!key && !secret) return true;
-  return Boolean(key && secret && secret.length === 40);
+  if (!key || !secret) return false;
+  return secret.length === 40;
 }
 
 function isS3Ready() {
   return isS3Configured() && isS3CredentialsUsable();
 }
 
-function getClient() {
+function assertS3Ready() {
   if (!isS3Configured()) {
     const err = new Error('S3 is not configured. Set AWS_S3_BUCKET and AWS_REGION.');
     err.statusCode = 503;
     throw err;
   }
+  if (!hasS3Credentials()) {
+    const err = new Error(
+      'S3 credentials missing. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (or AWS_NOTIF_ACCESS_KEY / AWS_NOTIF_SECRET_KEY).'
+    );
+    err.statusCode = 503;
+    throw err;
+  }
+  if (!isS3CredentialsUsable()) {
+    const err = new Error(
+      'S3 credentials are invalid. AWS secret access key must be exactly 40 characters.'
+    );
+    err.statusCode = 503;
+    throw err;
+  }
+}
+
+function getClient() {
+  assertS3Ready();
   if (!client) {
-    const config = { region: env.s3.region };
-    if (env.s3.accessKeyId && env.s3.secretAccessKey) {
-      config.credentials = {
+    client = new S3Client({
+      region: env.s3.region,
+      credentials: {
         accessKeyId: env.s3.accessKeyId,
         secretAccessKey: env.s3.secretAccessKey,
-      };
-    }
-    client = new S3Client(config);
+      },
+    });
   }
   return client;
 }
@@ -47,50 +68,15 @@ function publicObjectUrl(key) {
 }
 
 async function uploadBuffer({ key, buffer, contentType, cacheControl = 'public, max-age=31536000' }) {
-  try {
-    await getClient().send(
-      new PutObjectCommand({
-        Bucket: env.s3.bucket,
-        Key: key,
-        Body: buffer,
-        ContentType: contentType || 'application/octet-stream',
-        CacheControl: cacheControl,
-      })
-    );
-  } catch (err) {
-    // #region agent log
-    const payload = JSON.stringify({
-      sessionId: '4fc0ec',
-      runId: 'pre-fix',
-      hypothesisId: 'A',
-      location: 's3Media.js:uploadBuffer',
-      message: 'S3 PutObject failed',
-      data: {
-        bucket: env.s3.bucket,
-        region: env.s3.region,
-        accessKeyLen: env.s3.accessKeyId ? env.s3.accessKeyId.length : 0,
-        secretLen: env.s3.secretAccessKey ? env.s3.secretAccessKey.length : 0,
-        name: err?.name,
-        code: err?.Code || err?.code,
-        httpStatus: err?.$metadata?.httpStatusCode,
-        message: String(err?.message || '').slice(0, 180),
-      },
-      timestamp: Date.now(),
-    });
-    const headers = { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4fc0ec' };
-    fetch('http://127.0.0.1:7494/ingest/c666538d-d52a-4b19-9d3b-5c52069c7f45', {
-      method: 'POST',
-      headers,
-      body: payload,
-    }).catch(() => {});
-    fetch('http://host.docker.internal:7494/ingest/c666538d-d52a-4b19-9d3b-5c52069c7f45', {
-      method: 'POST',
-      headers,
-      body: payload,
-    }).catch(() => {});
-    // #endregion
-    throw err;
-  }
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: env.s3.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType || 'application/octet-stream',
+      CacheControl: cacheControl,
+    })
+  );
   return {
     key,
     url: env.s3.usePublicUrls ? publicObjectUrl(key) : mediaProxyPath(key),
@@ -126,6 +112,8 @@ async function objectExists(key) {
 
 module.exports = {
   isS3Configured,
+  isS3Ready,
+  assertS3Ready,
   uploadBuffer,
   getSignedGetUrl,
   objectExists,

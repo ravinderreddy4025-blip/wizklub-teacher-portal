@@ -57,7 +57,9 @@ export default function InventorySchoolPicker() {
     setSelectingCode(school.schoolCode)
     setError('')
     try {
-      await completeInstructorSchoolSelection(school.schoolCode)
+      await completeInstructorSchoolSelection(
+        school.srCode || school.wizklubSchoolId || school.schoolCode,
+      )
       navigate(ROUTES.school.root)
     } catch (err) {
       setError(err.message || 'Could not open this school')

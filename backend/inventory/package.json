@@ -9,6 +9,13 @@
     "seed": "node scripts/seed.js",
     "migrate:cycles": "node scripts/migrateDispatchCycles.js",
     "dispatch:bulk": "node scripts/bulkSchoolDispatch.js --commit",
+    "sync:final-data": "node scripts/syncFinalDataSpreadsheet.js --commit",
+    "sync:combined-ack": "node scripts/syncCombinedAcknowledgedSpreadsheet.js --commit",
+    "sync:ensure-excel": "node scripts/ensureExcelInventorySync.js --commit",
+    "validate:spreadsheets": "node scripts/validateInventorySpreadsheets.js",
+    "repair:excel-totals": "node scripts/repairExcelInventoryTotals.js --commit",
+    "audit:kit-totals": "node scripts/auditKitQuantityTotals.js",
+    "repair:school-data": "node scripts/repairSchoolInventoryData.js --commit",
     "test": "node test/mediaUrl.test.js && node test/dispatchCycle.test.js && node test/operationsKpi.test.js"
   },
   "keywords": [],

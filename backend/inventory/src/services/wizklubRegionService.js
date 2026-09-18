@@ -195,6 +195,7 @@ async function ensureDivisionsFromSchools(schools) {
 function enrichWizklubSchool(school, {
   divisionLookup,
   registeredCodes,
+  registeredPortalIds,
   amDivisionIds,
   amByDivisionId,
   operationalLookup,
@@ -219,7 +220,8 @@ function enrichWizklubSchool(school, {
     : regionAmHint;
   const hasEmail = Boolean(school.email?.trim())
     || Boolean(process.env.WIZKLUB_SCHOOL_FALLBACK_EMAIL?.trim());
-  const alreadyRegistered = registeredCodes.has(codeKey);
+  const alreadyRegistered = registeredCodes.has(codeKey)
+    || (registeredPortalIds && registeredPortalIds.has(codeKey));
   const divisionMapped = Boolean(division);
   const mappingStatus = alreadyRegistered
     ? 'registered'

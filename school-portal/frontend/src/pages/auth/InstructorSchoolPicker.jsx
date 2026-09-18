@@ -59,7 +59,10 @@ const InstructorSchoolPicker = () => {
     setSelectingCode(school.schoolCode);
     setError('');
     try {
-      await completeInstructorSchoolSelection(school.schoolCode, session.instructorToken);
+      await completeInstructorSchoolSelection(
+        school.srCode || school.wizklubSchoolId || school.schoolCode,
+        session.instructorToken,
+      );
       navigate(ROUTES.school.root);
     } catch (err) {
       setError(err.response?.data?.message || err || 'Could not open this school');

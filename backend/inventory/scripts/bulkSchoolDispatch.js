@@ -8,7 +8,7 @@
  * What it does:
  *   1. Checks which schools from the spreadsheet are registered (by code, fallback by name)
  *   2. Updates joiningYear on matched schools
- *   3. Ensures all 35 kit types exist in the Kit collection
+ *   3. Ensures all catalog kit types exist in the Kit collection
  *   4. Creates Dispatch + SchoolInventory records (qty 12 per kit per school)
  */
 
@@ -44,13 +44,10 @@ const COMPONENT_KIT_MAP = new Map(
   componentKitsCatalog.map((k) => [String(k.kitId || '').trim().toUpperCase(), k])
 );
 
-// All 35 kit type IDs (confirmed by user)
-const ALL_KIT_IDS = [
-  'JFF', 'JMF', 'JMM', 'AR', 'LD', 'FL', 'FM', 'PS', 'RG', 'SS',
-  'SW', 'LS', 'PR', 'MS', 'YPDP', 'PT', 'PLB', 'PA', 'PC', 'HL',
-  'UA', 'UB', 'BZ', 'SD', 'SL', 'TL', 'WB', 'IB', 'JS', 'LP',
-  'SV', 'US', 'DP', 'MD', 'WS',
-];
+// Official kit IDs from component-kits.json
+const ALL_KIT_IDS = componentKitsCatalog
+  .map((k) => String(k.kitId || '').trim().toUpperCase())
+  .filter(Boolean);
 
 // ---------------------------------------------------------------------------
 // Spreadsheet data (147 rows; Madhurawada 5 skipped — no School ID)

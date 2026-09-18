@@ -16,7 +16,7 @@ const schoolSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User'
   },
-  wizklubSchoolId: { type: String, default: null, trim: true, sparse: true, unique: true },
+  wizklubSchoolId: { type: String, trim: true, sparse: true, unique: true },
   wizklubRegionId: { type: Number, default: null },
   wizklubRegionName: { type: String, default: null, trim: true },
 }, { timestamps: true });

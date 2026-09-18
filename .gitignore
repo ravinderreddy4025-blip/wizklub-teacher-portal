@@ -40,6 +40,9 @@ coverage/
 # ── Uploads / local runtime data ─────────────────────────
 uploads/
 data/
+# Production inventory seed data (required for Docker build / startup sync)
+!backend/inventory/data/
+!backend/inventory/data/**
 
 # ── Local dev helpers (not for deploy) ───────────────────
 /scripts/
@@ -49,6 +52,8 @@ test-mongo.js
 desktop.ini
 /Inventory/
 docs/
+!backend/inventory/docs/
+!backend/inventory/docs/**
 qa/
 
 # ── OS / Editor ──────────────────────────────────────────

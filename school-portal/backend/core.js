@@ -56,6 +56,7 @@ module.exports = {
     dispatchBillPdf: load('services/dispatchBillPdf'),
     operationsSnapshotService: load('services/operationsSnapshotService'),
     operationsAttentionService: load('services/operationsAttentionService'),
+    schoolPortalLink: load('services/schoolPortalLinkService'),
   },
   utils: {
     preserveSchoolLoginId: load('utils/schoolCode').preserveSchoolLoginId,

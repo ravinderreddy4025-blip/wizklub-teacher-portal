@@ -53,10 +53,11 @@ function addOutstandingOwnership(breakdown, dispatch, issues) {
 function pendingAckKitsOnDispatch(dispatch) {
   if (dispatch.status !== LIFECYCLE.DISPATCHED) return 0;
   const live = currentCycle(dispatch);
-  if (live && live.status === CYCLE_OPEN) {
+  if (!live) return n(dispatch.quantity);
+  if (live.status === CYCLE_OPEN) {
     return Math.max(0, n(live.quantityDispatched) - n(live.quantityAcknowledged));
   }
-  return n(dispatch.quantity);
+  return 0;
 }
 
 function hasOpenReplacementCycle(dispatch) {

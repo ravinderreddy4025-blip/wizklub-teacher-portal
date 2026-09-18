@@ -20,7 +20,10 @@ const { fileUrl } = require('../utils/mediaUrl');
 const { generateDispatchInvoicePdf, sendInvoicePdf } = require('../services/dispatchBillPdf');
 const wizklubRegionService = require('../services/wizklubRegionService');
 const { loadOperationalVerification } = require('../services/operationalSchoolList');
-const { bulkRegisterWizklubSchools } = require('../services/wizklubSchoolImportService');
+const {
+  bulkRegisterWizklubSchools,
+  loadRegistrationIndex,
+} = require('../services/wizklubSchoolImportService');
 const { syncOperationalAmsToDivisions } = require('../services/operationalAmService');
 const { serializeAMList } = require('../utils/amUser');
 const dispatchCycle = require('../utils/dispatchCycle');
@@ -679,8 +682,8 @@ const getWizklubSchools = async (req, res) => {
       divisionsEnsured = await wizklubRegionService.ensureDivisionsFromSchools(schools);
     }
 
-    const [registeredCodesList, divisionLookup, amDivisionIds, amByDivisionId] = await Promise.all([
-      School.find().select('code').lean(),
+    const [registrationIndex, divisionLookup, amDivisionIds, amByDivisionId] = await Promise.all([
+      loadRegistrationIndex(),
       wizklubRegionService.buildDivisionLookup(),
       wizklubRegionService.loadAmDivisionIds(),
       wizklubRegionService.loadAmByDivisionId(),
@@ -688,15 +691,10 @@ const getWizklubSchools = async (req, res) => {
 
     const operationalLookup = loadOperationalVerification();
 
-    const registeredCodes = new Set(
-      registeredCodesList
-        .map((school) => String(school.code || '').trim().toLowerCase())
-        .filter(Boolean),
-    );
-
     const enrichCtx = {
       divisionLookup,
-      registeredCodes,
+      registeredCodes: registrationIndex.registeredCodes,
+      registeredPortalIds: registrationIndex.registeredPortalIds,
       amDivisionIds,
       amByDivisionId,
       operationalLookup,
@@ -823,17 +821,13 @@ const registerWizklubSchoolsBulk = async (req, res) => {
     const pageSize = Math.min(Number(req.body?.page_size) || 100, 500);
     const schools = await wizklubApi.listAllSchools(accessToken, { pageSize });
 
-    const [registeredCodesList, divisionLookup, amDivisionIds] = await Promise.all([
-      School.find().select('code').lean(),
+    const [registrationIndex, divisionLookup, amDivisionIds] = await Promise.all([
+      loadRegistrationIndex(),
       wizklubRegionService.buildDivisionLookup(),
       wizklubRegionService.loadAmDivisionIds(),
     ]);
 
-    const registeredCodes = new Set(
-      registeredCodesList
-        .map((school) => String(school.code || '').trim().toLowerCase())
-        .filter(Boolean),
-    );
+    const { registeredCodes, registeredPortalIds, srIndex } = registrationIndex;
 
     let ids = Array.isArray(schoolIds) ? schoolIds : null;
     if (registerAllWithRegion) {
@@ -842,9 +836,9 @@ const registerWizklubSchoolsBulk = async (req, res) => {
         .filter((id) => {
           const school = schools.find((x) => String(x.id || x.code) === id);
           const codeKey = String(school?.code || school?.id || id).trim().toLowerCase();
-          if (registeredCodes.has(codeKey)) return false;
+          if (registeredPortalIds.has(codeKey)) return false;
           const enriched = wizklubRegionService.enrichWizklubSchool(school, {
-            divisionLookup, registeredCodes, amDivisionIds,
+            divisionLookup, registeredCodes, registeredPortalIds, amDivisionIds,
           });
           return enriched.mappingStatus === 'mapped';
         });
@@ -855,7 +849,7 @@ const registerWizklubSchoolsBulk = async (req, res) => {
         .filter((id) => {
           const enriched = wizklubRegionService.enrichWizklubSchool(
             schools.find((x) => String(x.id || x.code) === id),
-            { divisionLookup, registeredCodes, amDivisionIds },
+            { divisionLookup, registeredCodes, registeredPortalIds, amDivisionIds },
           );
           return enriched.readyToRegister;
         });
@@ -865,12 +859,15 @@ const registerWizklubSchoolsBulk = async (req, res) => {
       divisionLookup,
       amDivisionIds,
       registeredCodes,
+      registeredPortalIds,
+      srIndex,
       schoolIds: ids,
     });
 
     res.json({
-      message: `Registered ${report.registered.length} school(s)`,
+      message: `Linked ${report.linked.length} Excel school(s), created ${report.registered.length} API-only school(s)`,
       summary: {
+        linked: report.linked.length,
         registered: report.registered.length,
         skippedAlreadyRegistered: report.skippedAlreadyRegistered.length,
         skippedNoRegion: report.skippedNoRegion.length,
