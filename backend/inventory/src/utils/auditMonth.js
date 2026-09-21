@@ -23,6 +23,16 @@ function isNextAuditMonth(auditMonth) {
   return auditMonth === getNextAuditMonth();
 }
 
+function parseAuditMonth(auditMonth) {
+  const [year, month] = String(auditMonth || '').split('-').map(Number);
+  if (!year || !month || month < 1 || month > 12) return null;
+  return { year, month };
+}
+
+function isValidAuditMonth(auditMonth) {
+  return parseAuditMonth(auditMonth) !== null;
+}
+
 /** Accept YYYY-M or YYYY-MM and return both keys for DB queries. */
 function auditMonthMatchValues(monthInput) {
   if (!monthInput) return [];
@@ -37,5 +47,7 @@ module.exports = {
   getCurrentAuditMonth,
   formatAuditMonthLabel,
   isNextAuditMonth,
+  parseAuditMonth,
+  isValidAuditMonth,
   auditMonthMatchValues,
 };

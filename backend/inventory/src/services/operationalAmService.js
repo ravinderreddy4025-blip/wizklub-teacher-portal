@@ -6,6 +6,10 @@ const { generateSecurePassword } = require('../utils/passwordGenerator');
 const { encryptSecret } = require('../utils/credentialSecret');
 const { OPERATIONAL_AM_BY_STATE, getOperationalAmHint } = require('./operationalSchoolList');
 
+function normName(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 async function hashPassword(plain) {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(plain, salt);
@@ -124,7 +128,34 @@ async function syncOperationalAmsToDivisions() {
   };
 }
 
+async function loadAmUserLookup() {
+  const users = await User.find({ role: 'AM' }).lean();
+  const byEmail = new Map();
+  const byName = new Map();
+  users.forEach((user) => {
+    byEmail.set(user.email.toLowerCase(), user);
+    byName.set(normName(user.name), user);
+  });
+  return { byEmail, byName, users };
+}
+
+/**
+ * Resolve an AM user from spreadsheet Account Manager name and/or state/region hints.
+ */
+function resolveAmUserFromHint({ amName, state, region } = {}, lookup) {
+  if (!lookup) return null;
+  if (amName) {
+    const byName = lookup.byName.get(normName(amName));
+    if (byName) return byName;
+  }
+  const hint = getOperationalAmHint({ state, region });
+  if (hint?.email) return lookup.byEmail.get(hint.email.toLowerCase()) || null;
+  return null;
+}
+
 module.exports = {
   ensureOperationalAmUsers,
   syncOperationalAmsToDivisions,
+  loadAmUserLookup,
+  resolveAmUserFromHint,
 };

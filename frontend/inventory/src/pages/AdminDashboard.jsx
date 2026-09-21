@@ -48,6 +48,8 @@ import {
 } from '../utils/adminMetrics';
 import { formatSchoolDisplayName, normalizeBranchName } from '../utils/schoolName';
 import { preserveSchoolLoginId } from '../utils/schoolCode';
+import { formatSchoolIdentityPrefix } from '../utils/componentId';
+import SchoolIdentityEditor from '../components/admin/SchoolIdentityEditor';
 import { isReplacementInTransit } from '../utils/schoolDispatch';
 import Pagination from '../components/shared/Pagination';
 import ListToolbar from '../components/shared/ListToolbar';
@@ -190,7 +192,7 @@ const AdminDashboard = () => {
   });
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [schoolForm, setSchoolForm] = useState({
-    id: null, name: '', code: '', divisionId: '', contactEmail: '',
+    id: null, name: '', code: '', joiningYear: '', divisionId: '', contactEmail: '',
     wizklubSchoolId: '', wizklubRegionId: null, wizklubRegionName: '',
   });
   const [wizklubSchoolOptions, setWizklubSchoolOptions] = useState([]);
@@ -626,6 +628,7 @@ const AdminDashboard = () => {
       ...schoolForm,
       name: normalizeBranchName(schoolForm.name),
       code: preserveSchoolLoginId(schoolForm.code),
+      joiningYear: schoolForm.joiningYear === '' ? null : Number(schoolForm.joiningYear),
     };
     if (!payload.name) {
       toast.error('Branch name is required');
@@ -660,6 +663,21 @@ const AdminDashboard = () => {
          loadWizklubRegistryPage('not_mapped', wizklubNotMappedPage);
        }
     } catch (err) { toast.error(err.response?.data?.message || 'Error saving School'); }
+  };
+
+  const handleUpdateSchoolIdentity = async (schoolId, { code, wizklubSchoolId, joiningYear }) => {
+    try {
+      await api.put(`/admin/schools/${schoolId}`, {
+        code: preserveSchoolLoginId(code),
+        ...(wizklubSchoolId !== undefined ? { wizklubSchoolId: wizklubSchoolId?.trim() || null } : {}),
+        joiningYear,
+      });
+      toast.success('School ID updated — new dispatches will use the updated format code');
+      afterMutation();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update school ID');
+      throw err;
+    }
   };
 
   const handleRegenerateSchoolPassword = async (school) => {
@@ -1040,7 +1058,7 @@ const AdminDashboard = () => {
     }
 
     setSchoolForm({
-      id: null, name: '', code: '', divisionId: '', contactEmail: '',
+      id: null, name: '', code: '', joiningYear: '', divisionId: '', contactEmail: '',
       wizklubSchoolId: '', wizklubRegionId: null, wizklubRegionName: '',
     });
     setSelectedWizklubSchoolKey(String(school.code || school.id));
@@ -1072,6 +1090,7 @@ const AdminDashboard = () => {
         id: school._id,
         name: normalizeBranchName(school.name),
         code: school.code,
+        joiningYear: school.joiningYear != null ? String(school.joiningYear) : '',
         divisionId: divId,
         contactEmail: school.contactEmail || '',
         wizklubSchoolId: school.wizklubSchoolId || '',
@@ -1081,7 +1100,7 @@ const AdminDashboard = () => {
       setSelectedWizklubSchoolKey('');
     } else {
       setSchoolForm({
-        id: null, name: '', code: '', divisionId: '', contactEmail: '',
+        id: null, name: '', code: '', joiningYear: '', divisionId: '', contactEmail: '',
         wizklubSchoolId: '', wizklubRegionId: null, wizklubRegionName: '',
       });
       setSelectedWizklubSchoolKey('');
@@ -1386,7 +1405,13 @@ const AdminDashboard = () => {
               <Card key={school._id} className="flex flex-col shadow-sm">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-slate-900 leading-tight">{formatSchoolDisplayName(school.name)}</h3>
-                  <p className="text-xs text-slate-500 mt-1 font-medium">ID: {school.code || '—'}</p>
+                  <div className="mt-2">
+                    <SchoolIdentityEditor
+                      school={school}
+                      onSave={(updates) => handleUpdateSchoolIdentity(school._id, updates)}
+                      compact
+                    />
+                  </div>
                   <p className="text-xs font-semibold text-brand-primary mt-3">
                     {school.dispatchCount || 0} dispatch{(school.dispatchCount || 0) === 1 ? '' : 'es'}
                   </p>
@@ -1428,6 +1453,7 @@ const AdminDashboard = () => {
           division={selectedDispatchDivision}
           onBack={() => navigate(ROUTES.admin.dispatchesDivision(dispatchNav.divisionId))}
           onCreateDispatch={() => openDispatchForSchool(dispatchNav.divisionId, selectedDispatchSchool._id)}
+          onUpdateSchoolIdentity={handleUpdateSchoolIdentity}
         />
       )}
 
@@ -1611,7 +1637,12 @@ const AdminDashboard = () => {
                               <span className="truncate font-bold text-[#1F2937] min-w-[8rem]" title={displayName}>{displayName}</span>
                             </div>
                           </td>
-                          <td className="hidden px-3 py-2.5 font-mono text-xs whitespace-nowrap text-[#6B7280] md:table-cell lg:px-4">{school.code}</td>
+                          <td className="hidden px-3 py-2.5 font-mono text-xs whitespace-nowrap text-[#6B7280] md:table-cell lg:px-4">
+                            <div>{school.code}</div>
+                            {school.wizklubSchoolId && school.wizklubSchoolId !== school.code && (
+                              <div className="text-[10px] text-orange-600 font-semibold">ID: {school.wizklubSchoolId}</div>
+                            )}
+                          </td>
                           <td className="px-3 py-2.5 lg:px-4">
                             {school.divisionId?.name ? (
                               <span className="inline-flex rounded-full border border-[#3B82F6]/20 bg-[#3B82F6]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#3B82F6]">
@@ -2680,9 +2711,37 @@ const AdminDashboard = () => {
               value={schoolForm.code}
               onChange={(e) => setSchoolForm({ ...schoolForm, code: e.target.value })}
               required
-              placeholder="SC-098/22"
+              placeholder="BENG-0010 or beng0010"
             />
-            <p className="text-xs text-[#6B7280]">Saved exactly as entered — this is the portal login ID.</p>
+            <p className="text-xs text-[#6B7280]">Used for portal login and component ID prefix (e.g. BENG-0010).</p>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Joining year</label>
+            <input
+              type="number"
+              min={2000}
+              max={2099}
+              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-sm text-[#1F2937] outline-none focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
+              value={schoolForm.joiningYear}
+              onChange={(e) => setSchoolForm({ ...schoolForm, joiningYear: e.target.value })}
+              placeholder="2025"
+            />
+            <p className="text-xs text-[#6B7280]">
+              Year the school joined WizKlub — appears as /25 in component IDs
+              {schoolForm.code.trim() && (
+                <>
+                  {' '}
+                  (preview:{' '}
+                  <span className="font-mono font-semibold text-[#F89C28]">
+                    {formatSchoolIdentityPrefix(
+                      schoolForm.code,
+                      schoolForm.joiningYear === '' ? null : Number(schoolForm.joiningYear),
+                    )}
+                  </span>
+                  )
+                </>
+              )}
+            </p>
           </div>
           <div className="space-y-2">
             <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Branch Name</label>
@@ -2693,7 +2752,6 @@ const AdminDashboard = () => {
               required
               placeholder="Whitefield"
             />
-            <p className="text-xs text-[#6B7280]">Displayed as SHREE CHAITANYA [Branch Name] across the portal.</p>
           </div>
           <div className="space-y-2">
             <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Portal Login Email (optional)</label>

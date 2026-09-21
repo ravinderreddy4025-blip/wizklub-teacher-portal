@@ -16,6 +16,7 @@ const OPERATIONAL_AM_BY_STATE = {
   'rest of tamil nadu': { name: 'John Emmanuel', email: 'john.emmanuel@wizklub.in' },
   telangana: { name: 'Sandeep Kumar', email: 'sandeep.kumar@wizklub.in' },
   'west bengal': { name: 'Aditi Ashok Katti', email: 'aditi.katti@wizklub.in' },
+  'il school': { name: 'Aditi Ashok Katti', email: 'aditi.katti@wizklub.in' },
 };
 
 /** WizKlub region → operational AM (when state differs from region name). */
@@ -33,6 +34,7 @@ const OPERATIONAL_AM_BY_REGION = {
   karnataka: OPERATIONAL_AM_BY_STATE['rest of karnataka'],
   telangana: OPERATIONAL_AM_BY_STATE.telangana,
   'west bengal': OPERATIONAL_AM_BY_STATE['west bengal'],
+  'il school': OPERATIONAL_AM_BY_STATE['il school'],
 };
 
 function getOperationalAmHint({ state, region } = {}) {

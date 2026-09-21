@@ -27,7 +27,7 @@ async function findSchoolIdsMatchingSearch(search) {
   const regex = buildSearchRegex(search);
   if (!regex) return null;
   const schools = await School.find({
-    $or: [{ name: regex }, { code: regex }, { contactEmail: regex }],
+    $or: [{ name: regex }, { code: regex }, { contactEmail: regex }, { wizklubSchoolId: regex }],
   }).select('_id').lean();
   return schools.map((s) => s._id);
 }

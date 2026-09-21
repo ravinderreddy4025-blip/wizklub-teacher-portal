@@ -1,43 +1,84 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Trash2 } from 'lucide-react';
 import toast from '../../utils/toast';
 import api from '../../utils/api';
-
-function getNextAuditMonth() {
-  const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return `${next.getFullYear()}-${next.getMonth() + 1}`;
-}
-
-function formatAuditMonthLabel(auditMonth) {
-  const [year, month] = auditMonth.split('-').map(Number);
-  if (!year || !month) return auditMonth;
-  return new Date(year, month - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-}
+import {
+  addAuditMonths,
+  buildAuditMonthOptions,
+  compareAuditMonths,
+  findActiveScheduleMonth,
+  formatAuditMonthLabel,
+  getNextAuditMonth,
+} from '../../utils/auditMonth';
 
 const fieldClass =
   'h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15';
 const labelClass = 'text-[11px] font-bold uppercase tracking-wider text-[#6B7280]';
 
+function findWindowForSelection(auditWindows, divisionId, auditMonth) {
+  if (!divisionId || !auditMonth) return null;
+  return auditWindows.find(
+    (w) => (w.divisionId?._id || w.divisionId) === divisionId && w.auditMonth === auditMonth
+  );
+}
+
+function isMonthFullyScheduled(divisions, auditWindows, auditMonth) {
+  if (!divisions.length) return false;
+  return divisions.every((division) =>
+    auditWindows.some(
+      (window) =>
+        (window.divisionId?._id || window.divisionId) === division._id
+        && window.auditMonth === auditMonth
+    )
+  );
+}
+
+function groupWindowsByMonth(windows) {
+  const grouped = {};
+  windows.forEach((window) => {
+    const key = window.auditMonth || 'unknown';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(window);
+  });
+  return Object.entries(grouped)
+    .sort(([a], [b]) => compareAuditMonths(b, a))
+    .map(([month, items]) => ({
+      month,
+      items: [...items].sort((a, b) => (a.divisionId?.name || '').localeCompare(b.divisionId?.name || '')),
+    }));
+}
+
 const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
-  const nextAuditMonth = useMemo(() => getNextAuditMonth(), []);
+  const [scheduleMonth, setScheduleMonth] = useState(() => getNextAuditMonth());
   const [divisionId, setDivisionId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [saving, setSaving] = useState(false);
+  const userPickedMonthRef = useRef(false);
 
-  const existingForSelection = useMemo(() => {
-    if (!divisionId) return null;
-    return auditWindows.find(
-      (w) => (w.divisionId?._id || w.divisionId) === divisionId && w.auditMonth === nextAuditMonth
-    );
-  }, [auditWindows, divisionId, nextAuditMonth]);
+  useEffect(() => {
+    if (userPickedMonthRef.current || !divisions.length) return;
+    setScheduleMonth(findActiveScheduleMonth(divisions, auditWindows));
+  }, [divisions, auditWindows]);
 
-  const handleDivisionChange = (id) => {
-    setDivisionId(id);
-    const existing = auditWindows.find(
-      (w) => (w.divisionId?._id || w.divisionId) === id && w.auditMonth === nextAuditMonth
-    );
+  const auditMonthOptions = useMemo(
+    () =>
+      buildAuditMonthOptions({
+        monthsAhead: 12,
+        extraMonths: [
+          scheduleMonth,
+          ...auditWindows.map((w) => w.auditMonth).filter(Boolean),
+        ],
+      }),
+    [scheduleMonth, auditWindows]
+  );
+
+  const existingForSelection = useMemo(
+    () => findWindowForSelection(auditWindows, divisionId, scheduleMonth),
+    [auditWindows, divisionId, scheduleMonth]
+  );
+
+  const applyExistingWindow = (existing) => {
     if (existing) {
       setStartDate(existing.startDate ? existing.startDate.slice(0, 10) : '');
       setEndDate(existing.endDate ? existing.endDate.slice(0, 10) : '');
@@ -47,22 +88,47 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
     }
   };
 
+  const handleDivisionChange = (id) => {
+    setDivisionId(id);
+    applyExistingWindow(findWindowForSelection(auditWindows, id, scheduleMonth));
+  };
+
+  const handleMonthChange = (month) => {
+    userPickedMonthRef.current = true;
+    setScheduleMonth(month);
+    applyExistingWindow(findWindowForSelection(auditWindows, divisionId, month));
+  };
+
+  const advanceToNextMonthIfComplete = (savedMonth, windows) => {
+    if (!isMonthFullyScheduled(divisions, windows, savedMonth)) return;
+    const nextMonth = addAuditMonths(savedMonth, 1);
+    userPickedMonthRef.current = false;
+    setScheduleMonth(nextMonth);
+    setStartDate('');
+    setEndDate('');
+    applyExistingWindow(findWindowForSelection(windows, divisionId, nextMonth));
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!divisionId) {
       toast.error('Select a division');
       return;
     }
+    const savedMonth = scheduleMonth;
     setSaving(true);
     try {
       const res = await api.post('/admin/audit-windows', {
         divisionId,
-        auditMonth: nextAuditMonth,
+        auditMonth: savedMonth,
         startDate,
         endDate,
       });
       toast.success(res.data.message || 'Audit window saved');
-      onRefresh();
+      await onRefresh();
+      const refreshed = await api.get('/admin/audit-windows');
+      const windows = refreshed.data.windows || refreshed.data.auditWindows || [];
+      advanceToNextMonthIfComplete(savedMonth, windows);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save audit window');
     } finally {
@@ -81,12 +147,20 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
     }
   };
 
-  const upcomingWindows = useMemo(
+  const windowsForMonth = useMemo(
     () =>
       [...auditWindows]
-        .filter((w) => w.auditMonth === nextAuditMonth)
+        .filter((w) => w.auditMonth === scheduleMonth)
         .sort((a, b) => (a.divisionId?.name || '').localeCompare(b.divisionId?.name || '')),
-    [auditWindows, nextAuditMonth]
+    [auditWindows, scheduleMonth]
+  );
+
+  const historyGroups = useMemo(
+    () =>
+      groupWindowsByMonth(
+        auditWindows.filter((window) => window.auditMonth && window.auditMonth !== scheduleMonth)
+      ),
+    [auditWindows, scheduleMonth]
   );
 
   return (
@@ -100,8 +174,7 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
             <div>
               <h3 className="font-heading text-base font-bold text-[#1F2937]">Schedule Audit Window</h3>
               <p className="mt-1 text-[13px] text-[#6B7280]">
-                Select a division and set audit dates for{' '}
-                <strong className="text-[#1F2937]">{formatAuditMonthLabel(nextAuditMonth)}</strong>. All schools in
+                Select a division and audit month, then set the dates when schools can submit audits. All schools in
                 that division share the same window.
               </p>
             </div>
@@ -128,7 +201,19 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass} htmlFor="audit-scheduler-month">Audit Month</label>
-                <input id="audit-scheduler-month" className={`${fieldClass} bg-[#F1F5F9]`} readOnly value={formatAuditMonthLabel(nextAuditMonth)} />
+                <select
+                  id="audit-scheduler-month"
+                  className={fieldClass}
+                  value={scheduleMonth}
+                  onChange={(e) => handleMonthChange(e.target.value)}
+                  required
+                >
+                  {auditMonthOptions.map((month) => (
+                    <option key={month} value={month}>
+                      {formatAuditMonthLabel(month)}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass} htmlFor="audit-scheduler-start">Audit Start Date</label>
@@ -155,7 +240,7 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs italic text-[#6B7280]">
-                Schools in the selected division can submit {formatAuditMonthLabel(nextAuditMonth)} audits only between
+                Schools in the selected division can submit {formatAuditMonthLabel(scheduleMonth)} audits only between
                 these dates.
               </p>
               <button
@@ -173,10 +258,13 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
       <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
         <div className="border-b border-[#E5E7EB] px-4 py-3">
           <h3 className="font-heading text-base font-bold text-[#1F2937]">
-            Scheduled for {formatAuditMonthLabel(nextAuditMonth)}
+            Scheduled for {formatAuditMonthLabel(scheduleMonth)}
           </h3>
+          <p className="mt-1 text-xs text-[#6B7280]">
+            Upcoming audit windows for the month you are currently scheduling.
+          </p>
         </div>
-        {upcomingWindows.length > 0 ? (
+        {windowsForMonth.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
@@ -194,7 +282,7 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E7EB]">
-                {upcomingWindows.map((w) => (
+                {windowsForMonth.map((w) => (
                   <tr key={w._id} className="hover:bg-[#F8FAFC]">
                     <td className="px-6 py-3.5 font-bold text-[#1F2937]">{w.divisionId?.name || '—'}</td>
                     <td className="px-6 py-3.5 text-sm text-[#6B7280]">
@@ -220,7 +308,72 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
           </div>
         ) : (
           <p className="px-6 py-10 text-center text-[#6B7280]">
-            No audit windows scheduled for the upcoming month yet.
+            No audit windows scheduled for {formatAuditMonthLabel(scheduleMonth)} yet.
+          </p>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+        <div className="border-b border-[#E5E7EB] px-4 py-3">
+          <h3 className="font-heading text-base font-bold text-[#1F2937]">Scheduled audit history</h3>
+          <p className="mt-1 text-xs text-[#6B7280]">
+            Previously scheduled audit windows for other months.
+          </p>
+        </div>
+        {historyGroups.length > 0 ? (
+          <div className="divide-y divide-[#E5E7EB]">
+            {historyGroups.map(({ month, items }) => (
+              <div key={month}>
+                <div className="bg-[#F8FAFC] px-6 py-2.5 text-sm font-bold text-[#1F2937]">
+                  {formatAuditMonthLabel(month)}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB]">
+                        {['Division', 'Start', 'End', 'Actions'].map((col) => (
+                          <th
+                            key={col}
+                            className={`px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-[#6B7280] ${
+                              col === 'Actions' ? 'text-right' : ''
+                            }`}
+                          >
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {items.map((w) => (
+                        <tr key={w._id} className="hover:bg-[#F8FAFC]">
+                          <td className="px-6 py-3.5 font-bold text-[#1F2937]">{w.divisionId?.name || '—'}</td>
+                          <td className="px-6 py-3.5 text-sm text-[#6B7280]">
+                            {new Date(w.startDate).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-3.5 text-sm text-[#6B7280]">
+                            {new Date(w.endDate).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-3.5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(w._id)}
+                              className="rounded-lg p-2 text-[#EF4444] transition hover:bg-[#EF4444] hover:text-white"
+                              aria-label="Remove audit window"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="px-6 py-10 text-center text-[#6B7280]">
+            No previous audit windows scheduled yet.
           </p>
         )}
       </section>

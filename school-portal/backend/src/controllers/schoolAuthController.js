@@ -5,11 +5,15 @@ const {
   generateInstructorSession,
   verifyInstructorSession,
   readInstructorToken,
-  schoolIdAllowed,
 } = require('../utils/instructorAuth');
 
 const { User, School } = models;
 const wizklubApi = services.wizklubApi;
+const {
+  formatSrCode,
+  findInventorySchoolByIdentifier,
+  instructorCanAccessSchool,
+} = services.schoolPortalLink;
 const {
   preserveSchoolLoginId,
   wizklubSchoolNameToBranch,
@@ -28,7 +32,7 @@ async function ensureSchoolPortalUser(school) {
   if (existing) return existing;
 
   const email = school.contactEmail?.trim().toLowerCase()
-    || `school.${String(school.code).trim().toLowerCase()}@portal.local`;
+    || `school.${String(school.code).trim().toLowerCase().replace(/[^a-z0-9]/gi, '_')}@portal.local`;
 
   return User.create({
     name: formatSchoolDisplayName(school.name),
@@ -85,18 +89,14 @@ async function buildInstructorSchoolList(decoded) {
     serviceAdminToken = null;
   }
 
+  const tokens = [decoded.wizklubToken, serviceAdminToken].filter(Boolean);
+
   const schools = await Promise.all(
     (decoded.schoolIds || []).map(async (schoolId) => {
-      const localSchool = await School.findOne({
-        code: { $regex: new RegExp(`^${String(schoolId).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-      });
-
-      let displayName = localSchool?.name
-        ? wizklubSchoolNameToBranch(localSchool.name)
-        : null;
+      let displayName = null;
+      let wizklubBranchName = null;
       let wizklubError = null;
 
-      const tokens = [decoded.wizklubToken, serviceAdminToken].filter(Boolean);
       for (const token of tokens) {
         try {
           const details = await wizklubApi.getSchoolDetails(schoolId, token);
@@ -104,6 +104,7 @@ async function buildInstructorSchoolList(decoded) {
           const branch = wizklubSchoolNameToBranch(parsed.name);
           if (branch) {
             displayName = branch;
+            wizklubBranchName = branch;
             wizklubError = null;
             break;
           }
@@ -112,10 +113,23 @@ async function buildInstructorSchoolList(decoded) {
         }
       }
 
+      const localSchool = await findInventorySchoolByIdentifier(schoolId, {
+        wizklubTokens: tokens,
+        wizklubBranchName,
+        commitLink: true,
+      });
+
+      const srCode = formatSrCode(localSchool);
+      const wizklubSchoolId = localSchool?.wizklubSchoolId || schoolId;
+      const portalLoginId = localSchool?.wizklubSchoolId || schoolId;
+
       return {
         schoolId,
-        name: displayName || schoolId,
-        schoolCode: localSchool?.code || schoolId,
+        wizklubSchoolId,
+        srCode,
+        name: displayName
+          || (localSchool?.name ? wizklubSchoolNameToBranch(localSchool.name) : schoolId),
+        schoolCode: portalLoginId,
         localSchoolId: localSchool?._id || null,
         hasInventory: Boolean(localSchool),
         wizklubError,
@@ -138,19 +152,33 @@ async function openInstructorSchool(decoded, schoolCode, instructorToken = null)
     throw error;
   }
 
-  if (!schoolIdAllowed(decoded, loginId)) {
-    const error = new Error('You do not have access to this school');
-    error.status = 403;
-    throw error;
+  let serviceAdminToken = null;
+  try {
+    serviceAdminToken = await wizklubApi.getServiceAdminAccessToken();
+  } catch {
+    serviceAdminToken = null;
   }
 
-  const school = await School.findOne({
-    code: { $regex: new RegExp(`^${String(loginId).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+  const tokens = [decoded.wizklubToken, serviceAdminToken].filter(Boolean);
+  const school = await findInventorySchoolByIdentifier(loginId, {
+    wizklubTokens: tokens,
+    commitLink: true,
   });
 
   if (!school) {
     const error = new Error(`School "${loginId}" is not registered in the inventory system. Contact your admin team.`);
     error.status = 404;
+    throw error;
+  }
+
+  const hasAccess = await instructorCanAccessSchool(decoded, school, {
+    wizklubTokens: tokens,
+    commitLink: true,
+  });
+
+  if (!hasAccess) {
+    const error = new Error('You do not have access to this school');
+    error.status = 403;
     throw error;
   }
 
@@ -161,7 +189,9 @@ async function openInstructorSchool(decoded, schoolCode, instructorToken = null)
     name: school.name,
     email: user.email,
     role: user.role,
-    schoolCode: school.code,
+    schoolCode: school.wizklubSchoolId || formatSrCode(school) || school.code,
+    srCode: formatSrCode(school),
+    wizklubSchoolId: school.wizklubSchoolId || decoded.schoolId || null,
     loginType: 'instructor',
     instructorName: decoded.instructorName,
     instructorToken,

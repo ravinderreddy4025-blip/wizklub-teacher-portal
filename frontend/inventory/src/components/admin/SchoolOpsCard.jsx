@@ -4,6 +4,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import { formatSchoolDisplayName } from '../../utils/schoolName';
+import { formatSchoolIdentityPrefix } from '../../utils/componentId';
 const SchoolOpsCard = ({
   school,
   pendingCount,
@@ -30,7 +31,7 @@ const SchoolOpsCard = ({
         <h3 className="text-lg font-bold text-brand-deep leading-tight flex items-center gap-2 flex-wrap">
           {formatSchoolDisplayName(school.name)}
           <span className="text-[10px] glass-chip text-slate-600 font-mono normal-case tracking-normal">
-            {school.code}
+            {formatSchoolIdentityPrefix(school.code, school.joiningYear)}
           </span>
         </h3>
         <p className="text-xs text-slate-500 mt-1.5 glass-chip inline-block normal-case tracking-normal font-medium">

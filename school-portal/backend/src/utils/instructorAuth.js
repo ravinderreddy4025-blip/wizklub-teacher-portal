@@ -56,7 +56,7 @@ function readInstructorToken(req) {
 function schoolIdAllowed(decoded, schoolCode) {
   const normalized = String(schoolCode || '').trim().toLowerCase();
   if (!normalized) return false;
-  return decoded.schoolIds.some((id) => String(id).trim().toLowerCase() === normalized);
+  return (decoded?.schoolIds || []).some((id) => String(id).trim().toLowerCase() === normalized);
 }
 
 module.exports = {

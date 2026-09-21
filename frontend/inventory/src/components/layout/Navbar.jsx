@@ -51,12 +51,27 @@ const Navbar = ({ onOpenMobileMenu }) => {
         </span>
         {isSchool ? (
           <div className="min-w-0">
-            <p
-              className="truncate text-[11px] font-bold leading-tight text-brand-primary sm:text-xs"
-              title={schoolDisplayName}
-            >
-              {schoolDisplayName}
-            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p
+                className="truncate text-[11px] font-bold leading-tight text-brand-primary sm:text-xs"
+                title={schoolDisplayName}
+              >
+                {schoolDisplayName}
+              </p>
+              {(user?.srCode || user?.schoolCode || user?.wizklubSchoolId) && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                  {(user?.srCode || user?.schoolCode) && (
+                    <span>SR: <strong className="text-slate-900 font-semibold">{user.srCode || user.schoolCode}</strong></span>
+                  )}
+                  {user?.wizklubSchoolId && user.wizklubSchoolId !== (user.srCode || user.schoolCode) && (
+                    <>
+                      <span className="text-slate-400">•</span>
+                      <span>ID: <strong className="text-slate-900 font-semibold">{user.wizklubSchoolId}</strong></span>
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
             {showNavPageTitle && (
               <p className="truncate font-heading text-sm font-bold tracking-tight text-[#1F2937] md:text-base">
                 {pageTitle}

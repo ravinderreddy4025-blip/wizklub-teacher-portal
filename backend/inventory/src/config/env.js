@@ -22,8 +22,12 @@ const env = {
     prefix: String(
       process.env.INVENTORY_S3_PREFIX || process.env.S3_UPLOAD_PREFIX || 'inventory'
     ).trim() || 'inventory',
-    accessKeyId: String(process.env.AWS_ACCESS_KEY_ID || '').trim() || undefined,
-    secretAccessKey: String(process.env.AWS_SECRET_ACCESS_KEY || '').trim() || undefined,
+    accessKeyId: String(
+      process.env.AWS_ACCESS_KEY_ID || process.env.AWS_NOTIF_ACCESS_KEY || ''
+    ).trim() || undefined,
+    secretAccessKey: String(
+      process.env.AWS_SECRET_ACCESS_KEY || process.env.AWS_NOTIF_SECRET_KEY || ''
+    ).trim() || undefined,
     publicBaseUrl: String(process.env.AWS_S3_PUBLIC_BASE_URL || process.env.INVENTORY_S3_PUBLIC_BASE_URL || '').trim(),
     usePublicUrls:
       process.env.INVENTORY_S3_PUBLIC === '1' ||

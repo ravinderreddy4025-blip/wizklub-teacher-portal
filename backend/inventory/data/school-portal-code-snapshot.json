@@ -1,0 +1,1072 @@
+[
+  {
+    "id": "6aab9f773e1968ebfb1df69c",
+    "name": "Beverly Hills Shalini School",
+    "code": "dehr0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df69d",
+    "name": "Cauvery Public School",
+    "code": "mand0008"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df69e",
+    "name": "Jaipur Xaviers School",
+    "code": "jaip0022"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df69f",
+    "name": "Luxor World School",
+    "code": "dind0002"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a0",
+    "name": "Pt Uma Dutt Public School",
+    "code": "dhau0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a1",
+    "name": "Radha Krishna Public School",
+    "code": "amro0003"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a2",
+    "name": "Railways Higher Secondary School",
+    "code": "chen0040"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a3",
+    "name": "Seven Hills School",
+    "code": "etaw0004"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a4",
+    "name": "Shidiswa Samvarddhan Gurukul School",
+    "code": "ball0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a5",
+    "name": "Shri Ram Vidyapeeth Global School",
+    "code": "meer0016"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a6",
+    "name": "Dunlop",
+    "code": "kolk0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a7",
+    "name": "NTPC Ramagundam",
+    "code": "rama0005"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a8",
+    "name": "Adibatla",
+    "code": "hyde0090"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6a9",
+    "name": "Agra",
+    "code": "agra0011"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6aa",
+    "name": "Ambala",
+    "code": "amba0013"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6ab",
+    "name": "Asilmetta",
+    "code": "visa0007"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6ac",
+    "name": "Asilmetta 3",
+    "code": "visa0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6ad",
+    "name": "Aurangabad 1",
+    "code": "aura0010"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6ae",
+    "name": "Aurangabad 2",
+    "code": "aura0012"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6af",
+    "name": "Bada Bazar",
+    "code": "bara0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b0",
+    "name": "Badlapur",
+    "code": "badl0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b1",
+    "name": "Ballari",
+    "code": "ball0006"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b2",
+    "name": "Banaswadi",
+    "code": "beng0010"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b3",
+    "name": "Bannerghatta Road",
+    "code": "bang0012"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b4",
+    "name": "Bareilly",
+    "code": "bare0015"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b5",
+    "name": "Basavanagudi",
+    "code": "beng0006"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b6",
+    "name": "Bavadhan",
+    "code": "bavd0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b7",
+    "name": "Bhagathsingh Nagar Boys Res",
+    "code": "dava0003"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b8",
+    "name": "Bikaner",
+    "code": "bika0004"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6b9",
+    "name": "Chaitanyapuri CBSE",
+    "code": "hyde0005"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6ba",
+    "name": "Chandigarh",
+    "code": "chan0013"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6bb",
+    "name": "Chinsurah",
+    "code": "hoog0002"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6bc",
+    "name": "Chittorgarh",
+    "code": "chit0012"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6bd",
+    "name": "Coimbatore 1",
+    "code": "coim0002"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6be",
+    "name": "Coimbatore 2",
+    "code": "coim0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6bf",
+    "name": "Coimbatore 4",
+    "code": "coim0003"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c0",
+    "name": "Coimbatore 6",
+    "code": "coim0019"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c1",
+    "name": "Coimbatore Chetty Street",
+    "code": "coim0020"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c2",
+    "name": "Davanagere",
+    "code": "dava0002"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c3",
+    "name": "Dehradun",
+    "code": "dehr0027"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c4",
+    "name": "Dhuri 2",
+    "code": "dhur0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c5",
+    "name": "Dindigul",
+    "code": "dind0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c6",
+    "name": "Dombivali",
+    "code": "domb0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c7",
+    "name": "Ecil 3",
+    "code": "hyde0004"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c8",
+    "name": "Electronic City International",
+    "code": "bang0010"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6c9",
+    "name": "Eluru CBSE",
+    "code": "raja0002"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6ca",
+    "name": "Erode",
+    "code": "erod0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6cb",
+    "name": "Faridabad",
+    "code": "fari0013"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6cc",
+    "name": "Faridabad 2",
+    "code": "fari0015"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6cd",
+    "name": "Future Pathways Global School Varthur",
+    "code": "beng0063"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6ce",
+    "name": "Ganapavaram",
+    "code": "west0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6cf",
+    "name": "Gangavathi",
+    "code": "gang0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d0",
+    "name": "Ghaziabad 1",
+    "code": "ghaz0021"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d1",
+    "name": "Ghaziabad 2",
+    "code": "ghaz0020"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d2",
+    "name": "Gundla Pochampally CBSE",
+    "code": "hyde0105"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d3",
+    "name": "Guntur Res",
+    "code": "gunt0011"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d4",
+    "name": "Gurugram 1",
+    "code": "delh0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d5",
+    "name": "Gurugram 12",
+    "code": "gurg0019"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d6",
+    "name": "Gurugram 2",
+    "code": "delh0002"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d7",
+    "name": "Gurugram 3",
+    "code": "delh0004"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d8",
+    "name": "Gurugram 4",
+    "code": "delh0003"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6d9",
+    "name": "Gurugram 6",
+    "code": "gurg0018"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6da",
+    "name": "Gurugram 9",
+    "code": "gurg0017"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6db",
+    "name": "Habsiguda 2",
+    "code": "hyde0057"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6dc",
+    "name": "Hasmathpet",
+    "code": "hyde0049"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6dd",
+    "name": "Hathan",
+    "code": "male0003"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6de",
+    "name": "Hebbal",
+    "code": "bang0007"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6df",
+    "name": "Himayatnagar",
+    "code": "hyde0063"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6e0",
+    "name": "Hospet",
+    "code": "hosp0001"
+  },
+  {
+    "id": "6aab9f773e1968ebfb1df6e1",
+    "name": "Hospet 2",
+    "code": "hosp0002"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6e2",
+    "name": "Hosur 1",
+    "code": "hosu0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6e3",
+    "name": "Hosur 2",
+    "code": "hosu0002"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6e4",
+    "name": "Hosur 3",
+    "code": "hosu0003"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6e5",
+    "name": "Howrah",
+    "code": "howr0003"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6e6",
+    "name": "HSR layout",
+    "code": "bang0005"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6e7",
+    "name": "Hubli",
+    "code": "hubb0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6e8",
+    "name": "Hyderguda",
+    "code": "hyde0053"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6e9",
+    "name": "International Bezawada",
+    "code": "vija0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6ea",
+    "name": "International School Vijayawada",
+    "code": "vija0002"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6eb",
+    "name": "International School Whitehouse",
+    "code": "gunt0012"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6ec",
+    "name": "Iyyapanthangal",
+    "code": "chen0003"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6ed",
+    "name": "Jaipur 1",
+    "code": "jaip0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6ee",
+    "name": "Jaipur 2",
+    "code": "jaip0018"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6ef",
+    "name": "Jaipur 3",
+    "code": "jaip0020"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f0",
+    "name": "Jaipur 4",
+    "code": "jaip0021"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f1",
+    "name": "Jaipur 5",
+    "code": "jaip0024"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f2",
+    "name": "Jaipur 8",
+    "code": "jaip0023"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f3",
+    "name": "Jalandhar",
+    "code": "jala0004"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f4",
+    "name": "Jodhpur",
+    "code": "jodh0008"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f5",
+    "name": "JP Nagar",
+    "code": "bang0006"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f6",
+    "name": "Jubilee Hills",
+    "code": "hyde0003"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f7",
+    "name": "Kaggadasapura",
+    "code": "bang0009"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f8",
+    "name": "Kaggadasapura 2",
+    "code": "bang0024"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6f9",
+    "name": "Kaggadasapura 3",
+    "code": "bang0022"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6fa",
+    "name": "Kakinada 3",
+    "code": "kaki0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6fb",
+    "name": "Kanakapura Road",
+    "code": "beng0003"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6fc",
+    "name": "Karnal",
+    "code": "karn0011"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6fd",
+    "name": "Karur",
+    "code": "chen0012"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6fe",
+    "name": "Keelkattalai",
+    "code": "chen0016"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df6ff",
+    "name": "Khalsa",
+    "code": "hyde0006"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df700",
+    "name": "KK Nagar",
+    "code": "chen0014"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df701",
+    "name": "Kompally 2",
+    "code": "hyde0035"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df702",
+    "name": "Kompally 5",
+    "code": "hyde0002"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df703",
+    "name": "KR Puram",
+    "code": "beng0014"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df704",
+    "name": "Krishnagiri",
+    "code": "kris0005"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df705",
+    "name": "Kudlu",
+    "code": "beng0007"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df706",
+    "name": "Kudlu 2",
+    "code": "beng0008"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df707",
+    "name": "Kudlu Future Pathways",
+    "code": "bang0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df708",
+    "name": "Kukatpally",
+    "code": "hyde0039"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df709",
+    "name": "Kukatpally 2",
+    "code": "hyde0040"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df70a",
+    "name": "Kurmannapalem",
+    "code": "visa0008"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df70b",
+    "name": "Lucknow 1",
+    "code": "luck0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df70c",
+    "name": "Ludhiana 1",
+    "code": "ludh0016"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df70d",
+    "name": "M S Palya",
+    "code": "beng0009"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df70e",
+    "name": "Madhavaram",
+    "code": "chen0015"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df70f",
+    "name": "Madhurawada",
+    "code": "visa0002"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df710",
+    "name": "Madhurawada 5",
+    "code": "visa0027"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df711",
+    "name": "Madurai",
+    "code": "madu0008"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df712",
+    "name": "Mahalakshmi Layout",
+    "code": "bang0015"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df713",
+    "name": "Malsian",
+    "code": "shah0003"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df714",
+    "name": "Manapakkam",
+    "code": "chen0017"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df715",
+    "name": "Mandya",
+    "code": "mand0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df716",
+    "name": "Mangalore",
+    "code": "mang0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df717",
+    "name": "Manikonda",
+    "code": "hyde0019"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df718",
+    "name": "Marthahally 1",
+    "code": "beng0015"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df719",
+    "name": "Marthahally 2",
+    "code": "beng0005"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df71a",
+    "name": "Mehdipatnam",
+    "code": "hyde0054"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df71b",
+    "name": "Mohali",
+    "code": "moha0005"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df71c",
+    "name": "Moolakadai",
+    "code": "chen0018"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df71d",
+    "name": "Muzaffarnagar",
+    "code": "muza0001"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df71e",
+    "name": "Mylapore",
+    "code": "chen0004"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df71f",
+    "name": "Mysore",
+    "code": "mysu0007"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df720",
+    "name": "Nacharam",
+    "code": "hyde0007"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df721",
+    "name": "Nagarbhavi",
+    "code": "bang0004"
+  },
+  {
+    "id": "6aab9f783e1968ebfb1df722",
+    "name": "Nagole",
+    "code": "hyde0116"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df723",
+    "name": "Nagole Metro CBSE",
+    "code": "hyde0119"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df724",
+    "name": "Nallagandla",
+    "code": "rang0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df725",
+    "name": "Nallakunta",
+    "code": "hyde0060"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df726",
+    "name": "Namakkal",
+    "code": "nama0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df727",
+    "name": "Nanded",
+    "code": "nand0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df728",
+    "name": "Nanded 2",
+    "code": "nand0004"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df729",
+    "name": "Nashik 1",
+    "code": "nash0008"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df72a",
+    "name": "Nashik 2",
+    "code": "nash0009"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df72b",
+    "name": "New Town\t2",
+    "code": "kolk0015"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df72c",
+    "name": "New Town 1",
+    "code": "kolk0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df72d",
+    "name": "Nizampet",
+    "code": "hyde0109"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df72e",
+    "name": "Noida 1",
+    "code": "noid0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df72f",
+    "name": "Noida 2",
+    "code": "noid0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df730",
+    "name": "Noida 3",
+    "code": "noid0003"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df731",
+    "name": "Nolambur",
+    "code": "chen0019"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df732",
+    "name": "Pa",
+    "code": "kanc0010"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df733",
+    "name": "Padur",
+    "code": "chen0049"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df734",
+    "name": "Palakol 2",
+    "code": "pala0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df735",
+    "name": "Pallavakkam",
+    "code": "chen0010"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df736",
+    "name": "Pallavaram",
+    "code": "chen0008"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df737",
+    "name": "Pallavaram 2",
+    "code": "pall0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df738",
+    "name": "Panipat",
+    "code": "pani0004"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df739",
+    "name": "Peenya Dasarahalli",
+    "code": "beng0011"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df73a",
+    "name": "Perumbakkam",
+    "code": "chen0009"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df73b",
+    "name": "Perungudi",
+    "code": "chen0005"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df73c",
+    "name": "Pollachi",
+    "code": "poll0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df73d",
+    "name": "Poonamallee International School",
+    "code": "chen0006"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df73e",
+    "name": "Raichur 3",
+    "code": "raic0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df73f",
+    "name": "Rajahmundry 1",
+    "code": "raja0005"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df740",
+    "name": "Rajaji Nagar",
+    "code": "beng0013"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df741",
+    "name": "Ram Murthy Nagar 1",
+    "code": "bang0008"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df742",
+    "name": "Ram Murthy Nagar 3",
+    "code": "beng0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df743",
+    "name": "Ram Murthy Nagar 4",
+    "code": "beng0059"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df744",
+    "name": "Ram Murthy Nagar2 Harivillu",
+    "code": "bang0011"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df745",
+    "name": "Ramagundam",
+    "code": "rama0004"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df746",
+    "name": "Ramapuram",
+    "code": "chen0007"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df747",
+    "name": "Rampura",
+    "code": "beng0071"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df748",
+    "name": "Reddypalem DS",
+    "code": "gunt0030"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df749",
+    "name": "Royapuram",
+    "code": "chen0011"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df74a",
+    "name": "Salem",
+    "code": "sale0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df74b",
+    "name": "Selaiyur",
+    "code": "chen0047"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df74c",
+    "name": "Serampore",
+    "code": "kolk0003"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df74d",
+    "name": "Seshadripuram",
+    "code": "bang0013"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df74e",
+    "name": "Shamli",
+    "code": "sham0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df74f",
+    "name": "Sindhanur",
+    "code": "sind0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df750",
+    "name": "SP Nagar DS",
+    "code": "hyde0042"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df751",
+    "name": "Sr Nagar",
+    "code": "hyde0018"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df752",
+    "name": "Sunam",
+    "code": "suna0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df753",
+    "name": "Tadepalligudem",
+    "code": "tade0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df754",
+    "name": "Tambaram",
+    "code": "chen0013"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df755",
+    "name": "Thanjavur",
+    "code": "than0018"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df756",
+    "name": "Thoraipakkam",
+    "code": "chen0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df757",
+    "name": "Tiruchengode",
+    "code": "tiru0053"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df758",
+    "name": "Tiruppur",
+    "code": "tiru0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df759",
+    "name": "Tiruppur 2",
+    "code": "tiru0052"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df75a",
+    "name": "Tiruvannamalai",
+    "code": "tiru0044"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df75b",
+    "name": "Trichy",
+    "code": "tiru0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df75c",
+    "name": "TSN Puram",
+    "code": "tiru0003"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df75d",
+    "name": "Tumkur 1",
+    "code": "tuma0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df75e",
+    "name": "Tumkur 3",
+    "code": "tuma0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df75f",
+    "name": "Ulhasnagar",
+    "code": "ulha0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df760",
+    "name": "Ullal",
+    "code": "beng0040"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df761",
+    "name": "Uttarahalli",
+    "code": "beng0012"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df762",
+    "name": "Valasaravakkam",
+    "code": "chen0048"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df763",
+    "name": "Velachery",
+    "code": "chen0020"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df764",
+    "name": "Vellore",
+    "code": "vell0008"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df765",
+    "name": "Vidyaranyapura",
+    "code": "beng0004"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df766",
+    "name": "Wagholi",
+    "code": "wagh0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df767",
+    "name": "Whitefield",
+    "code": "beng0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df768",
+    "name": "Yelahanka",
+    "code": "bang0023"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df769",
+    "name": "Yeshwanthpur",
+    "code": "bang0014"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df76a",
+    "name": "Sri Saraswathi Public School",
+    "code": "mett0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df76b",
+    "name": "St. Arnold Central School",
+    "code": "mysu0008"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df76c",
+    "name": "St. Soldier's School",
+    "code": "tonk0001"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df76d",
+    "name": "Suraj Public School",
+    "code": "alwa0007"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df76e",
+    "name": "The Future Foundation School",
+    "code": "SCHOOL266"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df76f",
+    "name": "Vivekananda CBSE School",
+    "code": "pudu0003"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df770",
+    "name": "Vivekananda Higher Secondary School",
+    "code": "pudu0002"
+  },
+  {
+    "id": "6aab9f793e1968ebfb1df771",
+    "name": "Vivekananda Vidyalaya",
+    "code": "pudu0004"
+  }
+]

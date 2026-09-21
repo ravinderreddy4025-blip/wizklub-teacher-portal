@@ -6,7 +6,7 @@ import React from 'react';
 const ComponentIdPreview = ({
   value,
   label = 'Component ID (preview)',
-  hint = 'School code / school id — kit id — qty (01–NN)',
+  hint = 'School ID / joining year — kit id — qty (01–NN)',
 }) => (
   <div className="flex flex-col gap-1.5">
     <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{label}</label>
