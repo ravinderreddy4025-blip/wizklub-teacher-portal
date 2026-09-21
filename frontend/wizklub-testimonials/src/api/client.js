@@ -11,6 +11,8 @@ import {
   batchSessionLevelResponsesPath,
   batchSessionLevelResponseDeletePath,
   batchSessionSubmitPath,
+  srCodeBulkCardsPath,
+  srCodeBulkGeneratePath,
 } from './batchSessionPaths'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
@@ -143,6 +145,60 @@ async function request(path, options = {}, base = API_BASE) {
   }
 
   return { ok: true, status: response.status, data }
+}
+
+
+async function requestBlob(path, options = {}, base = API_BASE) {
+  const headers = { ...(options.headers ?? {}) }
+
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`
+  }
+
+  if (options.body && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  let response = await fetch(`${base}${path}`, {
+    ...options,
+    headers,
+  })
+
+  if (response.status === 401 && refreshToken) {
+    const refreshed = await tryRefresh()
+    if (refreshed) {
+      headers.Authorization = `Bearer ${authToken}`
+      response = await fetch(`${base}${path}`, { ...options, headers })
+    }
+  }
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    return {
+      ok: false,
+      status: response.status,
+      error:
+        data.message ||
+        data.error ||
+        (typeof data.detail === 'string' ? data.detail : null) ||
+        'Request failed.',
+      data,
+    }
+  }
+
+  const blob = await response.blob()
+  return { ok: true, status: response.status, blob }
+}
+
+function triggerBrowserDownload(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
 }
 
 async function loadMockStore() {
@@ -769,6 +825,88 @@ export const api = {
 
     if (!result.ok) return { ok: false, status: result.status, error: result.error }
     return { ok: true, feedback: result.data.feedback }
+  },
+
+
+  async bulkGenerateSrCodes(studentIds) {
+    const ids = (studentIds || []).map((id) => String(id || '').trim()).filter(Boolean)
+    if (!ids.length) {
+      return { ok: false, status: 400, error: 'Select at least one student.' }
+    }
+    if (ids.length > 200) {
+      return { ok: false, status: 400, error: 'You can generate SR Codes for at most 200 students at a time.' }
+    }
+
+    if (USE_MOCK) {
+      return {
+        ok: true,
+        data: {
+          results: ids.map((student_id) => ({
+            student_id,
+            success: true,
+            created: true,
+            sr_label: 'SR-MOCK',
+          })),
+          total: ids.length,
+          succeeded: ids.length,
+          failed: 0,
+        },
+      }
+    }
+
+    const result = await request(
+      srCodeBulkGeneratePath(),
+      {
+        method: 'POST',
+        body: JSON.stringify({ student_ids: ids }),
+      },
+      WIZKLUB_API_BASE,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) {
+      return {
+        ok: false,
+        status: result.status,
+        error: result.message || result.error || 'Failed to generate SR Codes.',
+      }
+    }
+    const payload = result.data
+    return { ok: true, data: payload?.data ?? payload }
+  },
+
+  async bulkDownloadSrCards(studentIds) {
+    const ids = (studentIds || []).map((id) => String(id || '').trim()).filter(Boolean)
+    if (!ids.length) {
+      return { ok: false, status: 400, error: 'Select at least one student.' }
+    }
+    if (ids.length > 200) {
+      return { ok: false, status: 400, error: 'You can download SR cards for at most 200 students at a time.' }
+    }
+
+    if (USE_MOCK) {
+      const blob = new Blob(['PK mock sr cards zip'], { type: 'application/zip' })
+      triggerBrowserDownload(blob, 'sr-codes.zip')
+      return { ok: true, downloaded: ids.length }
+    }
+
+    const result = await requestBlob(
+      srCodeBulkCardsPath(),
+      {
+        method: 'POST',
+        body: JSON.stringify({ student_ids: ids }),
+      },
+      WIZKLUB_API_BASE,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) {
+      return {
+        ok: false,
+        status: result.status,
+        error: result.error || 'Failed to download SR cards.',
+      }
+    }
+    triggerBrowserDownload(result.blob, 'sr-codes.zip')
+    return { ok: true, downloaded: ids.length }
   },
 
   async listInventorySchools() {

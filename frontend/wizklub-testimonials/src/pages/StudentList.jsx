@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { BATCH_GROUP_PHOTO_LABEL } from '../api/constants'
 import GroupPhotoSheet from '../components/GroupPhotoSheet'
+import '../components/GroupPhotoSheet.css'
 import QuickUploadSheet from '../components/QuickUploadSheet'
 import AppShell from '../components/layout/AppShell'
 import LoadingScreen from '../components/ui/LoadingScreen'
-import { IconCamera, IconChevronRight, IconSearch } from '../components/icons/Icons'
+import { IconCamera, IconChevronRight, IconDownload, IconSearch, IconUpload } from '../components/icons/Icons'
 import { useNavigate } from '../router'
 import '../styles/app.css'
 import './pages.css'
@@ -85,6 +86,13 @@ function CompletionRing({ value }) {
   )
 }
 
+
+const SR_BULK_LIMIT = 200
+
+function studentSrId(student) {
+  return String(student?.username || student?.id || '').trim()
+}
+
 export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
   const navigate = useNavigate()
   const [schoolIdFromQuery] = useState(
@@ -102,6 +110,10 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
   const [uploadStudent, setUploadStudent] = useState(null)
   const [fabPickerOpen, setFabPickerOpen] = useState(false)
   const [groupPhotoOpen, setGroupPhotoOpen] = useState(false)
+  const [selectedSrIds, setSelectedSrIds] = useState(() => new Set())
+  const [srBusy, setSrBusy] = useState('')
+  const [srMessage, setSrMessage] = useState('')
+  const [srError, setSrError] = useState('')
 
   const loadStudents = useCallback(() => {
     setLoadError('')
@@ -165,6 +177,103 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
   const assessmentSessions = (assessments?.sessions ?? []).filter(
     (session) => session?.type === 'assessment' && session?.is_scannable !== false,
   )
+
+  const selectedCount = selectedSrIds.size
+  const visibleIds = filtered.map(studentSrId).filter(Boolean)
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedSrIds.has(id))
+
+  function toggleStudentSelected(studentId) {
+    if (!studentId) return
+    setSelectedSrIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(studentId)) next.delete(studentId)
+      else next.add(studentId)
+      return next
+    })
+    setSrError('')
+    setSrMessage('')
+  }
+
+  function selectAllVisible() {
+    const next = new Set(selectedSrIds)
+    for (const id of visibleIds) {
+      if (next.size >= SR_BULK_LIMIT) break
+      next.add(id)
+    }
+    setSelectedSrIds(next)
+    setSrError('')
+    if (visibleIds.length > SR_BULK_LIMIT) {
+      setSrMessage(`Selected the first ${SR_BULK_LIMIT} students (API limit).`)
+    } else {
+      setSrMessage('')
+    }
+  }
+
+  function clearSelection() {
+    setSelectedSrIds(new Set())
+    setSrError('')
+    setSrMessage('')
+  }
+
+  async function handleBulkGenerate() {
+    const ids = Array.from(selectedSrIds)
+    if (!ids.length) {
+      setSrError('Select at least one student.')
+      return
+    }
+    setSrBusy('generate')
+    setSrError('')
+    setSrMessage('')
+    try {
+      const result = await api.bulkGenerateSrCodes(ids)
+      if (result?.forbidden) {
+        setSrError('You do not have permission to generate SR Codes.')
+        return
+      }
+      if (!result?.ok) {
+        setSrError(result?.error || 'Failed to generate SR Codes.')
+        return
+      }
+      const succeeded = Number(result.data?.succeeded ?? 0)
+      const failed = Number(result.data?.failed ?? 0)
+      setSrMessage(
+        `Generated ${succeeded} of ${ids.length} SR Code${ids.length === 1 ? '' : 's'}` +
+          (failed ? ` (${failed} failed).` : '.'),
+      )
+    } catch (err) {
+      setSrError(err?.message || 'Failed to generate SR Codes.')
+    } finally {
+      setSrBusy('')
+    }
+  }
+
+  async function handleBulkDownload() {
+    const ids = Array.from(selectedSrIds)
+    if (!ids.length) {
+      setSrError('Select at least one student.')
+      return
+    }
+    setSrBusy('download')
+    setSrError('')
+    setSrMessage('')
+    try {
+      const result = await api.bulkDownloadSrCards(ids)
+      if (result?.forbidden) {
+        setSrError('You do not have permission to download SR cards.')
+        return
+      }
+      if (!result?.ok) {
+        setSrError(result?.error || 'Failed to download SR cards.')
+        return
+      }
+      setSrMessage(`Downloaded ZIP for ${ids.length} student${ids.length === 1 ? '' : 's'}.`)
+    } catch (err) {
+      setSrError(err?.message || 'Failed to download SR cards.')
+    } finally {
+      setSrBusy('')
+    }
+  }
 
   return (
     <AppShell
@@ -230,6 +339,71 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
               </div>
             </section>
 
+
+            <section className="sr-code-card" aria-label="SR Codes">
+              <div className="sr-code-card__header">
+                <div>
+                  <h2 className="sr-code-card__title">SR Codes</h2>
+                  <p className="sr-code-card__meta">
+                    Generate printable cards for selected students (max {SR_BULK_LIMIT}).
+                  </p>
+                </div>
+              </div>
+
+              <div className="sr-code-card__select-row">
+                <p className="sr-code-card__meta" style={{ margin: 0 }}>
+                  {selectedCount} selected
+                </p>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button
+                    type="button"
+                    className="sr-code-card__link"
+                    onClick={allVisibleSelected ? clearSelection : selectAllVisible}
+                    disabled={Boolean(srBusy) || visibleIds.length === 0}
+                  >
+                    {allVisibleSelected ? 'Clear' : 'Select all'}
+                  </button>
+                  {selectedCount > 0 && !allVisibleSelected ? (
+                    <button
+                      type="button"
+                      className="sr-code-card__link"
+                      onClick={clearSelection}
+                      disabled={Boolean(srBusy)}
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="sr-code-card__actions">
+                <button
+                  type="button"
+                  className="sr-code-card__btn sr-code-card__btn--primary"
+                  onClick={handleBulkGenerate}
+                  disabled={Boolean(srBusy) || selectedCount === 0}
+                >
+                  <IconUpload size={16} />
+                  {srBusy === 'generate' ? 'Generating…' : 'Generate'}
+                </button>
+                <button
+                  type="button"
+                  className="sr-code-card__btn sr-code-card__btn--secondary"
+                  onClick={handleBulkDownload}
+                  disabled={Boolean(srBusy) || selectedCount === 0}
+                >
+                  <IconDownload size={16} />
+                  {srBusy === 'download' ? 'Downloading…' : 'Download ZIP'}
+                </button>
+              </div>
+
+              {srError ? (
+                <p className="sr-code-card__message sr-code-card__message--error">{srError}</p>
+              ) : srMessage ? (
+                <p className="sr-code-card__message">{srMessage}</p>
+              ) : null}
+            </section>
+
             <div className="sticky-filters">
               <div className="search-input-wrap">
                 <IconSearch className="search-icon" />
@@ -262,8 +436,20 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
                   <p className="empty-state__text">Try a different filter or search term.</p>
                 </div>
               ) : (
-                filtered.map((student) => (
-                  <div key={student.id} className="list-row-wrap">
+                filtered.map((student) => {
+                  const srId = studentSrId(student)
+                  const isSelected = srId ? selectedSrIds.has(srId) : false
+                  return (
+                  <div key={student.id} className="list-row-wrap list-row-wrap--selectable">
+                    <label className="list-row__select" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={!srId || Boolean(srBusy)}
+                        onChange={() => toggleStudentSelected(srId)}
+                        aria-label={`Select ${student.full_name} for SR Code`}
+                      />
+                    </label>
                     <button
                       type="button"
                       className="list-row list-row__main"
@@ -298,7 +484,8 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
                       <IconCamera size={18} />
                     </button>
                   </div>
-                ))
+                  )
+                })
               )}
             </div>
           </>
