@@ -37,3 +37,11 @@ export function batchSessionLevelResponseDeletePath(batchId, sessionId, levelId,
     `/responses/${encodeURIComponent(studentId)}`
   )
 }
+
+export function srCodeBulkGeneratePath() {
+  return '/v1/sr-code/students/bulk'
+}
+
+export function srCodeBulkCardsPath() {
+  return '/v1/sr-code/students/bulk/cards'
+}
