@@ -22,9 +22,17 @@ function formatSubmitFailureReason(result) {
   return result?.status || 'Submit failed'
 }
 
+function assessmentsListPath(schoolId, batchId) {
+  const base = schoolId
+    ? `/schools/${schoolId}/batches/${batchId}/students`
+    : `/batches/${batchId}/students`
+  return `${base}?view=assessments`
+}
+
 export default function AssessmentConduct({ schoolId = '', batchId, sessionId }) {
   const navigate = useNavigate()
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [successOpen, setSuccessOpen] = useState(false)
   const {
     context,
     loading,
@@ -47,14 +55,16 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
   } = useAssessmentConduct(batchId, sessionId)
 
   const currentQuestionId = currentQuestion?.question_id || ''
+  const backPath = assessmentsListPath(schoolId, batchId)
 
   useEffect(() => {
     clearAlreadyScanned()
   }, [currentQuestionId])
 
-  const backPath = schoolId
-    ? `/schools/${schoolId}/batches/${batchId}/students`
-    : `/batches/${batchId}/students`
+  const goToAssessmentList = () => {
+    setSuccessOpen(false)
+    navigate(backPath)
+  }
 
   const handleSubmitAssessment = async () => {
     if (submitting) return
@@ -79,11 +89,7 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
       return
     }
 
-    toast.success(
-      successTotal
-        ? `Assessment submitted successfully for ${successTotal} student(s).`
-        : 'Assessment submit completed.',
-    )
+    setSuccessOpen(true)
   }
 
   if (loading) {
@@ -185,6 +191,28 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
           onCaptured={addCapturedResponse}
           onClose={() => setScannerOpen(false)}
         />
+      ) : null}
+
+      {successOpen ? (
+        <div className="conduct-modal-backdrop" role="presentation">
+          <div
+            className="conduct-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="assessment-submit-success-title"
+          >
+            <h2 id="assessment-submit-success-title" className="conduct-modal__title">
+              Assessment submitted successfully
+            </h2>
+            <p className="conduct-modal__text">
+              Responses are saved. You can reopen this assessment anytime to review student
+              answers.
+            </p>
+            <button type="button" className="btn-primary" onClick={goToAssessmentList}>
+              Go to assessment list
+            </button>
+          </div>
+        </div>
       ) : null}
     </AppShell>
   )

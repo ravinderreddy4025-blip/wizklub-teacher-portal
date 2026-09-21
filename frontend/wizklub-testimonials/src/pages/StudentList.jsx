@@ -99,7 +99,10 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
     () => new URLSearchParams(window.location.search).get('school_id') ?? '',
   )
   const schoolId = schoolIdProp || schoolIdFromQuery
-  const [pageView, setPageView] = useState('students')
+  const [pageView, setPageView] = useState(() => {
+    const view = new URLSearchParams(window.location.search).get('view')
+    return view === 'assessments' ? 'assessments' : 'students'
+  })
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [data, setData] = useState(null)
@@ -313,7 +316,18 @@ export default function StudentList({ batchId, schoolId: schoolIdProp = '' }) {
               key={view.id}
               type="button"
               className={`chip ${pageView === view.id ? 'chip--active' : ''}`}
-              onClick={() => setPageView(view.id)}
+              onClick={() => {
+                setPageView(view.id)
+                const params = new URLSearchParams(window.location.search)
+                if (view.id === 'assessments') {
+                  params.set('view', 'assessments')
+                } else {
+                  params.delete('view')
+                }
+                const query = params.toString()
+                const next = `${window.location.pathname}${query ? `?${query}` : ''}`
+                window.history.replaceState({}, '', next)
+              }}
             >
               {view.label}
             </button>
