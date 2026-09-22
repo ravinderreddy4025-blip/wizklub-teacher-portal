@@ -10,9 +10,9 @@ export default function AmNetworkHealth({ current }) {
   const eligible = fulfillment.eligibleDsps ?? 0;
 
   return (
-    <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
-      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">School network health</p>
-      <p className="mt-1 text-[12px] text-[#6B7280]">What is currently happening across your schools.</p>
+    <section className="rounded-2xl bg-white shadow-card p-5">
+      <h2 className="text-base font-semibold text-wk-ink">School network health</h2>
+      <p className="mt-0.5 text-[13px] text-wk-body">What is currently happening across your schools.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <AmKpiCard
           label="Pending acknowledgement"

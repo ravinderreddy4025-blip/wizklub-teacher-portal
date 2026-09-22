@@ -8,10 +8,9 @@ const GuestRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen app-shell-bg">
-        <div className="glass-panel p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto" />
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-white" role="status" aria-live="polite">
+        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-wk-peach border-t-wk-orange-text" />
+        <span className="sr-only">Loading…</span>
       </div>
     );
   }

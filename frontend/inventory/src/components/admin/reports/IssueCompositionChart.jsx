@@ -7,33 +7,36 @@ export default function IssueCompositionChart({ composition, loading }) {
   const total = composition?.totalAffected ?? 0;
 
   if (loading) {
-    return <div className="h-64 animate-pulse rounded-2xl bg-[#F1F5F9]" />;
+    return <div className="h-64 animate-pulse rounded-2xl bg-wk-mist" />;
   }
 
   return (
-    <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
+    <section className="rounded-2xl bg-white shadow-card p-5">
       <div className="mb-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">Issue composition</p>
-        <p className="mt-1 text-[13px] text-[#6B7280]">
+        <h2 className="text-base font-semibold text-wk-ink">Issue composition</h2>
+        <p className="mt-0.5 text-[13px] text-wk-body">
           How affected kits split by issue type this month ({total} total).
         </p>
       </div>
       {data.length === 0 ? (
-        <p className="py-16 text-center text-sm text-[#6B7280]">No receipt issues recorded for this month.</p>
+        <p className="inv-empty inv-empty__text">No receipt issues recorded for this month.</p>
       ) : (
-        <div className="h-64 w-full">
+        <figure className="h-64 w-full" aria-label={`Affected kits by issue type, ${total} kits total`}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={88} paddingAngle={2}>
+              <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={88} paddingAngle={2} stroke="#FFFFFF" strokeWidth={2}>
                 {data.map((entry) => (
                   <Cell key={entry.key} fill={ISSUE_COLORS[entry.key]} />
                 ))}
               </Pie>
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 1px 12px rgba(0,0,0,0.16)', fontFamily: 'Poppins, sans-serif', fontSize: 13 }}
+                formatter={(value, name) => [`${value} kits`, name]}
+              />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 12, color: '#52565C' }} />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </figure>
       )}
     </section>
   );

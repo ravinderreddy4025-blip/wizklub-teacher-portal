@@ -74,8 +74,8 @@ export default function AdminReportsSection({ registrySection, divisions = [] })
     <div className="space-y-6">
       <section className="stitch-card-pad md:p-5 space-y-6">
         <div>
-          <h3 className="font-heading text-base font-bold text-[var(--stitch-text)]">Monthly reports</h3>
-          <p className="mt-1 text-[13px] text-[var(--stitch-muted)]">
+          <h3 className="text-base font-semibold text-wk-ink">Monthly reports</h3>
+          <p className="mt-1 text-[13px] text-wk-muted">
             Management analytics — what happened, where problems occurred, and whether they are improving.
           </p>
         </div>
@@ -106,17 +106,17 @@ export default function AdminReportsSection({ registrySection, divisions = [] })
           <TopSchoolsPanel topSchools={report?.topSchools} loading={loading} />
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-[var(--stitch-border)]">
-          <div className="border-b border-[var(--stitch-border)] bg-[var(--stitch-canvas)]/80 px-5 py-4">
-            <h4 className="font-bold text-[var(--stitch-text)]">School-wise monthly report</h4>
-            <p className="mt-1 text-xs text-[var(--stitch-muted)]">
+        <div className="overflow-hidden rounded-xl border border-wk-line">
+          <div className="border-b border-wk-line bg-wk-cream px-5 py-4">
+            <h4 className="font-bold text-wk-ink">School-wise monthly report</h4>
+            <p className="mt-1 text-xs text-wk-muted">
               Detailed metrics for {formatMonthLong(reportMonth)}. Download PDF for audit history per school.
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead className="stitch-table-head">
-                <tr className="border-b border-[var(--stitch-border)]">
+                <tr className="border-b border-wk-line">
                   {['School', 'Division', 'Shipped', 'Received', 'Replacements', 'Affected', 'Issue rate', 'Fulfillment', 'PDF'].map(
                     (col) => (
                       <th key={col} className={col === 'PDF' ? 'text-right' : ''}>{col}</th>
@@ -124,28 +124,28 @@ export default function AdminReportsSection({ registrySection, divisions = [] })
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5E7EB]">
+              <tbody className="divide-y divide-wk-line">
                 {schools.map((row) => {
                   const fulfillment = formatFulfillment(row.fulfillment);
                   return (
-                    <tr key={row.schoolId} className="transition hover:bg-[#F8FAFC]">
-                      <td className="px-5 py-3.5 font-bold text-[#1F2937]">{formatSchoolDisplayName(row.schoolName)}</td>
-                      <td className="px-5 py-3.5 text-sm text-[#6B7280]">{row.divisionName}</td>
-                      <td className="px-5 py-3.5 text-sm font-semibold text-[#1F2937]">{row.shippedKits ?? 0}</td>
+                    <tr key={row.schoolId} className="transition hover:bg-wk-cream">
+                      <td className="px-5 py-3.5 font-medium text-wk-ink">{formatSchoolDisplayName(row.schoolName)}</td>
+                      <td className="px-5 py-3.5 text-sm text-wk-muted">{row.divisionName}</td>
+                      <td className="px-5 py-3.5 text-sm font-semibold text-wk-ink">{row.shippedKits ?? 0}</td>
                       <td className="px-5 py-3.5 text-sm">{row.receivedKits ?? 0}</td>
                       <td className="px-5 py-3.5 text-sm">{row.replacedKits ?? 0}</td>
                       <td className="px-5 py-3.5 text-sm">{row.affectedKits ?? 0}</td>
                       <td className="px-5 py-3.5 text-sm tabular-nums">{formatIssueRate(row.issueRate)}</td>
                       <td className="px-5 py-3.5 text-sm">
                         <span className="font-semibold tabular-nums">{fulfillment.primary}</span>
-                        <span className="ml-1 text-[10px] text-[#9CA3AF]">{fulfillment.secondary}</span>
+                        <span className="ml-1 text-xs text-wk-muted">{fulfillment.secondary}</span>
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <button
                           type="button"
                           disabled={downloadingId === row.schoolId}
                           onClick={() => handleDownloadPdf(row.schoolId, row.schoolName)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-bold text-[#1F2937] transition hover:border-[#F89C28] hover:text-[#F89C28] disabled:opacity-60"
+                          className="wk-btn-secondary !min-h-[40px] !px-4 !text-[13px]"
                         >
                           <FileDown size={14} />
                           {downloadingId === row.schoolId ? 'Generating…' : 'Download'}
@@ -156,7 +156,7 @@ export default function AdminReportsSection({ registrySection, divisions = [] })
                 })}
                 {!loading && schools.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="px-5 py-10 text-center text-[#6B7280]">
+                    <td colSpan={9} className="px-5 py-10 text-center text-wk-muted">
                       No school activity recorded for this scope and month.
                     </td>
                   </tr>

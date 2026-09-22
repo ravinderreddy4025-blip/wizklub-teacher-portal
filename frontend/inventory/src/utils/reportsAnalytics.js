@@ -7,12 +7,12 @@ export const ISSUE_TYPE_OPTIONS = [
 ];
 
 export const ISSUE_COLORS = {
-  mismatch: '#6366F1',
-  notReceived: '#F89C28',
-  damaged: '#D97706',
-  lost: '#64748B',
-  totalAffected: '#DC2626',
-  rate: '#16A34A',
+  mismatch: '#5B2FD6',
+  notReceived: '#C2551A',
+  damaged: '#8A5500',
+  lost: '#52565C',
+  totalAffected: '#B42323',
+  rate: '#04742D',
 };
 
 export const KPI_CARDS = [

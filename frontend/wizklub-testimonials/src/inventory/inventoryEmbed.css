@@ -1,10 +1,17 @@
+/*
+ * Kit Inventory embedded in the Teachers Portal (/inventory/...).
+ * The header mirrors the Teachers Portal top bar (white, hairline, 56px, round back button);
+ * below it the inventory app renders its own IL shell (orange chrome + white panel on desktop,
+ * white page + bottom nav on mobile), themed by the shared Tailwind tokens.
+ */
 .inventory-embedded-root {
   --inventory-embed-header-height: 56px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-accent, linear-gradient(165deg, #fff7ed 0%, #faf7f5 42%, #f5f0ec 100%));
-  color: var(--text-primary, #1a1714);
+  background: var(--surface, #fff);
+  color: var(--text-primary, #080e14);
+  font-family: var(--font);
 }
 
 .inventory-embed-header {
@@ -13,33 +20,41 @@
   z-index: 40;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   height: var(--inventory-embed-header-height);
-  padding: 0 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(250, 247, 245, 0.92);
-  backdrop-filter: blur(10px);
+  padding: 0 var(--page-gutter, 16px);
+  border-bottom: 1px solid var(--border-light, #e6e7e8);
+  background: var(--surface, #fff);
 }
 
 .inventory-embed-header__back {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--text-primary, #1a1714);
+  border-radius: 50%;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 1px 4px rgba(0, 0, 0, 0.16));
+  color: var(--brand, #b4430f);
   cursor: pointer;
+  transition: background 0.2s var(--ease-out, ease);
 }
 
 .inventory-embed-header__back:hover {
-  background: rgba(249, 115, 22, 0.08);
+  background: var(--brand-light, #ffe7cf);
+}
+
+.inventory-embed-header__back:focus-visible,
+.inventory-embed-header__switch:focus-visible {
+  outline: 2px solid var(--wk-orange-text, #b4430f);
+  outline-offset: 2px;
 }
 
 .inventory-embed-header__logo {
-  height: 28px;
+  height: 32px;
   width: auto;
   flex-shrink: 0;
 }
@@ -47,46 +62,46 @@
 .inventory-embed-header__main {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   min-width: 0;
 }
 
 .inventory-embed-header__eyebrow {
   margin: 0;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--orange, #f97316);
-  line-height: 1.2;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--brand, #b4430f);
 }
 
 .inventory-embed-header__school {
   margin: 0;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--text-primary, #1a1714);
-  line-height: 1.25;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--text-primary, #080e14);
 }
 
 .inventory-embed-header__switch {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
-  padding: 8px 10px;
-  border: 1px solid rgba(249, 115, 22, 0.25);
-  border-radius: 10px;
-  background: rgba(255, 237, 213, 0.85);
-  color: var(--orange, #f97316);
-  font-size: 11px;
-  font-weight: 800;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--wk-navy, #02344f);
+  border-radius: var(--radius-pill, 9999px);
+  background: var(--surface, #fff);
+  color: var(--wk-navy, #02344f);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .inventory-embed-header__switch:hover {
-  background: rgba(255, 237, 213, 1);
+  background: var(--wk-cream, #fff7ee);
 }
 
 .inventory-embed-header__switch-label {
@@ -95,8 +110,8 @@
 
 .inventory-embed-header__title {
   font-size: 14px;
-  font-weight: 800;
-  color: var(--text-primary, #1a1714);
+  font-weight: 600;
+  color: var(--text-primary, #080e14);
 }
 
 .inventory-embedded-root .inventory-embed-body {
@@ -108,8 +123,8 @@
   position: relative;
   min-height: calc(100vh - var(--inventory-embed-header-height));
   overflow: hidden;
-  color: var(--text-primary, #1a1714);
-  background: transparent;
+  color: var(--text-primary, #080e14);
+  background: var(--surface, #fff);
 }
 
 .inventory-embedded-root .inventory-embed-shell::before,
@@ -118,22 +133,39 @@
   display: none;
 }
 
+/* The inventory shell fills the viewport below the embed header. */
 .inventory-embedded-root .dashboard-shell {
-  height: calc(100vh - var(--inventory-embed-header-height));
-  max-height: calc(100vh - var(--inventory-embed-header-height));
+  height: calc(100dvh - var(--inventory-embed-header-height));
+  max-height: calc(100dvh - var(--inventory-embed-header-height));
+}
+
+/* The embed header already carries the logo + school name. */
+.inventory-embedded-root .inv-topbar__logo,
+.inventory-embedded-root .inv-topbar__school-mobile {
+  display: none;
 }
 
 .inventory-embedded-root .inventory-empty-state {
   margin: 0;
-  padding: 48px 16px;
+  padding: 32px 16px;
+  border-radius: var(--radius-md, 16px);
+  background: var(--wk-cream, #fff7ee);
   text-align: center;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--text-secondary, #6b6560);
+  color: var(--text-secondary, #52565c);
 }
 
 .inventory-embedded-root .inventory-empty-state__hint {
   margin-top: 8px;
   font-size: 13px;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted, #6c6e72);
+}
+
+.inventory-embedded-root h1,
+.inventory-embedded-root h2,
+.inventory-embedded-root h3,
+.inventory-embedded-root h4 {
+  font-family: var(--font);
+  font-weight: 600;
 }

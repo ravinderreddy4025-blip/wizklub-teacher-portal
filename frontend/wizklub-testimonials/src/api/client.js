@@ -11,8 +11,6 @@ import {
   batchSessionLevelResponsesPath,
   batchSessionLevelResponseDeletePath,
   batchSessionSubmitPath,
-  srCodeBulkCardsPath,
-  srCodeBulkGeneratePath,
 } from './batchSessionPaths'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
@@ -147,58 +145,9 @@ async function request(path, options = {}, base = API_BASE) {
   return { ok: true, status: response.status, data }
 }
 
-
-async function requestBlob(path, options = {}, base = API_BASE) {
-  const headers = { ...(options.headers ?? {}) }
-
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`
-  }
-
-  if (options.body && !(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json'
-  }
-
-  let response = await fetch(`${base}${path}`, {
-    ...options,
-    headers,
-  })
-
-  if (response.status === 401 && refreshToken) {
-    const refreshed = await tryRefresh()
-    if (refreshed) {
-      headers.Authorization = `Bearer ${authToken}`
-      response = await fetch(`${base}${path}`, { ...options, headers })
-    }
-  }
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}))
-    return {
-      ok: false,
-      status: response.status,
-      error:
-        data.message ||
-        data.error ||
-        (typeof data.detail === 'string' ? data.detail : null) ||
-        'Request failed.',
-      data,
-    }
-  }
-
-  const blob = await response.blob()
-  return { ok: true, status: response.status, blob }
-}
-
-function triggerBrowserDownload(blob, filename) {
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
+async function loadMockLiveClass() {
+  const { mockLiveClass } = await import('./mockLiveClass')
+  return mockLiveClass
 }
 
 async function loadMockStore() {
@@ -633,6 +582,39 @@ export const api = {
     return result.data
   },
 
+  /* ── Student health (HEALTH_CONTRACT v1). `{ run: null }` = no snapshot yet. ── */
+
+  async getBatchHealth(batchId) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.getBatchHealth(batchId)
+    }
+    const result = await request(`/api/teacher/batches/${encodeURIComponent(batchId)}/health`)
+    if (result.status === 403) return { forbidden: true }
+    return result.ok ? result.data : null
+  },
+
+  async getStudentHealth(batchId, username) {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.getStudentHealth(batchId, username)
+    }
+    const result = await request(
+      `/api/teacher/batches/${encodeURIComponent(batchId)}/students/${encodeURIComponent(username)}/health`,
+    )
+    if (result.status === 403) return { forbidden: true }
+    return result.ok ? result.data : null
+  },
+
+  async getHealthAttention() {
+    if (USE_MOCK) {
+      const { mockStore } = await loadMockStore()
+      return mockStore.getHealthAttention()
+    }
+    const result = await request('/api/teacher/health/attention')
+    return result.ok ? result.data : null
+  },
+
   async uploadMedia(studentId, category, file) {
     const validation = validateUploadFile(file)
     if (!validation.ok) return { ok: false, status: 415, error: validation.error }
@@ -827,86 +809,66 @@ export const api = {
     return { ok: true, feedback: result.data.feedback }
   },
 
-
-  async bulkGenerateSrCodes(studentIds) {
-    const ids = (studentIds || []).map((id) => String(id || '').trim()).filter(Boolean)
-    if (!ids.length) {
-      return { ok: false, status: 400, error: 'Select at least one student.' }
-    }
-    if (ids.length > 200) {
-      return { ok: false, status: 400, error: 'You can generate SR Codes for at most 200 students at a time.' }
-    }
-
+  /* ---- Live class (lab attendance by class code) -------------------------------
+   * The code identifies the class, the student's PIN identifies the child, and the
+   * roster is the authorisation check. Attendance stays provisional until endClass().
+   */
+  async getClassSession(batchId) {
     if (USE_MOCK) {
-      return {
-        ok: true,
-        data: {
-          results: ids.map((student_id) => ({
-            student_id,
-            success: true,
-            created: true,
-            sr_label: 'SR-MOCK',
-          })),
-          total: ids.length,
-          succeeded: ids.length,
-          failed: 0,
-        },
-      }
+      const mock = await loadMockLiveClass()
+      return mock.get(batchId)
+    }
+
+    const result = await request(`/api/teacher/batches/${batchId}/class`)
+    if (result.status === 404) return null
+    return result.ok ? result.data : null
+  },
+
+  async startClass(batchId) {
+    if (USE_MOCK) {
+      const mock = await loadMockLiveClass()
+      return mock.start(batchId)
+    }
+
+    const result = await request(`/api/teacher/batches/${batchId}/class`, { method: 'POST' })
+    if (result.status === 403) return { forbidden: true }
+    return result.ok ? result.data : null
+  },
+
+  async markAttendance(batchId, studentId, status) {
+    if (USE_MOCK) {
+      const mock = await loadMockLiveClass()
+      return mock.mark(batchId, studentId, status)
+    }
+
+    const result = await request(`/api/teacher/batches/${batchId}/class/students/${studentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
+    return result.ok ? result.data : null
+  },
+
+  async resetStudentPin(batchId, studentId) {
+    if (USE_MOCK) {
+      const mock = await loadMockLiveClass()
+      return mock.resetPin(batchId, studentId)
     }
 
     const result = await request(
-      srCodeBulkGeneratePath(),
-      {
-        method: 'POST',
-        body: JSON.stringify({ student_ids: ids }),
-      },
-      WIZKLUB_API_BASE,
+      `/api/teacher/batches/${batchId}/class/students/${studentId}/reset-pin`,
+      { method: 'POST' },
     )
-    if (result.status === 403) return { forbidden: true }
-    if (!result.ok) {
-      return {
-        ok: false,
-        status: result.status,
-        error: result.message || result.error || 'Failed to generate SR Codes.',
-      }
-    }
-    const payload = result.data
-    return { ok: true, data: payload?.data ?? payload }
+    return result.ok ? result.data : null
   },
 
-  async bulkDownloadSrCards(studentIds) {
-    const ids = (studentIds || []).map((id) => String(id || '').trim()).filter(Boolean)
-    if (!ids.length) {
-      return { ok: false, status: 400, error: 'Select at least one student.' }
-    }
-    if (ids.length > 200) {
-      return { ok: false, status: 400, error: 'You can download SR cards for at most 200 students at a time.' }
-    }
-
+  async endClass(batchId) {
     if (USE_MOCK) {
-      const blob = new Blob(['PK mock sr cards zip'], { type: 'application/zip' })
-      triggerBrowserDownload(blob, 'sr-codes.zip')
-      return { ok: true, downloaded: ids.length }
+      const mock = await loadMockLiveClass()
+      return mock.end(batchId)
     }
 
-    const result = await requestBlob(
-      srCodeBulkCardsPath(),
-      {
-        method: 'POST',
-        body: JSON.stringify({ student_ids: ids }),
-      },
-      WIZKLUB_API_BASE,
-    )
-    if (result.status === 403) return { forbidden: true }
-    if (!result.ok) {
-      return {
-        ok: false,
-        status: result.status,
-        error: result.error || 'Failed to download SR cards.',
-      }
-    }
-    triggerBrowserDownload(result.blob, 'sr-codes.zip')
-    return { ok: true, downloaded: ids.length }
+    const result = await request(`/api/teacher/batches/${batchId}/class/end`, { method: 'POST' })
+    return result.ok ? result.data : null
   },
 
   async listInventorySchools() {

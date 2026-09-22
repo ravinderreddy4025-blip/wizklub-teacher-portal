@@ -13,3 +13,8 @@
 **/npm-debug.log*
 **/yarn-debug.log*
 **/yarn-error.log*
+backend/health-snapshot/raw
+backend/health-snapshot/out
+**/health-snapshot/raw/**
+**/health-snapshot/out/**
+**/__pycache__

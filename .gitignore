@@ -8,6 +8,10 @@ dist-ssr/
 build/
 dev-dist/
 
+# ── npm (CodeArtifact auth tokens) ───────────────────────
+**/.npmrc
+!**/.npmrc.example
+
 # ── Environment — NEVER commit secrets ───────────────────
 .env
 .env.local

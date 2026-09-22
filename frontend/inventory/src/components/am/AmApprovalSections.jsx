@@ -88,7 +88,7 @@ const ReplacementRequestTable = ({ requests, onAction, emptyMessage }) => (
               <p className="font-bold text-slate-900">{req.kit?.name}</p>
               <p className="text-xs text-slate-500 mt-1">{formatSchoolDisplayName(req.school?.name)}</p>
             </td>
-            <td className="font-bold text-slate-800 text-base">x{req.quantity}</td>
+            <td className="font-medium text-slate-800 text-base">x{req.quantity}</td>
             <td className="text-slate-600 max-w-sm">
               <p className="line-clamp-2">{req.reasonDetails}</p>
             </td>
@@ -135,7 +135,7 @@ const AmAuditApprovalList = ({
     .filter((group) => group.items.length > 0);
 
   if (groups.length === 0) {
-    return <p className="text-center py-10 text-slate-500">{emptyMessage}</p>;
+    return <p className="inv-empty inv-empty__text">{emptyMessage}</p>;
   }
 
   const approveLabel = lineType === 'lost' ? 'Approve lost kits' : 'Approve damaged kits';
@@ -180,7 +180,7 @@ const AmAuditApprovalList = ({
                   return (
                     <tr key={idx}>
                       <td className="font-semibold text-slate-900">{item.kit?.name || 'Kit'}</td>
-                      <td className="font-bold">x{qty}</td>
+                      <td className="font-medium">x{qty}</td>
                       <td>
                         {evidenceUrl ? (
                           <a href={assetUrl(evidenceUrl)} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand-primary hover:underline">
@@ -206,11 +206,12 @@ const AmApprovalTile = ({
   title,
   subtitle,
   count,
-  icon: Icon,
+  icon,
   selected = false,
   onClick,
-  accentClass = 'border-t-[#F89C28]',
+  accentClass = 'border-t-wk-orange',
 }) => {
+  const Icon = icon;
   const hasPending = count > 0;
   const displayCount = hasPending ? String(count).padStart(2, '0') : '0';
   const ariaLabel = `${title}. ${hasPending ? `${count} pending` : 'No pending items'}. ${subtitle}`;
@@ -222,32 +223,32 @@ const AmApprovalTile = ({
       aria-label={ariaLabel}
       className={clsx(
         'stitch-card flex min-h-[132px] w-full cursor-pointer flex-col border-t-[3px] p-4 text-left transition-all duration-200',
-        'hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--stitch-primary)]/40',
+        'hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-wk-orange-text/40',
         accentClass,
-        selected && 'ring-2 ring-[var(--stitch-primary)]/35 shadow-md',
+        selected && 'ring-2 ring-wk-orange-text/40 shadow-md',
       )}
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div
           className={clsx(
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-            hasPending ? 'bg-[var(--stitch-primary)]/10 text-[var(--stitch-primary)]' : 'bg-[var(--stitch-canvas)] text-[var(--stitch-muted)]',
+            hasPending ? 'bg-wk-peach text-wk-orange-text' : 'bg-wk-cream text-wk-muted',
           )}
         >
           <Icon size={18} strokeWidth={2} />
         </div>
         <span
-          className={clsx('font-heading text-xl font-extrabold', hasPending ? 'text-[var(--stitch-text)]' : 'text-[#D1D5DB]')}
+          className={clsx('text-xl font-semibold', hasPending ? 'text-wk-ink' : 'text-wk-muted')}
           aria-hidden="true"
         >
           {displayCount}
         </span>
       </div>
-      <h3 className="text-sm font-bold leading-snug text-[var(--stitch-text)]">{title}</h3>
-      <p className="mt-1.5 flex-1 text-[11px] leading-relaxed text-[var(--stitch-muted)]">{subtitle}</p>      <p
+      <h3 className="text-sm font-bold leading-snug text-wk-ink">{title}</h3>
+      <p className="mt-1.5 flex-1 text-xs leading-relaxed text-wk-muted">{subtitle}</p>      <p
         className={clsx(
-          'mt-4 text-[10px] font-bold uppercase tracking-wider',
-          hasPending ? 'text-[var(--stitch-primary)]' : 'text-[#9CA3AF]',
+          'mt-4 text-sm font-medium',
+          hasPending ? 'text-wk-orange-text' : 'text-wk-muted',
         )}
       >
         {hasPending ? `${count} pending — open` : 'Click to view'}

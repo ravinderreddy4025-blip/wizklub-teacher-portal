@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil } from 'lucide-react';
+import { BarChart3, ClipboardList, Package, Pencil, RefreshCcw } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -30,11 +30,11 @@ const SchoolOpsCard = ({
       <div className="pr-6">
         <h3 className="text-lg font-bold text-brand-deep leading-tight flex items-center gap-2 flex-wrap">
           {formatSchoolDisplayName(school.name)}
-          <span className="text-[10px] glass-chip text-slate-600 font-mono normal-case tracking-normal">
+          <span className="wk-badge bg-wk-mist font-mono text-wk-body">
             {formatSchoolIdentityPrefix(school.code, school.joiningYear)}
           </span>
         </h3>
-        <p className="text-xs text-slate-500 mt-1.5 glass-chip inline-block normal-case tracking-normal font-medium">
+        <p className="mt-1.5 text-[13px] text-wk-body">
           Div: {school.divisionId?.name || 'Unassigned'} · AM: {school.rmId?.name || 'Unassigned'}
         </p>
       </div>
@@ -42,22 +42,22 @@ const SchoolOpsCard = ({
     </div>
     <div className="grid grid-cols-2 gap-2 mt-auto">
       <Button variant="outline" className="text-xs py-2 font-bold" onClick={() => onDispatch(school._id)}>
-        📦 Dispatch
+        <Package size={16} aria-hidden /> Dispatch
       </Button>
       <Button variant="outline" className="text-xs py-2 font-bold" onClick={() => onAudit(school)}>
-        📋 Audit Repo
+        <ClipboardList size={16} aria-hidden /> Audit Repo
       </Button>
       <Button variant="outline" className="text-xs py-2 font-bold text-success-600" onClick={() => onKitStatus(school)}>
-        📊 Kit Status
+        <BarChart3 size={16} aria-hidden /> Kit Status
       </Button>
       <Button
         variant="outline"
         className={`text-xs py-2 relative font-bold ${pendingCount > 0 ? 'border-warning-300' : ''}`}
         onClick={() => onReplacements(school)}
       >
-        🔄 Replace
+        <RefreshCcw size={16} aria-hidden /> Replace
         {pendingCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 bg-error-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+          <span className="absolute -top-1.5 -right-1.5 bg-error-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
             {pendingCount}
           </span>
         )}

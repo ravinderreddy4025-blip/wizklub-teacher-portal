@@ -1,0 +1,73 @@
+/*
+ * WizKlub design tokens for Parent Orientation Tracker (PMO).
+ * Source of truth: design-system/tokens/tokens.css — keep in sync when tokens change.
+ */
+:root {
+  --wk-navy: #02344f;
+  --wk-navy-2: #0b4a6b;
+  --wk-orange: #ff8c2b;
+  --wk-orange-hover: #ff9d47;
+  --wk-orange-edge: #d9661a;
+  --wk-sun: #ffb547;
+  --wk-orange-text: #b4430f;
+  --wk-orange-text-hover: #8f3409;
+  --wk-cream: #fff7ee;
+  --wk-peach: #ffe7cf;
+  --wk-peach-2: #ffd1a8;
+  --wk-band: #f47d31;
+  --wk-dome: #f28c43;
+  --wk-chrome: radial-gradient(ellipse 150% 88% at 50% 100%, var(--wk-dome) 0 99.4%, rgba(242, 140, 67, 0) 100%), var(--wk-band);
+  --wk-brand-gradient: var(--wk-chrome);
+  --wk-frame: #e8661e;
+  --wk-promo: linear-gradient(120deg, #02344f 0%, #0b4a6b 100%);
+  --on-brand: var(--wk-navy);
+  --tint-blue: #e6f2ff;
+  --tint-blue-ink: #0062cc;
+  --tint-orange: #ffe7cf;
+  --tint-orange-ink: #b4430f;
+  --tint-green: #d6f4de;
+  --tint-green-ink: #04742d;
+  --tint-purple: #ede3ff;
+  --tint-purple-ink: #5b2fd6;
+  --tint-gold: #ffeecc;
+  --tint-gold-ink: #8a5500;
+  --tint-red: #fef0f0;
+  --tint-red-ink: #b42323;
+  --text-primary: #02344f;
+  --text-secondary: #4a5b68;
+  --text-muted: #6c6e72;
+  --border-control: #85878a;
+  --border-light: #e6e7e8;
+  --surface-muted: #f2f2f2;
+  --shadow-sm: 0 1px 4px 0 rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 1px 12px 0 rgba(0, 0, 0, 0.16);
+  --shadow-brand: 0 3px 0 var(--wk-orange-edge);
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 9999px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --focus-ring: 0 0 0 3px rgba(2, 52, 79, 0.45);
+
+  /* Legacy --po-* aliases so existing PMO rules re-theme without edits */
+  --po-navy: var(--text-primary);
+  --po-blue: var(--wk-orange-text);
+  --po-blue-dark: var(--wk-orange-text);
+  --po-green: #04742d;
+  --po-surface: var(--wk-cream);
+  --po-card: #ffffff;
+  --po-border: var(--border-light);
+  --po-text: var(--text-primary);
+  --po-muted: var(--text-muted);
+  --po-radius: 16px;
+  --po-radius-sm: 12px;
+  --po-shadow: var(--shadow-md);
+  --po-shadow-inset: 0 0 0 transparent;
+  --po-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.16);
+  --po-gradient-page: #ffffff;
+  --po-gradient-card: #ffffff;
+  --po-gradient-btn: var(--wk-orange);
+  --po-gradient-btn-hover: var(--wk-orange-hover);
+  --po-focus: rgba(180, 67, 15, 0.22);
+  --po-font: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}

@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+const PO_FONT = "'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
 const el = document.getElementById('toast-root');
 if (el) {
   const root = createRoot(el);
   root.render(
     <ToastContainer
+      className="po-toasts"
       position="bottom-right"
       autoClose={3200}
       limit={5}
@@ -18,7 +21,7 @@ if (el) {
       pauseOnFocusLoss
       draggable
       pauseOnHover
-      theme="colored"
+      theme="light"
     />
   );
 }
@@ -46,13 +49,16 @@ function confirmDialog(message, options = {}) {
           closeToast();
           resolve(value);
         };
+        const primaryBg = variant === 'danger' ? '#b42323' : '#ff8c2b';
+        const primaryColor = variant === 'danger' ? '#fff' : '#02344f';
         return (
           <div
             style={{
               padding: '2px 4px',
-              fontFamily: "'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif",
+              fontFamily: PO_FONT,
               minWidth: 240,
               maxWidth: 400,
+              color: '#02344f',
             }}
           >
             <div
@@ -77,14 +83,16 @@ function confirmDialog(message, options = {}) {
                 type="button"
                 onClick={() => finish(false)}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  border: '2px solid rgba(255,255,255,0.7)',
-                  background: 'transparent',
-                  color: 'inherit',
+                  minHeight: 44,
+                  padding: '0 16px',
+                  borderRadius: 9999,
+                  border: '1px solid #02344f',
+                  background: '#fff',
+                  color: '#02344f',
                   cursor: 'pointer',
                   fontWeight: 600,
-                  fontSize: 13,
+                  fontSize: 14,
+                  fontFamily: PO_FONT,
                 }}
               >
                 {cancelLabel}
@@ -93,15 +101,17 @@ function confirmDialog(message, options = {}) {
                 type="button"
                 onClick={() => finish(true)}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: 8,
+                  minHeight: 44,
+                  padding: '0 16px',
+                  borderRadius: 9999,
                   border: 'none',
-                  background: variant === 'danger' ? '#b71c1c' : '#0c447c',
-                  color: '#fff',
+                  background: primaryBg,
+                  color: primaryColor,
                   cursor: 'pointer',
                   fontWeight: 700,
-                  fontSize: 13,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  fontSize: 14,
+                  fontFamily: PO_FONT,
+                  boxShadow: variant === 'danger' ? 'none' : '0 3px 0 #d9661a',
                 }}
               >
                 {confirmLabel}

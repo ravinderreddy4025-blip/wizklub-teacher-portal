@@ -20,12 +20,12 @@ import {
 
 const ADMIN_MOBILE_PRIMARY = [
   { to: ROUTES.admin.overview, icon: Home, label: 'Home', end: true },
+  { to: ROUTES.admin.dispatches, icon: Truck, label: 'Dispatch' },
   { to: ROUTES.admin.schools, icon: GraduationCap, label: 'Schools' },
 ];
 
 const ADMIN_MOBILE_OVERFLOW = [
   ROUTES.admin.warehouse,
-  ROUTES.admin.dispatches,
   ROUTES.admin.divisions,
   ROUTES.admin.accountManagers,
   ROUTES.admin.audits,
@@ -52,7 +52,7 @@ const MobileNav = ({ onOpenMoreMenu }) => {
       case 'School':
         return {
           links: [
-            { to: ROUTES.school.dispatches, icon: Package, label: 'Kits', end: true },
+            { to: ROUTES.school.dispatches, icon: Truck, label: 'Kits', end: true },
             { to: ROUTES.school.warehouse, icon: Package, label: 'Stock' },
             { to: ROUTES.school.audit, icon: FileText, label: 'Audit' },
             { to: ROUTES.school.replacements, icon: CheckSquare, label: 'Replace' },
@@ -93,7 +93,7 @@ const MobileNav = ({ onOpenMoreMenu }) => {
   const renderBadge = (link) => {
     if (user?.role === 'AM' && link.to === ROUTES.am.approvals && amApprovalCounts.total > 0) {
       return (
-        <span className="absolute -top-0.5 right-1 approval-count-badge text-[9px] min-w-[1rem] h-4 px-1">
+        <span className="inv-bottom-nav__badge" aria-label={`${amApprovalCounts.total} pending`}>
           {amApprovalCounts.total}
         </span>
       );
@@ -102,43 +102,41 @@ const MobileNav = ({ onOpenMoreMenu }) => {
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-nav-mobile safe-area-pb" aria-label="Mobile navigation">
-      <div className="flex items-stretch justify-between gap-1 px-3 py-2">
-        {links.map((link) => {
-          const Icon = link.icon;
-          return (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.end}
-              className={({ isActive }) =>
-                `nav-link-mobile relative flex-1 min-w-0 ${isActive ? 'nav-link-mobile-active' : 'nav-link-mobile-idle'}`
-              }
-            >
-              <Icon size={18} />
-              {link.label}
-              {renderBadge(link)}
-            </NavLink>
-          );
-        })}
-
-        {showMore && (
-          <button
-            type="button"
-            onClick={onOpenMoreMenu}
-            className={`nav-link-mobile relative flex-1 min-w-0 ${isMoreActive ? 'nav-link-mobile-active' : 'nav-link-mobile-idle'}`}
-            aria-label="Open full menu"
+    <nav className="inv-bottom-nav" aria-label="Mobile navigation">
+      {links.map((link) => {
+        const Icon = link.icon;
+        return (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            end={link.end}
+            className={({ isActive }) =>
+              `inv-bottom-nav__item ${isActive ? 'inv-bottom-nav__item--active' : ''}`
+            }
           >
-            <LayoutGrid size={18} />
-            More
-            {moreBadgeCount > 0 && (
-              <span className="absolute -top-0.5 right-1 approval-count-badge text-[9px] min-w-[1rem] h-4 px-1">
-                {moreBadgeCount}
-              </span>
-            )}
-          </button>
-        )}
-      </div>
+            <Icon size={20} aria-hidden />
+            <span className="max-w-full truncate">{link.label}</span>
+            {renderBadge(link)}
+          </NavLink>
+        );
+      })}
+
+      {showMore && (
+        <button
+          type="button"
+          onClick={onOpenMoreMenu}
+          className={`inv-bottom-nav__item ${isMoreActive ? 'inv-bottom-nav__item--active' : ''}`}
+          aria-label="Open full menu"
+        >
+          <LayoutGrid size={20} aria-hidden />
+          <span>More</span>
+          {moreBadgeCount > 0 && (
+            <span className="inv-bottom-nav__badge" aria-label={`${moreBadgeCount} pending`}>
+              {moreBadgeCount}
+            </span>
+          )}
+        </button>
+      )}
     </nav>
   );
 };

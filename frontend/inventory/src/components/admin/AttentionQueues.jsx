@@ -18,8 +18,12 @@ export default function AttentionQueues({
 }) {
   if (loading) {
     return (
-      <section className={`rounded-2xl border border-[#E5E7EB] bg-white p-5 ${className}`}>
-        <p className="text-sm text-[#6B7280]">Loading action queues…</p>
+      <section className={`rounded-2xl bg-white p-5 shadow-card ${className}`} aria-busy="true">
+        <div className="h-5 w-48 animate-pulse-subtle rounded-md bg-wk-mist" />
+        <div className="mt-4 space-y-3">
+          {[0, 1, 2].map((i) => <div key={i} className="h-10 animate-pulse-subtle rounded-xl bg-wk-mist" />)}
+        </div>
+        <p className="sr-only">Loading action queues…</p>
       </section>
     );
   }
@@ -28,28 +32,32 @@ export default function AttentionQueues({
   const total = list.reduce((sum, q) => sum + (q.count || 0), 0);
 
   return (
-    <section className={`rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[0_12px_40px_-18px_rgba(15,23,42,0.18)] ${className}`}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">{eyebrow}</p>
-      <h3 className="mt-1 font-heading text-lg font-bold text-[#1F2937]">{title}</h3>
-      <p className="mt-1 text-[12px] text-[#6B7280]">
+    <section className={`rounded-2xl bg-white shadow-card p-5 ${className}`}>
+      <p className="text-sm font-medium text-wk-orange-text">{eyebrow}</p>
+      <h2 className="mt-0.5 text-lg font-semibold text-wk-ink">{title}</h2>
+      <p className="mt-1 text-[13px] text-wk-body">
         {total === 0 ? 'No action queues right now.' : `${total} open action${total === 1 ? '' : 's'} across queues.`}
       </p>
-      <div className="mt-4 divide-y divide-[#F1F5F9]">
+      <div className="mt-4 divide-y divide-wk-line">
         {list.map((queue) => (
           <Link
             key={queue.id}
             to={queue.href || '/admin'}
-            className="flex items-center justify-between gap-3 py-3 transition hover:bg-[#F8FAFC]"
+            className="-mx-3 flex min-h-[56px] items-center justify-between gap-3 rounded-xl px-3 py-3 transition hover:bg-wk-cream"
           >
             <div>
-              <p className="text-sm font-bold text-[#1F2937]">{queue.label}</p>
-              <p className="text-[11px] text-[#6B7280]">
+              <p className="text-sm font-medium text-wk-ink">{queue.label}</p>
+              <p className="text-xs text-wk-muted">
                 {queue.kitsAffected != null
                   ? `${queue.count || 0} claim${queue.count === 1 ? '' : 's'} · ${queue.kitsAffected} kits affected`
                   : (agingLabel(queue.aging) || 'No aging')}
               </p>
             </div>
-            <span className={`tabular-nums text-lg font-bold ${queue.count ? 'text-[#F89C28]' : 'text-[#9CA3AF]'}`}>
+            <span
+              className={`inline-flex h-8 min-w-[2rem] items-center justify-center rounded-full px-2 text-sm font-semibold tabular-nums ${
+                queue.count ? 'bg-wk-peach text-wk-orange-text' : 'bg-wk-mist text-wk-body'
+              }`}
+            >
               {queue.count || 0}
             </span>
           </Link>

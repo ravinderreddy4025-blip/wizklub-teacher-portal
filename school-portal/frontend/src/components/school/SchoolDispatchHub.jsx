@@ -71,30 +71,31 @@ function SummaryTile({ section, summary, active, onClick }) {
       type="button"
       onClick={onClick}
       className={[
-        'lumina-dispatch-tile text-left w-full rounded-xl border p-4 transition-all duration-200',
+        'lumina-dispatch-tile text-left w-full rounded-2xl border-2 p-4 transition-all duration-200',
         section.accent,
         active
-          ? 'border-2 border-[var(--stitch-primary)] bg-[#fffaf5] shadow-md'
-          : 'border-[var(--stitch-border)] bg-white hover:shadow-md',
+          ? 'border-wk-navy bg-white shadow-card'
+          : 'border-transparent bg-wk-cream hover:border-wk-line hover:bg-white',
       ].filter(Boolean).join(' ')}
+      aria-pressed={active}
     >
       <div className="mb-4 flex items-start justify-between gap-2">
         <div
-          className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-            active ? 'bg-[var(--stitch-primary)]/10 text-[var(--stitch-primary)]' : 'bg-gray-100 text-[var(--stitch-muted)]'
+          className={`flex h-10 w-10 items-center justify-center rounded-full ${
+            active ? 'bg-wk-peach text-wk-orange-text' : 'bg-white text-wk-body'
           }`}
         >
-          <Icon size={18} />
+          <Icon size={18} aria-hidden />
         </div>
         <div className="text-right">
-      <p className="text-2xl font-bold text-[var(--stitch-text)]">
+      <p className="text-2xl font-semibold tabular-nums text-wk-ink">
         {section.id === 'history' ? (stats.count || 0) : (stats.units || 0)}
       </p>
-          <p className="text-[10px] font-bold uppercase text-[var(--stitch-muted)]">Units</p>
+          <p className="text-xs text-wk-body">{section.id === 'history' ? 'records' : 'units'}</p>
         </div>
       </div>
-      <h3 className="text-sm font-semibold text-[var(--stitch-text)]">{section.label}</h3>
-      <p className="mt-0.5 text-xs text-[var(--stitch-muted)]">
+      <h3 className="text-sm font-medium text-wk-ink">{section.label}</h3>
+      <p className="mt-0.5 text-[13px] text-wk-body">
         {stats.count} record{stats.count === 1 ? '' : 's'}
       </p>
     </button>
@@ -106,14 +107,14 @@ function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade
     <div className="flex flex-col items-end gap-2">
       <Button
         variant="outline"
-        className="max-w-[140px] rounded-full px-4 py-1.5 text-xs font-semibold"
+        className="!min-h-[36px] min-w-[140px] max-w-[180px] px-4 text-[13px]"
         onClick={() => onTrack(item)}
       >
         Track dispatch
       </Button>
       <Button
         variant="outline"
-        className="max-w-[140px] rounded-full px-4 py-1.5 text-xs font-semibold"
+        className="!min-h-[36px] min-w-[140px] max-w-[180px] px-4 text-[13px]"
         onClick={() => onDownloadInvoice(item)}
       >
         Invoice PDF
@@ -121,7 +122,7 @@ function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade
       {canAcknowledgeDispatch(item) && (
         <Button
           variant="gradient"
-          className="max-w-[140px] rounded-full px-4 py-1.5 text-xs font-semibold shadow-sm"
+          className="!min-h-[36px] min-w-[140px] max-w-[180px] px-4 text-[13px]"
           onClick={() => onAcknowledge(item)}
         >
           Acknowledge receipt
@@ -130,7 +131,7 @@ function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade
       {canEditSchoolReceipt(item) && (
         <Button
           variant="outline"
-          className="max-w-[140px] rounded-full px-4 py-1.5 text-xs font-semibold"
+          className="!min-h-[36px] min-w-[140px] max-w-[180px] px-4 text-[13px]"
           onClick={() => onEdit(item)}
         >
           Edit acknowledgment
@@ -157,14 +158,14 @@ function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade
       {canUpgradeNotReceivedReport(item) && (
         <Button
           variant="outline"
-          className="max-w-[160px] rounded-full px-4 py-1.5 text-xs font-semibold"
+          className="!min-h-[36px] min-w-[140px] max-w-[180px] px-4 text-[13px]"
           onClick={() => onUpgrade(item)}
         >
           Complete not-received report
         </Button>
       )}
       {item.status === 'not_received_dispatch' && item.receiptIssue?.status && (
-        <p className="text-[10px] font-semibold text-error-600">Not received — {schoolIssueStatusLabel(item.receiptIssue.status)}</p>
+        <p className="text-xs font-semibold text-error-600">Not received — {schoolIssueStatusLabel(item.receiptIssue.status)}</p>
       )}
       {item.status === 'Pending' && (
         <span className="text-xs font-medium italic text-slate-400">Awaiting shipment</span>
@@ -175,11 +176,11 @@ function SchoolDispatchActions({ item, onTrack, onAcknowledge, onEdit, onUpgrade
 
 function DispatchTable({ rows, onTrack, onAcknowledge, onEdit, onUpgrade, onDownloadInvoice }) {
   if (!rows.length) {
-    return <p className="py-12 text-center text-[var(--stitch-muted)]">No dispatches in this section for the selected month.</p>;
+    return <p className="inv-empty inv-empty__text">No dispatches in this section for the selected month.</p>;
   }
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-[var(--stitch-border)] text-left">
+      <table className="min-w-full divide-y divide-wk-line text-left">
         <thead className="stitch-table-head">
           <tr>
             <th>Dispatch ID</th>
@@ -189,9 +190,9 @@ function DispatchTable({ rows, onTrack, onAcknowledge, onEdit, onUpgrade, onDown
             <th className="text-right">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[var(--stitch-border)] bg-white">
+        <tbody className="divide-y divide-wk-line bg-white">
           {rows.map((item) => (
-            <tr key={item._id} className="transition-colors hover:bg-gray-50">
+            <tr key={item._id} className="transition-colors hover:bg-wk-cream">
               <td className="px-5 py-5">
                 <DispatchIdCell item={item} onViewHistory={() => onTrack(item)} />
               </td>
@@ -202,7 +203,7 @@ function DispatchTable({ rows, onTrack, onAcknowledge, onEdit, onUpgrade, onDown
                   {formatDispatchStatus(item)}
                 </Badge>
                 {item.receiptIssue?.status && (
-                  <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
                     {schoolIssueStatusLabel(item.receiptIssue.status)}
                     {item.receiptIssue.issueType === 'Shipment Not Received' ? ' · Not Received' : ''}
                     {item.receiptIssue.issueType === 'Missing Product' ? ' · Lost' : ''}
@@ -235,11 +236,11 @@ function issueBadgeType(issueType) {
 
 function IssueTable({ rows }) {
   if (!rows.length) {
-    return <p className="py-12 text-center text-[var(--stitch-muted)]">No issues reported in this section for the selected month.</p>;
+    return <p className="inv-empty inv-empty__text">No issues reported in this section for the selected month.</p>;
   }
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-[var(--stitch-border)] text-left">
+      <table className="min-w-full divide-y divide-wk-line text-left">
         <thead className="stitch-table-head">
           <tr>
             <th>Source</th>
@@ -251,16 +252,16 @@ function IssueTable({ rows }) {
             <th>Reported</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[var(--stitch-border)] bg-white">
+        <tbody className="divide-y divide-wk-line bg-white">
           {rows.map((row) => {
             if (row.recordType === 'replacement_request') {
               const req = row.item;
               return (
-                <tr key={`req-${req._id}`} className="transition-colors hover:bg-gray-50">
+                <tr key={`req-${req._id}`} className="transition-colors hover:bg-wk-cream">
                   <td className="px-5 py-4"><Badge type="pending">{req.type === 'Damaged' ? 'Damaged kit request' : 'Lost kit request'}</Badge></td>
-                  <td className="px-5 py-4 font-bold text-slate-900">{req.kit?.name || '—'}</td>
+                  <td className="px-5 py-4 font-medium text-slate-900">{req.kit?.name || '—'}</td>
                   <td className="px-5 py-4"><Badge type="warning">{req.type}</Badge></td>
-                  <td className="px-5 py-4 font-bold">{req.quantity}</td>
+                  <td className="px-5 py-4 font-medium">{req.quantity}</td>
                   <td className="px-5 py-4 font-mono text-xs">{req.replacementId || '—'}</td>
                   <td className="px-5 py-4"><Badge type={schoolIssueStatusBadge(req.status)}>{schoolIssueStatusLabel(req.status)}</Badge></td>
                   <td className="px-5 py-4">{new Date(req.createdAt).toLocaleDateString()}</td>
@@ -269,11 +270,11 @@ function IssueTable({ rows }) {
             }
             const issue = row.item;
             return (
-              <tr key={`issue-${issue._id}`} className="transition-colors hover:bg-gray-50">
+              <tr key={`issue-${issue._id}`} className="transition-colors hover:bg-wk-cream">
                 <td className="px-5 py-4"><Badge type="info">Receipt report</Badge></td>
-                <td className="px-5 py-4 font-bold text-slate-900">{issue.kit?.name || '—'}</td>
+                <td className="px-5 py-4 font-medium text-slate-900">{issue.kit?.name || '—'}</td>
                   <td className="px-5 py-4"><Badge type={issueBadgeType(issue.issueType)}>{schoolIssueTypeLabel(issue.issueType)}</Badge></td>
-                <td className="px-5 py-4 font-bold">{issue.quantityAffected}</td>
+                <td className="px-5 py-4 font-medium">{issue.quantityAffected}</td>
                 <td className="px-5 py-4">
                   <p className="font-mono text-xs">{issue.sourceDispatchRef || issue.dispatch?.dispatchId || '—'}</p>
                   <IssueShipmentDetailsCell issue={issue} />
@@ -297,11 +298,8 @@ function FilterPills({ options, value, onChange }) {
           key={option.id || 'all'}
           type="button"
           onClick={() => onChange(option.id)}
-          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
-            value === option.id
-              ? 'border-[#F89C28] bg-[#F89C28] text-white'
-              : 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#F89C28]/40'
-          }`}
+          aria-pressed={value === option.id}
+          className={`wk-seg !min-h-[36px] !px-3 !text-[13px] ${value === option.id ? 'wk-seg-active' : ''}`}
         >
           {option.label}
         </button>
@@ -375,7 +373,7 @@ export default function SchoolDispatchHub({
 
   return (
     <section className="stitch-card overflow-hidden">
-      <div className="space-y-8 border-b border-[var(--stitch-border)] bg-[var(--stitch-canvas)]/50 p-6">
+      <div className="space-y-6 border-b border-wk-line bg-white p-4 md:p-6">
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
             <label className="stitch-label" htmlFor="school-dispatch-month">Month</label>
@@ -395,20 +393,18 @@ export default function SchoolDispatchHub({
           <button
             type="button"
             onClick={() => setHubTab('activity')}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider ${
-              hubTab === 'activity' ? 'bg-[#F89C28] text-white' : 'bg-[#F1F5F9] text-[#6B7280]'
-            }`}
+            aria-pressed={hubTab === 'activity'}
+            className={`wk-seg ${hubTab === 'activity' ? 'wk-seg-active' : ''}`}
           >
             Dispatch activity
           </button>
           <button
             type="button"
             onClick={() => setHubTab('issues')}
-            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider ${
-              hubTab === 'issues' ? 'bg-[#F89C28] text-white' : 'bg-[#F1F5F9] text-[#6B7280]'
-            }`}
+            aria-pressed={hubTab === 'issues'}
+            className={`wk-seg ${hubTab === 'issues' ? 'wk-seg-active' : ''}`}
           >
-            <AlertCircle size={12} />
+            <AlertCircle size={16} aria-hidden />
             Issues{summary?.issues ? ` · ${summary.issues.count}` : ''}
           </button>
         </div>
@@ -429,7 +425,7 @@ export default function SchoolDispatchHub({
 
         {hubTab === 'issues' && (
           <div className="space-y-3">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#9CA3AF]">
+            <p className="text-sm font-medium text-wk-muted">
               Not Received and Lost are different — filter by type
             </p>
             <FilterPills options={SCHOOL_ISSUE_STATUS_FILTERS} value={issueStatus} onChange={setIssueStatus} />
@@ -439,10 +435,10 @@ export default function SchoolDispatchHub({
       </div>
 
       {(hubTab === 'activity' || hubTab === 'issues') && (
-        <div className="border-b border-[var(--stitch-border)] bg-white p-6">
+        <div className="border-b border-wk-line bg-white p-6">
           <div className="relative max-w-md">
             <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <svg className="h-5 w-5 text-[var(--stitch-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <svg className="h-5 w-5 text-wk-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
@@ -457,11 +453,11 @@ export default function SchoolDispatchHub({
         </div>
       )}
 
-      <div className="bg-gray-50 px-6 py-4">
-        <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--stitch-primary)]">
+      <div className="bg-white px-4 pt-4 md:px-6">
+        <h4 className="text-base font-semibold text-wk-ink">
           {hubTab === 'issues' ? 'Issues' : activeSection.label}
         </h4>
-        <p className="mt-0.5 text-xs text-[var(--stitch-muted)]">
+        <p className="mt-0.5 text-xs text-wk-muted">
           {hubTab === 'issues'
             ? 'Lost, mismatch, damaged, and not received live here as issue types.'
             : activeSection.subtitle}
@@ -470,7 +466,7 @@ export default function SchoolDispatchHub({
 
       <div className="bg-white">
         {loading ? (
-          <p className="py-12 text-center text-[var(--stitch-muted)]">Loading…</p>
+          <p className="inv-empty inv-empty__text">Loading…</p>
         ) : kind === 'dispatches' ? (
           <DispatchTable
             rows={rows}
@@ -493,7 +489,7 @@ export default function SchoolDispatchHub({
         )}
       </div>
 
-      <div className="border-t border-[var(--stitch-border)] px-6 py-5">
+      <div className="border-t border-wk-line px-6 py-5">
         <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
       </div>
     </section>

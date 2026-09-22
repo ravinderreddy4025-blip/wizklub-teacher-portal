@@ -4,11 +4,11 @@ import { toast as toastify } from 'react-toastify';
 function ConfirmToastContent({ message, closeToast, resolve }) {
   return (
     <div className="min-w-[240px]">
-      <p className="text-sm font-medium text-slate-800 mb-3">{message}</p>
+      <p className="mb-3 text-sm font-medium text-wk-ink">{message}</p>
       <div className="flex gap-2 justify-end">
         <button
           type="button"
-          className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          className="min-h-[40px] rounded-full border border-wk-navy bg-white px-4 text-sm font-semibold text-wk-navy hover:bg-wk-cream"
           onClick={() => {
             resolve(false);
             closeToast();
@@ -18,7 +18,7 @@ function ConfirmToastContent({ message, closeToast, resolve }) {
         </button>
         <button
           type="button"
-          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-primary text-white hover:opacity-90"
+          className="min-h-[40px] rounded-full bg-wk-orange px-4 text-sm font-bold text-wk-navy shadow-brand hover:bg-wk-orange-hover"
           onClick={() => {
             resolve(true);
             closeToast();
@@ -67,11 +67,11 @@ function ApprovalNotesToastContent({ action, kind, closeToast, resolve }) {
 
   return (
     <div className="min-w-[300px] max-w-md">
-      <p className="text-sm font-bold text-slate-900 mb-1">{title}</p>
+      <p className="mb-1 text-base font-semibold text-wk-ink">{title}</p>
       {workflowHint && (
-        <p className="text-xs text-slate-600 mb-3 leading-relaxed">{workflowHint}</p>
+        <p className="mb-3 text-[13px] leading-relaxed text-wk-body">{workflowHint}</p>
       )}
-      <label htmlFor="approval-notes" className="block text-xs font-semibold text-slate-500 mb-1">
+      <label htmlFor="approval-notes" className="mb-1 block text-[13px] font-medium text-wk-body">
         Notes (optional)
       </label>
       <textarea
@@ -79,21 +79,23 @@ function ApprovalNotesToastContent({ action, kind, closeToast, resolve }) {
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         rows={3}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 mb-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/40 resize-none"
+        className="mb-3 w-full resize-none rounded-xl border border-wk-control px-3 py-2 text-sm text-wk-ink focus:border-wk-orange-text focus:outline-none focus:ring-1 focus:ring-wk-orange-text"
         placeholder="Add a note for the record…"
       />
       <div className="flex gap-2 justify-end">
         <button
           type="button"
-          className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          className="min-h-[40px] rounded-full border border-wk-navy bg-white px-4 text-sm font-semibold text-wk-navy hover:bg-wk-cream"
           onClick={() => finish(false)}
         >
           Cancel
         </button>
         <button
           type="button"
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white hover:opacity-90 ${
-            isApprove || isClarify ? 'bg-brand-primary' : 'bg-error-500'
+          className={`min-h-[40px] rounded-full px-4 text-sm font-bold ${
+            isApprove || isClarify
+              ? 'bg-wk-orange text-wk-navy shadow-brand hover:bg-wk-orange-hover'
+              : 'bg-error-600 text-white hover:bg-error-800'
           }`}
           onClick={() => finish(true)}
         >

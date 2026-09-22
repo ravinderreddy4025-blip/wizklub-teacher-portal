@@ -1,57 +1,52 @@
 import { useEffect, useState } from 'react'
+import { Smartphone, X } from 'lucide-react'
+import { assetUrl } from '../lib/assets.js'
+import {
+  isStandalone,
+  promptInstall,
+  shouldShowInstallCard,
+  snoozeInstallCard,
+  subscribeInstall,
+} from '../pwa/install.js'
 import './PwaInstallBanner.css'
 
+/*
+ * Phone/tablet only (desktop gets "Install app" in the avatar menu instead).
+ * Waits for a returning user, and "Not now" snoozes it for 14 days rather than nagging every load.
+ */
 export default function PwaInstallBanner() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null)
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem('pwa_install_dismissed') === '1',
-  )
-  const [isStandalone, setIsStandalone] = useState(false)
+  const [canInstall, setCanInstall] = useState(false)
+  const [hidden, setHidden] = useState(() => !shouldShowInstallCard())
 
-  useEffect(() => {
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true
-    setIsStandalone(standalone)
+  useEffect(() => subscribeInstall((prompt) => setCanInstall(Boolean(prompt))), [])
 
-    const onBeforeInstall = (event) => {
-      event.preventDefault()
-      setDeferredPrompt(event)
-    }
-
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
-    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstall)
-  }, [])
-
-  if (isStandalone || dismissed || !deferredPrompt) return null
-
-  const handleInstall = async () => {
-    deferredPrompt.prompt()
-    await deferredPrompt.userChoice
-    setDeferredPrompt(null)
-    setDismissed(true)
-    localStorage.setItem('pwa_install_dismissed', '1')
-  }
+  const isSmallScreen = typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
+  if (hidden || !canInstall || !isSmallScreen || isStandalone()) return null
 
   const handleDismiss = () => {
-    setDismissed(true)
-    localStorage.setItem('pwa_install_dismissed', '1')
+    snoozeInstallCard()
+    setHidden(true)
+  }
+
+  const handleInstall = async () => {
+    const accepted = await promptInstall()
+    if (!accepted) snoozeInstallCard()
+    setHidden(true)
   }
 
   return (
-    <div className="pwa-install" role="region" aria-label="Install app">
+    <div className="pwa-install" role="region" aria-label="Install the Teachers Portal app">
+      <img src={assetUrl('assets/logo.png')} alt="" className="pwa-install__logo" />
       <div className="pwa-install__content">
-        <p className="pwa-install__title">Install WizKlub Teachers Portal</p>
-        <p className="pwa-install__text">Add to your home screen for quick access and full-screen use.</p>
+        <p className="pwa-install__title">Get the app on your phone</p>
+        <p className="pwa-install__text">Open uploads in one tap from your home screen, full screen.</p>
       </div>
-      <div className="pwa-install__actions">
-        <button type="button" className="pwa-install__btn pwa-install__btn--ghost" onClick={handleDismiss}>
-          Not now
-        </button>
-        <button type="button" className="pwa-install__btn pwa-install__btn--primary" onClick={handleInstall}>
-          Install
-        </button>
-      </div>
+      <button type="button" className="pwa-install__btn" onClick={handleInstall}>
+        <Smartphone size={16} aria-hidden /> Install
+      </button>
+      <button type="button" className="pwa-install__close" onClick={handleDismiss} aria-label="Not now">
+        <X size={18} aria-hidden />
+      </button>
     </div>
   )
 }

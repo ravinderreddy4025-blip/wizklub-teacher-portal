@@ -65,7 +65,9 @@ async function start(app) {
 
   try {
     await initMongo();
-    if (mongo.client) startLsqWebhookScheduler();
+    if (mongo.client) {
+      startLsqWebhookScheduler();
+    }
   } catch (err) {
     console.error('MongoDB connection failed:', err.message);
     if (isProd) {

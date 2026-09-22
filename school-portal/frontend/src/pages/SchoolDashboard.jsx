@@ -308,7 +308,7 @@ const SchoolDashboard = () => {
       subtitle: (
         <>
           Kit stock at your school after confirmed dispatches.{' '}
-          <span className="font-semibold text-[var(--stitch-primary)]">Real-time inventory tracking.</span>
+          <span className="font-semibold text-wk-orange-text">Real-time inventory tracking.</span>
         </>
       ),
     },
@@ -330,7 +330,7 @@ const SchoolDashboard = () => {
 
       {activeView === 'warehouse' && (
         <section className="stitch-card overflow-hidden">
-          <div className="space-y-4 border-b border-[var(--stitch-border)] p-6">
+          <div className="space-y-4 border-b border-wk-line p-6">
             <div className="flex flex-col gap-1">
               <label className="stitch-label" htmlFor="school-warehouse-month">Report month</label>
               <input
@@ -353,29 +353,29 @@ const SchoolDashboard = () => {
                   <th>Last Updated</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--stitch-border)]">
+              <tbody className="divide-y divide-wk-line">
                 {warehouseRows.map((row) => (
                   <tr key={row._id} className="transition-colors hover:bg-slate-50">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--stitch-primary)]" aria-hidden />
-                        <span className="font-semibold text-[var(--stitch-text)]">{row.kit?.name || '—'}</span>
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-wk-orange" aria-hidden />
+                        <span className="font-semibold text-wk-ink">{row.kit?.name || '—'}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-4 font-mono text-sm text-[var(--stitch-muted)]">{row.kit?.kitId || '—'}</td>
+                    <td className="px-5 py-4 font-mono text-sm text-wk-muted">{row.kit?.kitId || '—'}</td>
                     <td className="px-5 py-4">
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-[var(--stitch-text)]">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-wk-ink">
                         {row.quantity} {row.quantity === 1 ? 'Unit' : 'Units'}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-sm text-[var(--stitch-muted)]">
+                    <td className="px-5 py-4 text-sm text-wk-muted">
                       {row.updatedAt ? new Date(row.updatedAt).toLocaleDateString() : '—'}
                     </td>
                   </tr>
                 ))}
                 {warehouseRows.length === 0 && (
                   <tr>
-                    <td colSpan="4" className="px-5 py-12 text-center italic text-[var(--stitch-muted)]">
+                    <td colSpan="4" className="px-5 py-12 text-center italic text-wk-muted">
                       No stock yet. Confirm incoming dispatches to add kits to your warehouse.
                     </td>
                   </tr>
@@ -383,8 +383,8 @@ const SchoolDashboard = () => {
               </tbody>
             </table>
           </div>
-          <footer className="flex items-center justify-between border-t border-[var(--stitch-border)] bg-slate-50/50 px-6 py-4">
-            <p className="text-xs text-[var(--stitch-muted)]">
+          <footer className="flex items-center justify-between border-t border-wk-line bg-slate-50/50 px-6 py-4">
+            <p className="text-xs text-wk-muted">
               Showing {warehouseRows.length} of {warehouseRows.length} {warehouseRows.length === 1 ? 'entry' : 'entries'}
             </p>
           </footer>
@@ -415,7 +415,7 @@ const SchoolDashboard = () => {
 
       {activeView === 'replacement' && (
         <section className="stitch-card-pad space-y-8">
-          <h2 className="text-lg font-semibold text-[var(--stitch-text)]">Replacement History</h2>
+          <h2 className="text-lg font-semibold text-wk-ink">Replacement History</h2>
 
           {replacementLoading ? (
             <div className="py-6">
@@ -424,9 +424,9 @@ const SchoolDashboard = () => {
             </div>
           ) : (
             <>
-              <div className="stitch-banner border-l-[var(--stitch-primary)] bg-[#FFF7ED] p-4">
+              <div className="stitch-banner border-l-wk-orange bg-wk-cream p-4">
                 <div className="flex gap-3">
-                  <svg className="mt-0.5 h-5 w-5 shrink-0 text-[var(--stitch-primary)]" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+                  <svg className="mt-0.5 h-5 w-5 shrink-0 text-wk-orange-text" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                   </svg>
                   <p className="text-sm leading-relaxed text-orange-800">
@@ -441,10 +441,10 @@ const SchoolDashboard = () => {
                 <div className="flex flex-col space-y-2 rounded-lg border border-gray-100 bg-gray-50 p-6">
                   <span className="stitch-label">Lost Summary</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-[var(--stitch-text)]">
+                    <span className="text-4xl font-bold text-wk-ink">
                       {replacementSummary?.['Lost Dispatch']?.count ?? 0}
                     </span>
-                    <span className="text-sm font-medium text-[var(--stitch-muted)]">
+                    <span className="text-sm font-medium text-wk-muted">
                       Total Qty: {replacementSummary?.['Lost Dispatch']?.totalQuantity ?? 0}
                     </span>
                   </div>
@@ -452,10 +452,10 @@ const SchoolDashboard = () => {
                 <div className="flex flex-col space-y-2 rounded-lg border border-gray-100 bg-gray-50 p-6">
                   <span className="stitch-label">Damaged Summary</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-[var(--stitch-text)]">
+                    <span className="text-4xl font-bold text-wk-ink">
                       {replacementSummary?.['Damaged Dispatch']?.count ?? 0}
                     </span>
-                    <span className="text-sm font-medium text-[var(--stitch-muted)]">
+                    <span className="text-sm font-medium text-wk-muted">
                       Total Qty: {replacementSummary?.['Damaged Dispatch']?.totalQuantity ?? 0}
                     </span>
                   </div>
@@ -478,7 +478,7 @@ const SchoolDashboard = () => {
                   <tbody className="divide-y divide-gray-100 bg-white">
                     {replacementHistory.length === 0 && (
                       <tr>
-                        <td colSpan="7" className="px-5 py-10 text-center font-medium text-[var(--stitch-muted)]">
+                        <td colSpan="7" className="px-5 py-10 text-center font-medium text-wk-muted">
                           No audit replacements yet. Submit your monthly audit to report lost or damaged kits.
                         </td>
                       </tr>

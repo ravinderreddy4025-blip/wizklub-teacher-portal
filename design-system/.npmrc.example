@@ -1,0 +1,10 @@
+# Copy to design-system/.npmrc (gitignored) after creating the CodeArtifact repo.
+# Replace placeholders with your AWS values (see PUBLISHING.md).
+#
+#   cp .npmrc.example .npmrc
+#
+# Then log in (writes the auth token into ~/.npmrc or merges with this file):
+#   aws codeartifact login --tool npm --domain DOMAIN --domain-owner ACCOUNT_ID --repository REPO --region REGION
+
+@wizklub:registry=https://DOMAIN-ACCOUNT_ID.d.codeartifact.REGION.amazonaws.com/npm/REPO/
+//DOMAIN-ACCOUNT_ID.d.codeartifact.REGION.amazonaws.com/npm/REPO/:always-auth=true

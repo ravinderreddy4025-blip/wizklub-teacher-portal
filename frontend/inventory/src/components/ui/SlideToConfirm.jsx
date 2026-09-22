@@ -99,8 +99,8 @@ const SlideToConfirm = ({
       className={clsx(
         'relative h-14 w-full select-none overflow-hidden rounded-full border',
         enabled && !disabled
-          ? 'border-brand-primary/30 bg-gradient-to-r from-orange-50 to-brand-primary/10'
-          : 'border-slate-200 bg-slate-100',
+          ? 'border-wk-control bg-wk-cream'
+          : 'border-wk-line bg-wk-mist',
         className,
       )}
       role="slider"
@@ -117,8 +117,8 @@ const SlideToConfirm = ({
 
       <p
         className={clsx(
-          'pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-bold tracking-wide transition-opacity',
-          enabled && !disabled ? 'text-brand-primary/80' : 'text-slate-400',
+          'pointer-events-none absolute inset-0 flex items-center justify-center pl-12 pr-4 text-sm font-semibold transition-opacity',
+          enabled && !disabled ? 'text-wk-navy' : 'text-wk-muted',
           progress > 0.35 && 'opacity-0',
         )}
       >
@@ -132,11 +132,19 @@ const SlideToConfirm = ({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onKeyDown={(e) => {
+          if (inactive) return;
+          if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'End') {
+            e.preventDefault();
+            finish();
+          }
+        }}
+        aria-label={inactive ? undefined : `${label} (or press Enter)`}
         className={clsx(
-          'absolute top-1 left-1 z-10 flex h-12 w-12 items-center justify-center rounded-full shadow-md transition-colors touch-none',
+          'absolute top-1 left-1 z-10 flex h-12 w-12 items-center justify-center rounded-full transition-colors touch-none',
           enabled && !disabled
-            ? 'bg-brand-primary text-white cursor-grab active:cursor-grabbing'
-            : 'bg-slate-300 text-slate-500 cursor-not-allowed',
+            ? 'bg-wk-orange text-wk-navy shadow-brand cursor-grab active:cursor-grabbing'
+            : 'bg-wk-line text-wk-muted cursor-not-allowed',
         )}
         style={{ transform: `translateX(${offset}px)` }}
         aria-hidden={inactive}

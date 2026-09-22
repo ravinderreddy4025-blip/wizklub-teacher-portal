@@ -14,7 +14,7 @@ import {
 function CycleChip({ count, onClick }) {
   if (!count || count < 2) return null;
   const label = `${count} redispatch cycles — click to view full shipment history`;
-  const className = 'inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-600';
+  const className = 'inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-sm font-medium text-slate-600';
   if (onClick) {
     return (
       <button
@@ -45,14 +45,14 @@ export function DispatchIdCell({ item, onViewHistory }) {
         {item.dispatchId || item._id}
       </p>
       <p
-        className={`text-xs uppercase tracking-widest font-semibold ${
+        className={`text-xs normal-case tracking-normal font-semibold ${
           !hasTracking ? 'text-warning-700' : 'text-slate-500'
         }`}
       >
         Tracking: {currentTracking}
       </p>
       {overdue && (
-        <span className="inline-flex items-center rounded-md bg-error-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-error-700">
+        <span className="inline-flex items-center rounded-md bg-error-50 px-1.5 py-0.5 text-sm font-medium text-error-700">
           Tracking overdue
         </span>
       )}
@@ -73,10 +73,10 @@ export function KitDetailsCell({ item, showShippedDate = true }) {
     <div>
       <p className="font-bold text-slate-900">{item.kit?.name || '—'}</p>
       <div className="mt-1 space-y-1">
-        <p className="text-xs uppercase tracking-widest font-semibold text-slate-500">
+        <p className="text-xs normal-case tracking-normal font-semibold text-slate-500">
           Kit ID: {current?.kitId || '—'}
         </p>
-        <p className="text-xs uppercase tracking-widest font-semibold text-brand-primary">
+        <p className="text-xs normal-case tracking-normal font-semibold text-brand-primary">
           Category: {current?.category || '—'}
         </p>
         {isRedispatched && summary.original?.category && summary.original.category !== current?.category && (
@@ -105,21 +105,21 @@ export function QuantityCell({ item }) {
       ? Number(item.outstandingQuantity)
       : Math.max(0, initial - ack);
     return (
-      <div className="space-y-0.5 text-[11px] font-semibold text-slate-800">
+      <div className="space-y-0.5 text-xs font-semibold text-slate-800">
         <p>sent {initial} · ok {ack}</p>
         {affected > 0 && (
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          <p className="text-sm font-medium text-slate-400">
             affected {affected}
             {replaced > 0 ? ` · repl ${replaced}` : outstanding > 0 ? ' · repl pending' : ''}
           </p>
         )}
         {item.status === 'Completed' && (
           outstanding > 0 ? (
-            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600">
+            <p className="text-sm font-medium text-amber-600">
               Cycle completed · outstanding {outstanding}
             </p>
           ) : (
-            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">
+            <p className="text-sm font-medium text-emerald-600">
               Fulfilled
             </p>
           )
@@ -134,7 +134,7 @@ export function QuantityCell({ item }) {
       <div className="space-y-0.5 text-sm font-semibold text-slate-800">
         <p>x{ack}</p>
         {cycleQty > 0 && cycleQty !== ack && (
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          <p className="text-sm font-medium text-slate-400">
             this cycle x{cycleQty}
           </p>
         )}
@@ -149,7 +149,7 @@ export function QuantityCell({ item }) {
     <div className="space-y-0.5 text-sm font-semibold text-slate-800">
       <p className="text-brand-primary">x{qty.redispatched}</p>
       {qty.originalSent != null && qty.originalSent !== qty.redispatched && (
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+        <p className="text-sm font-medium text-slate-400">
           orig x{qty.originalSent}
         </p>
       )}

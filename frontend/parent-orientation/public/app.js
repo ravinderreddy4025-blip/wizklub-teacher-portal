@@ -281,10 +281,11 @@
       ellipsis: '\u2026',
       arrowDown: '\u25BC',
       arrowRight: '\u2192',
-      iconCal: '\u{1F4C5}',
-      iconPerson: '\u{1F464}',
-      iconPin: '\u{1F4CD}',
-      iconId: '\u{1F194}',
+      /* Row icons: inline SVG (was emoji) — decorative, text beside each stays the label. */
+      iconCal: '<svg class="po-row-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+      iconPerson: '<svg class="po-row-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+      iconPin: '<svg class="po-row-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+      iconId: '<svg class="po-row-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h4M7 13h10M7 17h6"/></svg>',
     };
 
     function safeZoomHref(url) {
@@ -406,11 +407,11 @@
       const sid = o.sessionId;
       const online = o.venue === 'Online';
       if (href && online && sid) {
-        return `<a href="${escapeAttr(href)}" class="po-meeting-link" data-po-meeting-sid="${escapeAttr(sid)}" data-po-meeting-href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer" style="color:#c2410c;text-decoration:none;font-weight:600;">Open meeting</a>
+        return `<a href="${escapeAttr(href)}" class="po-meeting-link" data-po-meeting-sid="${escapeAttr(sid)}" data-po-meeting-href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer" style="color:#b4430f;text-decoration:none;font-weight:600;">Open meeting</a>
           <button type="button" class="btn btn-o btn-sm po-copy-meeting-link" data-po-meeting-sid="${escapeAttr(sid)}" style="margin-left:8px;vertical-align:middle">Copy share link</button>`;
       }
       if (href) {
-        return `<a href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer" style="color:#c2410c;text-decoration:none;font-weight:600;">Open link</a>`;
+        return `<a href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer" style="color:#b4430f;text-decoration:none;font-weight:600;">Open link</a>`;
       }
       const t = (loc || '').trim();
       return t ? escapeHtml(t) : '—';
@@ -3165,7 +3166,7 @@
         <div class="fg">
           <label for="f-att-${s.id}">No. of Parents Attended *</label>
           <input type="number" id="f-att-${s.id}" data-po-invited-cap="${invitedCap}" placeholder="0" min="0" max="${invitedCap}" title="Must be ≤ parents invited (${invitedCap})" value="${escapeAttr(attVal)}" aria-describedby="f-att-err-${s.id}" autocomplete="off">
-          <div id="f-att-err-${s.id}" class="po-att-err" role="alert" style="display:none;color:#c62828;font-size:12px;margin-top:4px;font-weight:500"></div>
+          <div id="f-att-err-${s.id}" class="po-att-err" role="alert" style="display:none;color:#b42323;font-size:12px;margin-top:4px;font-weight:500"></div>
         </div>
         <div class="fg">
           <label>Engagement Level *</label>
@@ -3551,7 +3552,7 @@
         ? `<tfoot><tr><td>Total</td><td class="num">${ts}</td><td class="num">${tc}</td>${
             hideAtt ? '' : `<td class="num">${fmtDashAttended(ta)}</td>`
           }</tr></tfoot>`
-        : `<tfoot><tr><td colspan="${colSpan}" class="dash-foot" style="padding:10px;background:#fafbfc">Totals above sum per-grade rows (a session with multiple grades appears once per grade). Compare with region totals for unique session counts.</td></tr></tfoot>`;
+        : `<tfoot><tr><td colspan="${colSpan}" class="dash-foot" style="padding:10px;background:#fff7ee">Totals above sum per-grade rows (a session with multiple grades appears once per grade). Compare with region totals for unique session counts.</td></tr></tfoot>`;
       const thAtt = hideAtt ? '' : '<th class="num">Parents attended</th>';
       return `<div class="dash-panel"><div class="dash-panel-title">${escapeHtml(title)}</div><div class="dash-table-wrap"><table class="dash-table" aria-label="${escapeAttr(title)}"><thead><tr><th>${escapeHtml(keyLabel)}</th><th class="num">Scheduled</th><th class="num">Completed</th>${thAtt}</tr></thead><tbody>${body}</tbody>${foot}</table></div></div>`;
     }
@@ -3572,7 +3573,7 @@
     <div class="metric"><div class="mv">${resch}</div><div class="ml">Rescheduled</div></div>
     <div class="metric"><div class="mv">${canc}</div><div class="ml">Cancelled</div></div>
     <div class="metric"><div class="mv">${inv}</div><div class="ml">Parents invited</div></div>
-    <div class="metric"><div class="mv">${att} <span style="font-size:13px;color:#888">(${rate}%)</span></div><div class="ml">Parents attended</div></div>
+    <div class="metric"><div class="mv">${att} <span style="font-size:13px;color:#6c6e72">(${rate}%)</span></div><div class="ml">Parents attended</div></div>
   `;
     }
 
@@ -4138,10 +4139,10 @@
         .join('');
       const totalStatus = Math.max(1, all.total);
       const statusSegs = [
-        { value: Math.round((all.completed / totalStatus) * 100), color: '#16a34a' },
-        { value: Math.round((all.planned / totalStatus) * 100), color: '#94a3b8' },
-        { value: Math.round((all.rescheduled / totalStatus) * 100), color: '#3b82f6' },
-        { value: Math.round((all.cancelled / totalStatus) * 100), color: '#ef4444' },
+        { value: Math.round((all.completed / totalStatus) * 100), color: '#1e8e4a' },
+        { value: Math.round((all.planned / totalStatus) * 100), color: '#85878a' },
+        { value: Math.round((all.rescheduled / totalStatus) * 100), color: '#0062cc' },
+        { value: Math.round((all.cancelled / totalStatus) * 100), color: '#d23c3c' },
       ].filter((s) => s.value > 0);
       const donePct = all.total ? Math.round((all.completed / all.total) * 100) : 0;
       const attRateAll = all.invited ? Math.round((all.attended / all.invited) * 100) : 0;
@@ -4151,21 +4152,21 @@
             <h3 class="sales-chart-title">Sessions by month (stacked status)</h3>
             <div class="pmo-mo-timeline">${rows.map(pmoTimelineRowHtml).join('')}</div>
             <div class="pmo-mo-legend">
-              <span><i style="background:#16a34a"></i> Completed</span>
-              <span><i style="background:#94a3b8"></i> Planned</span>
-              <span><i style="background:#3b82f6"></i> Rescheduled</span>
-              <span><i style="background:#ef4444"></i> Cancelled</span>
+              <span><i style="background:#1e8e4a"></i> Completed</span>
+              <span><i style="background:#85878a"></i> Planned</span>
+              <span><i style="background:#0062cc"></i> Rescheduled</span>
+              <span><i style="background:#d23c3c"></i> Cancelled</span>
             </div>
           </div>
           <div class="sales-chart-card">
             <h3 class="sales-chart-title">All sessions — status mix</h3>
             <div class="sales-donut-wrap">
-              ${salesDonutSvg(donePct, statusSegs.length ? statusSegs : [{ value: 100, color: '#e5e7eb' }])}
+              ${salesDonutSvg(donePct, statusSegs.length ? statusSegs : [{ value: 100, color: '#e6e7e8' }])}
               <ul class="sales-donut-legend">
-                <li><span class="sales-donut-swatch" style="background:#16a34a"></span> ${all.completed} completed</li>
-                <li><span class="sales-donut-swatch" style="background:#94a3b8"></span> ${all.planned} planned</li>
-                <li><span class="sales-donut-swatch" style="background:#3b82f6"></span> ${all.rescheduled} rescheduled</li>
-                <li><span class="sales-donut-swatch" style="background:#ef4444"></span> ${all.cancelled} cancelled</li>
+                <li><span class="sales-donut-swatch" style="background:#1e8e4a"></span> ${all.completed} completed</li>
+                <li><span class="sales-donut-swatch" style="background:#85878a"></span> ${all.planned} planned</li>
+                <li><span class="sales-donut-swatch" style="background:#0062cc"></span> ${all.rescheduled} rescheduled</li>
+                <li><span class="sales-donut-swatch" style="background:#d23c3c"></span> ${all.cancelled} cancelled</li>
               </ul>
             </div>
           </div>
@@ -4188,10 +4189,10 @@
       const attPct = c.invited ? Math.round((c.attended / c.invited) * 100) : 0;
       const totalStatus = Math.max(1, c.total);
       const statusSegs = [
-        { value: Math.round((c.completed / totalStatus) * 100), color: '#16a34a' },
-        { value: Math.round((c.planned / totalStatus) * 100), color: '#94a3b8' },
-        { value: Math.round((c.rescheduled / totalStatus) * 100), color: '#3b82f6' },
-        { value: Math.round((c.cancelled / totalStatus) * 100), color: '#ef4444' },
+        { value: Math.round((c.completed / totalStatus) * 100), color: '#1e8e4a' },
+        { value: Math.round((c.planned / totalStatus) * 100), color: '#85878a' },
+        { value: Math.round((c.rescheduled / totalStatus) * 100), color: '#0062cc' },
+        { value: Math.round((c.cancelled / totalStatus) * 100), color: '#d23c3c' },
       ].filter((s) => s.value > 0);
       const donePct = c.total ? Math.round((c.completed / c.total) * 100) : 0;
       el.innerHTML = `
@@ -4209,22 +4210,22 @@
           <div class="sales-chart-card">
             <h3 class="sales-chart-title">This month — status mix</h3>
             <div class="sales-donut-wrap">
-              ${c.total ? salesDonutSvg(donePct, statusSegs.length ? statusSegs : [{ value: 100, color: '#e5e7eb' }]) : '<p class="empty" style="margin:0">No sessions</p>'}
+              ${c.total ? salesDonutSvg(donePct, statusSegs.length ? statusSegs : [{ value: 100, color: '#e6e7e8' }]) : '<p class="empty" style="margin:0">No sessions</p>'}
               <ul class="sales-donut-legend">
-                <li><span class="sales-donut-swatch" style="background:#16a34a"></span> ${c.completed} completed</li>
-                <li><span class="sales-donut-swatch" style="background:#94a3b8"></span> ${c.planned} planned</li>
-                <li><span class="sales-donut-swatch" style="background:#3b82f6"></span> ${c.rescheduled} rescheduled</li>
-                <li><span class="sales-donut-swatch" style="background:#ef4444"></span> ${c.cancelled} cancelled</li>
+                <li><span class="sales-donut-swatch" style="background:#1e8e4a"></span> ${c.completed} completed</li>
+                <li><span class="sales-donut-swatch" style="background:#85878a"></span> ${c.planned} planned</li>
+                <li><span class="sales-donut-swatch" style="background:#0062cc"></span> ${c.rescheduled} rescheduled</li>
+                <li><span class="sales-donut-swatch" style="background:#d23c3c"></span> ${c.cancelled} cancelled</li>
               </ul>
             </div>
           </div>
           <div class="sales-chart-card">
             <h3 class="sales-chart-title">Parent attendance</h3>
             <div class="sales-donut-wrap">
-              ${salesDonutSvg(attPct, [{ value: 100, color: attPct >= 60 ? '#16a34a' : '#f97316' }])}
+              ${salesDonutSvg(attPct, [{ value: 100, color: attPct >= 60 ? '#1e8e4a' : '#ff8c2b' }])}
               <ul class="sales-donut-legend">
-                <li><span class="sales-donut-swatch" style="background:#f97316"></span> ${c.attended} attended</li>
-                <li><span class="sales-donut-swatch" style="background:#e5e7eb"></span> ${Math.max(0, c.invited - c.attended)} not recorded</li>
+                <li><span class="sales-donut-swatch" style="background:#ff8c2b"></span> ${c.attended} attended</li>
+                <li><span class="sales-donut-swatch" style="background:#e6e7e8"></span> ${Math.max(0, c.invited - c.attended)} not recorded</li>
                 <li>Invited total: <strong>${c.invited}</strong></li>
               </ul>
             </div>
@@ -4307,7 +4308,7 @@
           <div class="strow">
             <span class="sname">${escapeHtml(s.branch || PO_TEXT.emDash)}</span>
             <span class="pill ${pillCls}">${escapeHtml(s.status)}</span>
-            ${s.region ? `<span style="font-size:11px;color:#888">${escapeHtml(s.region)}</span>` : ''}
+            ${s.region ? `<span style="font-size:11px;color:#6c6e72">${escapeHtml(s.region)}</span>` : ''}
           </div>
           <div class="sdet">
             ${!speakerMode ? `<span title="Session id (UUID)">${PO_TEXT.iconId} <code style="font-size:11px;user-select:all;word-break:break-all">${escapeHtml(s.id)}</code></span>` : ''}
@@ -4431,7 +4432,7 @@
     function speakerMonthTileHtml(r, index) {
       const pendingBadge =
         r.planned > 0
-          ? `<span class="spk-pending-badge"><span aria-hidden="true">⚡</span> ${r.planned} pending</span>`
+          ? `<span class="spk-pending-badge"><span aria-hidden="true" style="display:inline-flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span> ${r.planned} pending</span>`
           : '';
       const delay = Math.min(index, 12);
       return `<button type="button" class="spk-month-tile" data-spk-month="${escapeAttr(r.monthKey)}" style="animation-delay:${delay * 0.07}s">
@@ -4526,7 +4527,7 @@
       if (pending.length) {
         html += speakerStatusLaneHtml(
           'pending',
-          '⚡',
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
           'Pending update',
           pending.length,
           pending.map((s) => sessionRowHTML(s, true, cardIdx++)).join(''),
@@ -4787,12 +4788,12 @@
     function pmoSchoolCardHtml(row) {
       const tier = schoolFulfillmentTier(row);
       const pct = schoolFulfillmentPct(row) ?? 0;
-      const ringColor = tier === 'below' ? '#ef4444' : tier === 'met' ? '#16a34a' : '#3b82f6';
+      const ringColor = tier === 'below' ? '#d23c3c' : tier === 'met' ? '#1e8e4a' : '#0062cc';
       const deg = Math.min(100, pct) * 3.6;
       const ac = Number(row.actual_completed) || 0;
       const tc = Number(row.target_completed) || 0;
       return `<article class="pmo-school-card pmo-school-card--${tier}">
-        <div class="pmo-school-card__ring" style="background:conic-gradient(${ringColor} ${deg}deg,#e5e7eb 0)">${pct}%</div>
+        <div class="pmo-school-card__ring" style="background:conic-gradient(${ringColor} ${deg}deg,#e6e7e8 0)">${pct}%</div>
         <div class="pmo-school-card__name">${escapeHtml(row.branch)}</div>
         <div class="pmo-school-card__region">${escapeHtml(row.region)}</div>
         <div class="pmo-school-card__stat">${ac} / ${tc} completed</div>
@@ -4810,8 +4811,8 @@
       const barCls = pct >= 100 ? ' pmo-targets-hero__bar-fill--met' : '';
       const donut =
         target > 0
-          ? salesDonutSvg(pct, [{ value: 100, color: pct >= 100 ? '#16a34a' : '#f97316' }])
-          : salesDonutSvg(0, [{ value: 100, color: '#e5e7eb' }]);
+          ? salesDonutSvg(pct, [{ value: 100, color: pct >= 100 ? '#1e8e4a' : '#ff8c2b' }])
+          : salesDonutSvg(0, [{ value: 100, color: '#e6e7e8' }]);
       el.innerHTML = `
         <div class="sales-donut-wrap" style="flex-shrink:0">${donut}</div>
         <div class="pmo-targets-hero__copy">
@@ -4869,11 +4870,11 @@
       const donutSegs =
         withTarget.length > 0
           ? [
-              { value: segMet, color: '#16a34a' },
-              { value: segTrack, color: '#3b82f6' },
-              { value: segBelow + Math.max(0, segRemainder), color: '#ef4444' },
+              { value: segMet, color: '#1e8e4a' },
+              { value: segTrack, color: '#0062cc' },
+              { value: segBelow + Math.max(0, segRemainder), color: '#d23c3c' },
             ].filter((s) => s.value > 0)
-          : [{ value: 100, color: '#e5e7eb' }];
+          : [{ value: 100, color: '#e6e7e8' }];
       const statusRows = [
         { label: 'Target met (100%+)', count: met, cls: 'met' },
         { label: 'On track (50–99%)', count: track, cls: 'track' },
@@ -4909,11 +4910,11 @@
         <div class="sales-chart-card">
           <h3 class="sales-chart-title">School mix</h3>
           <div class="sales-donut-wrap">
-            ${withTarget.length ? salesDonutSvg(mixPct, donutSegs) : salesDonutSvg(0, [{ value: 100, color: '#e5e7eb' }])}
+            ${withTarget.length ? salesDonutSvg(mixPct, donutSegs) : salesDonutSvg(0, [{ value: 100, color: '#e6e7e8' }])}
             <ul class="sales-donut-legend">
-              <li><span class="sales-donut-swatch" style="background:#16a34a"></span> ${met} met target</li>
-              <li><span class="sales-donut-swatch" style="background:#3b82f6"></span> ${track} on track</li>
-              <li><span class="sales-donut-swatch" style="background:#ef4444"></span> ${below} below 50%</li>
+              <li><span class="sales-donut-swatch" style="background:#1e8e4a"></span> ${met} met target</li>
+              <li><span class="sales-donut-swatch" style="background:#0062cc"></span> ${track} on track</li>
+              <li><span class="sales-donut-swatch" style="background:#d23c3c"></span> ${below} below 50%</li>
             </ul>
           </div>
         </div>
@@ -5376,12 +5377,12 @@
       const completedLen = (p / 100) * c;
       const pendingLen = c - completedLen;
       return `<svg class="sales-progress-donut" viewBox="0 0 192 192" role="img" aria-label="Overall progress ${p} percent completed">
-        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#fff4e6" stroke-width="${stroke}"/>
-        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#f97316" stroke-width="${stroke}" stroke-linecap="butt"
+        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#ffe7cf" stroke-width="${stroke}"/>
+        <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#ff8c2b" stroke-width="${stroke}" stroke-linecap="butt"
           stroke-dasharray="${completedLen} ${pendingLen}" transform="rotate(-90 ${cx} ${cy})"/>
         <circle cx="${cx}" cy="${cy}" r="52" fill="#fff" filter="url(#salesDonutInnerShadow)"/>
-        <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="'Nunito', 'Segoe UI', sans-serif" font-size="36" font-weight="800" fill="#f97316">${p}%</text>
-        <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-family="'Nunito', 'Segoe UI', sans-serif" font-size="12" font-weight="500" fill="#9a3412" letter-spacing="0.6">Completed</text>
+        <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="'Poppins', system-ui, sans-serif" font-size="36" font-weight="600" fill="#02344f">${p}%</text>
+        <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-family="'Poppins', system-ui, sans-serif" font-size="12" font-weight="500" fill="#4a5b68">Completed</text>
         <defs>
           <filter id="salesDonutInnerShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.06"/>
@@ -5397,9 +5398,9 @@
       const w = 120;
       const h = 44;
       const p = Math.min(1, Math.max(0.08, Number(level) || 0.35));
-      const orange = '#f97316';
-      const orangeSoft = 'rgba(249, 115, 22, 0.22)';
-      const orangeFade = 'rgba(249, 115, 22, 0.08)';
+      const orange = '#ff8c2b';
+      const orangeSoft = 'rgba(255, 140, 43, 0.28)';
+      const orangeFade = 'rgba(255, 140, 43, 0.1)';
       if (idx === 0) {
         const bars = [0.45, 0.72, 0.55 + p * 0.35].map((f, i) => {
           const bw = 18;
@@ -5633,10 +5634,10 @@
         })
         .join('');
       return `<svg class="sales-donut" viewBox="0 0 120 120" role="img" aria-label="Overall completion ${pctComplete} percent">
-        <circle cx="60" cy="60" r="${r}" fill="none" stroke="#f1f5f9" stroke-width="14"/>
+        <circle cx="60" cy="60" r="${r}" fill="none" stroke="#f2f2f2" stroke-width="14"/>
         ${arcs}
-        <text x="60" y="56" text-anchor="middle" font-size="18" font-weight="700" fill="#1e3a5f">${pctComplete}%</text>
-        <text x="60" y="72" text-anchor="middle" font-size="9" fill="#64748b">completed</text>
+        <text x="60" y="56" text-anchor="middle" font-size="18" font-weight="600" fill="currentColor">${pctComplete}%</text>
+        <text x="60" y="72" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.72">completed</text>
       </svg>`;
     }
 
@@ -6751,6 +6752,8 @@
         toast(error && error.message ? error.message : 'Failed to generate Excel file.', 'error');
       }
     }
+
+
 
     initLogin();
 

@@ -1,4 +1,4 @@
-import { Profiler, useEffect, useState } from 'react'
+import { Profiler, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import AssessmentHeader from '../components/assessment-conduct/AssessmentHeader'
 import AssessmentScanner from '../components/assessment-conduct/AssessmentScanner'
@@ -13,6 +13,7 @@ import { useNavigate } from '../router'
 import { onConductProfilerRender } from '../utils/conductPerf'
 import '../styles/app.css'
 import './pages.css'
+import './assessment-conduct.css'
 
 function formatSubmitFailureReason(result) {
   if (result?.failure_stage) {
@@ -22,17 +23,9 @@ function formatSubmitFailureReason(result) {
   return result?.status || 'Submit failed'
 }
 
-function assessmentsListPath(schoolId, batchId) {
-  const base = schoolId
-    ? `/schools/${schoolId}/batches/${batchId}/students`
-    : `/batches/${batchId}/students`
-  return `${base}?view=assessments`
-}
-
 export default function AssessmentConduct({ schoolId = '', batchId, sessionId }) {
   const navigate = useNavigate()
   const [scannerOpen, setScannerOpen] = useState(false)
-  const [successOpen, setSuccessOpen] = useState(false)
   const {
     context,
     loading,
@@ -55,16 +48,15 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
   } = useAssessmentConduct(batchId, sessionId)
 
   const currentQuestionId = currentQuestion?.question_id || ''
-  const backPath = assessmentsListPath(schoolId, batchId)
+  const capturedCount = useMemo(() => students.filter((s) => s.captured).length, [students])
 
   useEffect(() => {
     clearAlreadyScanned()
   }, [currentQuestionId])
 
-  const goToAssessmentList = () => {
-    setSuccessOpen(false)
-    navigate(backPath)
-  }
+  const backPath = schoolId
+    ? `/schools/${schoolId}/batches/${batchId}/students`
+    : `/batches/${batchId}/students`
 
   const handleSubmitAssessment = async () => {
     if (submitting) return
@@ -89,7 +81,11 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
       return
     }
 
-    setSuccessOpen(true)
+    toast.success(
+      successTotal
+        ? `Assessment submitted successfully for ${successTotal} student(s).`
+        : 'Assessment submit completed.',
+    )
   }
 
   if (loading) {
@@ -115,19 +111,14 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
         showBottomNav={false}
         onBack={() => navigate(backPath)}
       >
-        <div className="empty-state" style={{ marginTop: 40 }}>
-          <p className="empty-state__title">
-            {forbidden ? 'Permission denied' : 'Unable to load assessment'}
+        <div className="ac-card ac-empty ac-empty--page">
+          <p className="ac-empty__title">
+            {forbidden ? 'You do not have access to this assessment' : 'Could not load the assessment'}
           </p>
-          <p className="empty-state__text">
-            {error || 'The assessment conduct context could not be loaded.'}
+          <p className="ac-empty__text">
+            {error || 'The assessment could not be loaded. Check your connection and try again.'}
           </p>
-          <button
-            type="button"
-            className="btn-primary"
-            style={{ marginTop: 16, maxWidth: 220 }}
-            onClick={() => navigate(backPath)}
-          >
+          <button type="button" className="ac-btn ac-btn--primary" onClick={() => navigate(backPath)}>
             Back to assessments
           </button>
         </div>
@@ -148,26 +139,28 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
       className="conduct-shell"
     >
       <Profiler id="AssessmentConduct" onRender={onConductProfilerRender}>
-        <div className="conduct-page">
-          <p className="page__subtitle" style={{ marginBottom: 8 }}>
-            {batchName}
-          </p>
-
+        <div className="ac-page">
           <AssessmentHeader
             title={assessment.title}
+            batchName={batchName}
             questionIndex={questionIndex}
             totalQuestions={totalQuestions}
             duration={assessment.duration}
             status={assessment.status}
+            capturedCount={capturedCount}
+            studentCount={students.length}
+            missingSrCardCount={missingSrCardCount}
           />
 
-          <Profiler id="QuestionCard" onRender={onConductProfilerRender}>
-            <QuestionCard question={currentQuestion} empty={totalQuestions === 0} />
-          </Profiler>
+          <div className="ac-layout">
+            <Profiler id="QuestionCard" onRender={onConductProfilerRender}>
+              <QuestionCard question={currentQuestion} empty={totalQuestions === 0} />
+            </Profiler>
 
-          <Profiler id="ConductStudentList" onRender={onConductProfilerRender}>
-            <ConductStudentList students={students} missingSrCardCount={missingSrCardCount} />
-          </Profiler>
+            <Profiler id="ConductStudentList" onRender={onConductProfilerRender}>
+              <ConductStudentList students={students} missingSrCardCount={missingSrCardCount} />
+            </Profiler>
+          </div>
         </div>
       </Profiler>
 
@@ -191,28 +184,6 @@ export default function AssessmentConduct({ schoolId = '', batchId, sessionId })
           onCaptured={addCapturedResponse}
           onClose={() => setScannerOpen(false)}
         />
-      ) : null}
-
-      {successOpen ? (
-        <div className="conduct-modal-backdrop" role="presentation">
-          <div
-            className="conduct-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="assessment-submit-success-title"
-          >
-            <h2 id="assessment-submit-success-title" className="conduct-modal__title">
-              Assessment submitted successfully
-            </h2>
-            <p className="conduct-modal__text">
-              Responses are saved. You can reopen this assessment anytime to review student
-              answers.
-            </p>
-            <button type="button" className="btn-primary" onClick={goToAssessmentList}>
-              Go to assessment list
-            </button>
-          </div>
-        </div>
       ) : null}
     </AppShell>
   )

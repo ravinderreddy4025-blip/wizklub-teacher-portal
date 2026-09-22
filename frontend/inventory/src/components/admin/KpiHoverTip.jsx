@@ -27,23 +27,23 @@ export default function KpiHoverTip({
       className={`pointer-events-none absolute ${pos} ${side} z-[90] hidden w-80 max-w-[min(20rem,calc(100vw-2rem))] group-hover:block group-focus-visible:block`}
       role="tooltip"
     >
-      <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5 text-left shadow-2xl ring-1 ring-black/5">
+      <div className="rounded-xl border border-wk-line bg-white p-3.5 text-left shadow-2xl ring-1 ring-black/5">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#F89C28]">{title}</p>
+          <p className="text-sm font-medium text-wk-orange-text">{title}</p>
           {total != null && (
-            <p className="font-heading text-lg font-bold tabular-nums text-[#1F2937]">{Number(total).toLocaleString()}</p>
+            <p className="text-lg font-semibold tabular-nums text-wk-ink">{Number(total).toLocaleString()}</p>
           )}
         </div>
-        <ul className="mt-2 space-y-1 border-t border-[#F1F5F9] pt-2">
+        <ul className="mt-2 space-y-1 border-t border-wk-line pt-2">
           {lines.map((row) => (
-            <li key={row.label} className="flex items-baseline justify-between gap-3 text-[11px]">
-              <span className="text-[#6B7280]">{row.label}</span>
-              <span className="font-heading font-bold tabular-nums text-[#1F2937]">{formatValue(row)}</span>
+            <li key={row.label} className="flex items-baseline justify-between gap-3 text-xs">
+              <span className="text-wk-muted">{row.label}</span>
+              <span className="font-bold tabular-nums text-wk-ink">{formatValue(row)}</span>
             </li>
           ))}
         </ul>
         {equation && (
-          <p className="mt-2 rounded-lg bg-[#FFFAF3] px-2 py-1.5 font-heading text-[11px] font-bold tabular-nums leading-snug text-[#1F2937]">
+          <p className="mt-2 rounded-lg bg-wk-cream px-2 py-1.5 text-xs font-bold tabular-nums leading-snug text-wk-ink">
             {equation}
           </p>
         )}

@@ -4,36 +4,39 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f47d31">
   <title>Join online meeting</title>
-  <link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
-  <link rel="icon" type="image/png" href="brand/logo.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Served at /pmo/join/<id> (and /join/<id> on the backend) — brand assets live one level up. -->
+  <link rel="icon" type="image/svg+xml" href="../brand/favicon.svg">
+  <link rel="icon" type="image/png" href="../brand/logo.png">
+  <!-- Join CSP allows style-src 'self' — shared tokens live next to index.html (../po-tokens.css). -->
+  <link rel="stylesheet" href="../po-tokens.css?v=20260922b">
   <style>
     * {
       box-sizing: border-box;
     }
 
     :root {
-      --po-blue: #ea580c;
-      --po-blue-dark: #c2410c;
-      --po-text: #1c1917;
-      --po-muted: #57534e;
-      --po-focus: rgba(234, 88, 12, 0.22);
-      --po-font: 'Nunito', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+      --red: #b42323;
+      --red-light: #fef0f0;
+      --font: var(--po-font);
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
     }
 
     body {
-      margin: 0;
       min-height: 100vh;
-      font-family: var(--po-font);
-      background: linear-gradient(160deg, #ffedd5 0%, #ffffff 45%, #fff7ed 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px 16px;
-      color: var(--po-text);
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      font-family: var(--font);
+      color: var(--text-primary);
+      background: var(--wk-band);
+      -webkit-font-smoothing: antialiased;
     }
 
     .skip-link {
@@ -41,11 +44,11 @@
       left: 12px;
       top: -56px;
       z-index: 10;
-      padding: 8px 14px;
-      background: var(--po-blue);
+      padding: 8px 16px;
+      background: var(--wk-navy);
       color: #fff;
-      font-weight: 700;
-      border-radius: 8px;
+      font-weight: 600;
+      border-radius: 9999px;
       text-decoration: none;
     }
 
@@ -54,115 +57,269 @@
       top: 12px;
     }
 
-    .join-card {
-      width: min(420px, 100%);
-      background: rgba(255, 255, 255, 0.92);
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(234, 88, 12, 0.1), 0 32px 64px -24px rgba(234, 88, 12, 0.14);
-      padding: 28px 24px 24px;
-      border-top: 4px solid #fb923c;
+    /* Brand half */
+    .join-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 48px 88px 48px 48px;
+      position: relative;
+      isolation: isolate;
+      color: var(--wk-navy);
+      text-align: center;
+      background: var(--wk-chrome);
+      overflow: hidden;
+    }
+
+    /* Faint doodles over the flat orange */
+    .join-brand::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: url('../brand/wiz-auth-bg.svg') center / cover no-repeat;
+      opacity: 0.35;
+      pointer-events: none;
     }
 
     .join-logo {
       display: block;
-      height: 56px;
-      width: auto;
-      max-width: min(220px, 80vw);
-      margin: 0 auto 12px;
-      object-fit: contain;
+      width: 240px;
+      max-width: 70%;
+      height: auto;
+      filter: drop-shadow(0 2px 6px rgba(120, 40, 0, 0.25));
     }
 
-    .join-brand {
+    .join-brand__tagline {
+      margin: 8px 0 0;
+      font-size: 28px;
+      line-height: 40px;
+      font-weight: 600;
+    }
+
+    /* Panel half */
+    .join-panel {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: -40px;
+      padding: 48px 32px;
+      background: #fff;
+      border-radius: 40px 0 0 40px;
+    }
+
+    .join-card {
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .join-eyebrow {
+      margin: 0 0 4px;
       font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--po-blue-dark);
-      margin-bottom: 8px;
+      line-height: 20px;
+      font-weight: 500;
       text-align: center;
+      color: var(--wk-orange-text);
     }
 
     h1 {
-      margin: 0 0 6px;
-      font-size: 22px;
-      color: #9a3412;
-      letter-spacing: -0.02em;
+      margin: 0;
+      font-size: 36px;
+      line-height: 54px;
+      font-weight: 500;
+      text-align: center;
+      color: var(--text-primary);
     }
 
     .join-meta {
-      margin: 0 0 20px;
+      margin: 16px 0 0;
+      padding: 16px;
+      border-radius: 16px;
+      background: #fff7ee;
       font-size: 14px;
-      color: var(--po-muted);
-      line-height: 1.45;
+      line-height: 22px;
+      color: var(--text-secondary);
+      text-align: center;
     }
 
-    label {
+    .join-meta strong {
       display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #44403c;
-      margin-bottom: 6px;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1px solid rgba(234, 88, 12, 0.22);
-      border-radius: 12px;
       font-size: 16px;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      font-family: inherit;
-      background: #fff;
-    }
-
-    input:focus,
-    input:focus-visible {
-      outline: 2px solid #ea580c;
-      outline-offset: 1px;
-      border-color: rgba(251, 146, 60, 0.85);
-      box-shadow: 0 0 0 3px var(--po-focus);
+      line-height: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
     }
 
     .join-err {
-      margin: 0 0 14px;
-      padding: 10px 12px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-      color: #b91c1c;
-      font-size: 13px;
+      display: flex;
+      gap: 10px;
+      margin: 20px 0 0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--red-light);
+      color: var(--red);
+      font-size: 14px;
+      line-height: 20px;
       font-weight: 500;
     }
 
-    button {
-      width: 100%;
-      margin-top: 18px;
-      padding: 12px 16px;
-      border: none;
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    /* Floating-label outlined field (48px, r12) */
+    .join-field {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 48px;
+      border: 1px solid var(--border-control);
       border-radius: 12px;
-      background: linear-gradient(135deg, #ea580c 0%, #f97316 48%, #fb923c 100%);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 700;
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .join-field:focus-within {
+      border-color: var(--wk-orange-text);
+      box-shadow: 0 0 0 1px var(--wk-orange-text);
+    }
+
+    .join-field input {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+      padding: 0 16px 0 24px;
+      border: 0;
+      border-radius: 12px;
+      outline: 0;
+      background: transparent;
       font-family: inherit;
+      font-size: 16px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .join-field input::placeholder {
+      color: transparent;
+    }
+
+    .join-field input:focus::placeholder {
+      color: #9a9c9f;
+      letter-spacing: 0.04em;
+    }
+
+    .join-field label {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 0 6px;
+      background: #fff;
+      color: var(--text-muted);
+      font-size: 16px;
+      line-height: 20px;
+      pointer-events: none;
+      transition: all 0.15s ease;
+    }
+
+    .join-field input:focus + label,
+    .join-field input:not(:placeholder-shown) + label {
+      top: 0;
+      font-size: 12px;
+    }
+
+    .join-field input:focus + label {
+      color: var(--wk-orange-text);
+    }
+
+    /* 56px tangerine pill, navy text; grey until an ID is entered */
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 56px;
+      padding: 0 24px;
+      border: 0;
+      border-radius: 9999px;
+      background: var(--wk-orange);
+      color: var(--wk-navy);
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
       cursor: pointer;
+      box-shadow: 0 3px 0 var(--wk-orange-edge);
+      transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.1s ease;
     }
 
     button:hover {
-      background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+      background: var(--wk-orange-hover);
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 var(--wk-orange-edge);
+    }
+
+    #join-form:invalid button {
+      background: #e6e7e8;
+      color: var(--text-muted);
+      box-shadow: none;
     }
 
     button:focus-visible {
-      outline: 2px solid #ea580c;
-      outline-offset: 2px;
+      outline: none;
+      box-shadow: var(--focus-ring);
     }
 
     .join-hint {
-      margin: 12px 0 0;
-      font-size: 12px;
-      color: var(--po-muted);
-      line-height: 1.4;
+      margin: 16px 0 0;
+      font-size: 13px;
+      line-height: 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 1023px) {
+      body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      .join-brand {
+        min-height: 30vh;
+        min-height: 30dvh;
+        padding: 32px 24px 64px;
+        gap: 8px;
+      }
+
+      .join-logo {
+        width: 176px;
+      }
+
+      .join-brand__tagline {
+        font-size: 22px;
+        line-height: 32px;
+      }
+
+      .join-panel {
+        align-items: flex-start;
+        margin: -32px 0 0;
+        padding: 32px max(16px, env(safe-area-inset-left)) 32px max(16px, env(safe-area-inset-right));
+        border-radius: 32px 32px 0 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 40px;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -178,20 +335,27 @@
 
 <body>
   <a class="skip-link" href="#student_id">Skip to SCS id</a>
-  <div class="join-card">
-    <img class="join-logo" src="brand/logo.png" alt="WIZKLUB Futurz" width="220" height="56" decoding="async">
-    <div class="join-brand">Parent Orientation</div>
-    <h1>Enter your SCS id</h1>
-    <p class="join-meta"><strong>__BRANCH__</strong><br>Session date: __DATE__</p>
-    __ERROR__
-    <form method="post" action="" id="join-form">
-      <label for="student_id">SCS id</label>
-      <input type="text" id="student_id" name="student_id" required maxlength="40" autocomplete="off"
-        spellcheck="false" inputmode="text" placeholder="SCS12345">
-      <button type="submit">Continue to meeting</button>
-    </form>
-    <p class="join-hint">Your ID is stored in uppercase. You will be redirected to the video meeting after submitting.</p>
-  </div>
+  <section class="join-brand" aria-label="WizKlub Futurz">
+    <img class="join-logo" src="../brand/logo-white.png" alt="WIZKLUB Futurz — An Infinity Learn initiative" width="240" height="138" decoding="async" onerror="this.onerror=null;this.src='../brand/logo.png'">
+    <p class="join-brand__tagline">Parent Orientation</p>
+  </section>
+  <main class="join-panel">
+    <div class="join-card">
+      <p class="join-eyebrow">Online session</p>
+      <h1>Enter your SCS id</h1>
+      <p class="join-meta"><strong>__BRANCH__</strong>Session date: __DATE__</p>
+      __ERROR__
+      <form method="post" action="" id="join-form">
+        <div class="join-field">
+          <input type="text" id="student_id" name="student_id" required maxlength="40" autocomplete="off"
+            spellcheck="false" inputmode="text" placeholder="SCS12345">
+          <label for="student_id">SCS id</label>
+        </div>
+        <button type="submit">Continue to meeting</button>
+      </form>
+      <p class="join-hint">Your ID is stored in uppercase. You will be redirected to the video meeting after submitting.</p>
+    </div>
+  </main>
   <script>
     (function () {
       var input = document.getElementById('student_id');

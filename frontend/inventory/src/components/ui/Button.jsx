@@ -2,14 +2,19 @@ import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+/*
+ * IL buttons in WizKlub colours: pill shapes, 44px touch target.
+ *  primary/gradient = tangerine fill + NAVY text + 3px orange edge (never white on orange)
+ *  secondary/outline = white pill, 1px navy border, navy text
+ */
 const variants = {
-  primary: 'bg-brand-primary text-white hover:bg-brand-orange-vivid shadow-glow-orange border border-white/30',
-  gradient: 'bg-gradient-to-r from-brand-orange-light via-brand-primary to-brand-orange-deep text-white shadow-glow-orange border border-white/45 hover:brightness-105',
-  secondary: 'bg-brand-orange-light/25 backdrop-blur-md text-brand-deep hover:bg-brand-orange-light/40 border border-brand-orange-light/50 shadow-soft',
-  glass: 'bg-white/20 backdrop-blur-md text-white border border-white/30 hover:bg-white/30 shadow-glass-inset',
-  outline: 'bg-white text-brand-deep border border-brand-orange-light/60 hover:bg-brand-orange-light/15 hover:border-brand-primary/40 shadow-soft',
-  danger: 'bg-error-500/90 backdrop-blur-sm text-white hover:bg-error-600 border border-white/20 shadow-soft',
-  ghost: 'text-white/75 hover:bg-white/10 hover:text-white border border-transparent',
+  primary: 'bg-wk-orange text-wk-navy font-bold shadow-brand enabled:hover:bg-wk-orange-hover disabled:bg-wk-line disabled:text-wk-body disabled:shadow-none disabled:opacity-100',
+  gradient: 'bg-wk-orange text-wk-navy font-bold shadow-brand enabled:hover:bg-wk-orange-hover disabled:bg-wk-line disabled:text-wk-body disabled:shadow-none disabled:opacity-100',
+  secondary: 'bg-white text-wk-navy border border-wk-navy enabled:hover:bg-wk-cream',
+  glass: 'bg-white/15 text-white border border-white/40 enabled:hover:bg-white/25',
+  outline: 'bg-white text-wk-navy border border-wk-navy enabled:hover:bg-wk-cream',
+  danger: 'bg-error-600 text-white enabled:hover:bg-error-800',
+  ghost: 'bg-transparent text-wk-orange-text border border-transparent enabled:hover:bg-wk-peach',
 };
 
 const Button = ({ children, variant = 'primary', className = '', ...props }) => {
@@ -17,8 +22,8 @@ const Button = ({ children, variant = 'primary', className = '', ...props }) => 
     <button
       className={twMerge(
         clsx(
-          'relative overflow-hidden transition-all duration-200 ease-out px-4 py-2.5 rounded-xl font-ui text-sm inline-flex items-center justify-center gap-2 enabled:active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed',
-          variants[variant]
+          'relative inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-5 py-2 font-ui text-sm font-semibold transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60',
+          variants[variant] || variants.primary
         ),
         className
       )}

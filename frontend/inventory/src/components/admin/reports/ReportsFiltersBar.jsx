@@ -45,8 +45,8 @@ export default function ReportsFiltersBar({
   }, [schoolOptions, schoolId, onSchoolChange]);
 
   return (
-    <div className="rounded-2xl border border-[#E5E7EB] bg-[#FFFAF3]/60 p-4">
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">Report filters</p>
+    <div className="rounded-2xl border border-wk-line bg-wk-cream p-4">
+      <p className="mb-3 text-sm font-medium text-wk-orange-text">Report filters</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <label className="flex flex-col gap-1.5">
           <span className="stitch-label">Report month</span>

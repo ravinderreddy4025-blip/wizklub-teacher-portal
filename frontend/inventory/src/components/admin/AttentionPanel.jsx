@@ -9,10 +9,10 @@ const AttentionPanel = ({ items }) => {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2.5">
-        <div className="h-5 w-1 shrink-0 rounded-sm bg-[#F89C28]" />
+        <div className="h-5 w-1 shrink-0 rounded-sm bg-wk-orange" />
         <div>
-          <h3 className="text-base font-bold text-[#1F2937]">Attention Required</h3>
-          <p className="text-[13px] text-[#6B7280]">            {taskCount === 0
+          <h3 className="text-base font-bold text-wk-ink">Attention Required</h3>
+          <p className="text-[13px] text-wk-muted">            {taskCount === 0
               ? 'No priority tasks right now'
               : `${taskCount} priority task${taskCount === 1 ? '' : 's'} identified`}
           </p>
@@ -20,9 +20,9 @@ const AttentionPanel = ({ items }) => {
       </div>
 
       {taskCount === 0 ? (
-        <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-8 text-center">
-          <p className="font-medium text-[#1F2937]">All schools are up to date</p>
-          <p className="mt-1 text-xs text-[#6B7280]">
+        <div className="rounded-xl border border-wk-line bg-wk-cream px-4 py-8 text-center">
+          <p className="font-medium text-wk-ink">All schools are up to date</p>
+          <p className="mt-1 text-xs text-wk-muted">
             No pending acknowledgments, audits, or mismatches.
           </p>
         </div>
@@ -42,41 +42,41 @@ const AttentionPanel = ({ items }) => {
               <Link
                 key={school._id}
                 to={ROUTES.admin.dispatches}
-                className={`relative flex items-center gap-2.5 overflow-hidden rounded-xl border border-[#E5E7EB] p-3 transition hover:-translate-y-0.5 hover:bg-[#F8FAFC] hover:shadow-sm ${
-                  highlighted ? 'bg-[#F8FAFC]' : 'bg-white'
+                className={`relative flex items-center gap-2.5 overflow-hidden rounded-xl border border-wk-line p-3 transition hover:-translate-y-0.5 hover:bg-wk-cream hover:shadow-sm ${
+                  highlighted ? 'bg-wk-cream' : 'bg-white'
                 }`}
               >                {highlighted && (
-                  <div className="absolute bottom-0 left-0 top-0 w-1 bg-[#F89C28]" />
+                  <div className="absolute bottom-0 left-0 top-0 w-1 bg-wk-orange" />
                 )}
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-xs font-bold text-[#F89C28]">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-wk-line bg-white text-xs font-bold text-wk-orange-text">
                   {initials}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-[#1F2937]">{name}</p>
-                  <p className="text-[11px] font-medium text-[#6B7280]">{school.code}</p>                </div>
+                  <p className="truncate text-sm font-bold text-wk-ink">{name}</p>
+                  <p className="text-xs font-medium text-wk-muted">{school.code}</p>                </div>
                 <div className="flex max-w-[45%] flex-col items-end gap-1">
                   {pendingAck > 0 && (
-                    <span className="rounded-full bg-[#F89C28]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#F89C28]">
+                    <span className="rounded-full bg-wk-peach px-2.5 py-1 text-sm font-medium text-wk-orange-text">
                       {pendingAck} Pending Ack
                     </span>
                   )}
                   {needsAudit && (
-                    <span className="rounded-full bg-[#F59E0B]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#F59E0B]">
+                    <span className="rounded-full bg-warning-50 px-2.5 py-1 text-sm font-medium text-warning-700">
                       Audit Due
                     </span>
                   )}
                   {hasMismatch && (
-                    <span className="rounded-full bg-[#EF4444]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#EF4444]">
+                    <span className="rounded-full bg-error-50 px-2.5 py-1 text-sm font-medium text-error-600">
                       Mismatch
                     </span>
                   )}
                   {pendingReplace > 0 && (
-                    <span className="rounded-full bg-[#F89C28]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#F89C28]">
+                    <span className="rounded-full bg-wk-peach px-2.5 py-1 text-sm font-medium text-wk-orange-text">
                       {pendingReplace} Replace
                     </span>
                   )}
                   {!pendingAck && !needsAudit && !hasMismatch && !pendingReplace && (
-                    <span className="rounded-full bg-[#22C55E]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#22C55E]">
+                    <span className="rounded-full bg-success-100 px-2.5 py-1 text-sm font-medium text-success-700">
                       Active
                     </span>
                   )}
@@ -88,7 +88,7 @@ const AttentionPanel = ({ items }) => {
 
       <Link
         to={ROUTES.admin.schools}
-        className="w-full rounded-xl py-2.5 text-center text-[13px] font-bold text-[#F89C28] transition hover:bg-[#F89C28]/5 hover:border-[#F89C28]/20 border border-transparent"
+        className="w-full rounded-xl py-2.5 text-center text-[13px] font-bold text-wk-orange-text transition hover:bg-wk-cream hover:border-wk-peach-2 border border-transparent"
       >
         View all schools
       </Link>

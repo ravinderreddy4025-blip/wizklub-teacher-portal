@@ -26,15 +26,15 @@ export default function Pagination({
   }
 
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 pt-4 px-1 ${className}`}>
-      <p className="text-xs text-slate-500 font-medium">
+    <nav className={`flex flex-wrap items-center justify-between gap-3 px-1 pt-4 ${className}`} aria-label="Pagination">
+      <p className="text-[13px] text-wk-body">
         Showing {start}–{end} of {total} · page {page} of {totalPages}
       </p>
       <div className="flex items-center gap-1">
         <Button
           type="button"
           variant="outline"
-          className="text-xs py-1.5 px-2.5"
+          className="min-h-[40px] px-4 text-[13px]"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
@@ -45,10 +45,12 @@ export default function Pagination({
             key={p}
             type="button"
             onClick={() => onPageChange(p)}
-            className={`min-w-[2rem] h-8 rounded-lg text-xs font-bold transition-colors ${
+            aria-current={p === page ? 'page' : undefined}
+            aria-label={`Page ${p}`}
+            className={`h-10 min-w-[2.5rem] rounded-full px-2 text-[13px] font-semibold transition-colors ${
               p === page
-                ? 'bg-brand-primary text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-wk-navy text-white'
+                : 'bg-white text-wk-navy hover:bg-wk-cream'
             }`}
           >
             {p}
@@ -57,13 +59,13 @@ export default function Pagination({
         <Button
           type="button"
           variant="outline"
-          className="text-xs py-1.5 px-2.5"
+          className="min-h-[40px] px-4 text-[13px]"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >
           Next
         </Button>
       </div>
-    </div>
+    </nav>
   );
 }

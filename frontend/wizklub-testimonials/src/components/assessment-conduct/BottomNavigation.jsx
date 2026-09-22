@@ -1,114 +1,72 @@
+import { ArrowLeft, ArrowRight, Check, ScanLine } from 'lucide-react'
+
+/*
+ * Sticky action bar. Design-system rule: exactly ONE primary button per view —
+ * "Scan SR codes" while questions remain; on the last question "Submit assessment" becomes primary
+ * and scanning drops to secondary.
+ */
 export default function BottomNavigation({
-
   canGoPrevious,
-
   canGoNext,
-
   onPrevious,
-
   onNext,
-
   onScan,
-
   onFinish,
-
   disableNav,
-
   submitting = false,
-
   pendingCount = 0,
-
   showSubmit = false,
-
 }) {
-
   const finishLabel = submitting
-
     ? 'Submitting…'
-
     : pendingCount > 0
-
-      ? `Submit Assessment (${pendingCount})`
-
-      : 'Submit Assessment'
-
-
+      ? `Submit assessment (${pendingCount})`
+      : 'Submit assessment'
 
   return (
-
-    <div className={`conduct-bottom-bar${showSubmit ? '' : ' conduct-bottom-bar--nav-only'}`}>
-
+    <div className={`ac-bar-actions${showSubmit ? ' ac-bar-actions--submit' : ''}`}>
       <button
-
         type="button"
-
-        className="btn-outline conduct-bottom-bar__btn"
-
+        className="ac-btn ac-btn--secondary ac-btn--prev"
         onClick={onPrevious}
-
         disabled={disableNav || !canGoPrevious}
-
       >
-
-        Previous
-
+        <ArrowLeft size={20} strokeWidth={2.4} aria-hidden="true" />
+        <span>Previous</span>
       </button>
 
       <button
-
         type="button"
-
-        className="btn-primary conduct-bottom-bar__btn conduct-bottom-bar__btn--scan"
-
+        className={`ac-btn ac-btn--scan ${showSubmit ? 'ac-btn--secondary' : 'ac-btn--primary'}`}
         onClick={onScan}
-
         disabled={submitting}
-
       >
-
-        Scan SR Codes
-
-      </button>
-
-      <button
-
-        type="button"
-
-        className="btn-outline conduct-bottom-bar__btn"
-
-        onClick={onNext}
-
-        disabled={disableNav || !canGoNext}
-
-      >
-
-        Next
-
+        <span className="ac-btn__icon"><ScanLine size={18} strokeWidth={2.4} aria-hidden="true" /></span>
+        <span>Scan SR codes</span>
       </button>
 
       {showSubmit ? (
         <button
-
           type="button"
-
-          className="btn-outline conduct-bottom-bar__btn conduct-bottom-bar__btn--finish"
-
+          className="ac-btn ac-btn--primary ac-btn--finish"
           onClick={onFinish}
-
           disabled={submitting}
-
           aria-busy={submitting}
-
         >
-
-          {finishLabel}
-
+          <span className="ac-btn__icon"><Check size={18} strokeWidth={2.6} aria-hidden="true" /></span>
+          <span>{finishLabel}</span>
         </button>
-      ) : null}
-
+      ) : (
+        <button
+          type="button"
+          className="ac-btn ac-btn--secondary ac-btn--next"
+          onClick={onNext}
+          disabled={disableNav || !canGoNext}
+        >
+          <span>Next</span>
+          <ArrowRight size={20} strokeWidth={2.4} aria-hidden="true" />
+        </button>
+      )}
     </div>
-
   )
-
 }
-

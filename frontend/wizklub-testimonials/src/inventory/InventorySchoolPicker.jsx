@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, Loader2, Package } from 'lucide-react'
+import { Building2, ChevronRight, Loader2, Package } from 'lucide-react'
 import { api as teacherApi } from '../api/client'
 import { useInventoryBridge } from './InventoryAuthBridge'
 import { ROUTES } from '@inventory/utils/routes'
 import { formatSchoolDisplayName } from '@inventory/utils/schoolName'
-import { resolveSchoolDisplayFromApi } from '@inventory/utils/schoolIdentity'
 
 const EMPTY_SCHOOLS_MESSAGE = 'No schools linked to this instructor account.'
 
@@ -71,104 +70,89 @@ export default function InventorySchoolPicker() {
 
   return (
     <div className="inventory-embed-shell flex relative overflow-hidden flex-1">
-      <div className="flex-1 flex flex-col py-10 px-4 sm:px-8 relative z-10 max-w-3xl mx-auto w-full">
-        <div className="glass-login-card">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-orange-light flex items-center justify-center text-white shadow-glow-orange">
-              <Package size={28} strokeWidth={2} />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-brand-primary">Kit inventory</p>
-              <h1 className="text-2xl font-extrabold text-brand-deep">Select a school</h1>
-              {instructorName && (
-                <p className="text-sm text-slate-500 mt-0.5">Signed in as {instructorName}</p>
-              )}
-            </div>
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-8 sm:px-8">
+        <div className="mb-6 flex items-center gap-4">
+          <span className="inv-choice__art bg-wk-peach text-wk-orange-text" aria-hidden>
+            <Package size={26} strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-wk-orange-text">Kit inventory</p>
+            <h1 className="inv-page-title">Select a school</h1>
+            {instructorName && (
+              <p className="mt-0.5 text-sm text-wk-body">Signed in as {instructorName}</p>
+            )}
           </div>
-
-          <p className="text-sm text-slate-600 mb-6">
-            Choose a school to manage dispatches, warehouse stock, and monthly audits. Uses the same instructor login as Teachers Portal.
-          </p>
-
-          {error && (
-            <div className="mb-4 p-3 bg-error-50/80 text-error-700 text-sm font-medium rounded-xl border border-error-200">
-              {error}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-3">
-              <Loader2 className="animate-spin text-brand-primary" size={32} />
-              <p className="text-sm font-medium">Loading your schools…</p>
-            </div>
-          ) : schools.length === 0 ? (
-            <div className="inventory-empty-state" role="status">
-              <p>{EMPTY_SCHOOLS_MESSAGE}</p>
-              <p className="inventory-empty-state__hint">
-                Schools assigned to your teacher account in WizKlub will appear here once they are registered in inventory.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {schools.map((school) => {
-                const isSelecting = selectingCode === school.schoolCode
-                const disabled = !school.hasInventory || Boolean(selectingCode)
-                const { srCode, wizklubSchoolId } = resolveSchoolDisplayFromApi(school)
-
-                return (
-                  <button
-                    key={school.schoolId}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => handleSelect(school)}
-                    className={`w-full text-left rounded-xl border p-4 transition-all ${
-                      school.hasInventory
-                        ? 'border-slate-200 bg-white hover:border-brand-primary/40 hover:shadow-md'
-                        : 'border-slate-100 bg-slate-50 opacity-75 cursor-not-allowed'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
-                          <Building2 size={22} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-900 truncate">
-                            {formatSchoolDisplayName(school.name)}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs">
-                            {srCode && (
-                              <span className="inline-flex items-center gap-1 font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                <span className="font-semibold text-slate-500">SR Code:</span>
-                                <span className="font-bold text-slate-900">{srCode}</span>
-                              </span>
-                            )}
-                            {wizklubSchoolId && wizklubSchoolId !== srCode && (
-                              <span className="inline-flex items-center gap-1 font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                <span className="font-semibold text-slate-500">School ID:</span>
-                                <span className="font-bold text-slate-900">{wizklubSchoolId}</span>
-                              </span>
-                            )}
-                          </div>
-                          {!school.hasInventory && (
-                            <p className="text-xs text-amber-700 mt-1.5 font-medium">
-                              Not registered in inventory — contact admin to add this school.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      {school.hasInventory && (
-                        <span className="text-xs font-semibold text-brand-primary shrink-0">
-                          {isSelecting ? 'Opening…' : 'Open →'}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
         </div>
+
+        <p className="mb-6 text-sm text-wk-body">
+          Choose a school to manage dispatches, warehouse stock, and monthly audits. Uses the same instructor login as Teachers Portal.
+        </p>
+
+        {error && (
+          <div className="inv-auth-alert mb-4" role="alert">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-wk-body" role="status">
+            <Loader2 className="animate-spin text-wk-orange-text" size={32} aria-hidden />
+            <p className="text-sm font-medium">Loading your schools…</p>
+          </div>
+        ) : schools.length === 0 ? (
+          <div className="inventory-empty-state" role="status">
+            <p>{EMPTY_SCHOOLS_MESSAGE}</p>
+            <p className="inventory-empty-state__hint">
+              Schools assigned to your teacher account in WizKlub will appear here once they are registered in inventory.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {schools.map((school) => {
+              const isSelecting = selectingCode === school.schoolCode
+              const disabled = !school.hasInventory || Boolean(selectingCode)
+
+              return (
+                <button
+                  key={school.schoolId}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => handleSelect(school)}
+                  className="inv-choice group"
+                >
+                  <span
+                    className={`inv-choice__art ${school.hasInventory ? 'bg-wk-peach text-wk-orange-text' : 'bg-white text-wk-muted'}`}
+                    aria-hidden
+                  >
+                    <Building2 size={24} />
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="inv-choice__name truncate">{formatSchoolDisplayName(school.name)}</span>
+                    <span className="inv-choice__meta flex flex-wrap gap-x-3">
+                      {school.srCode && (
+                        <span>SR code: <span className="font-mono text-wk-ink">{school.srCode}</span></span>
+                      )}
+                      {(school.wizklubSchoolId || school.schoolId) && (
+                        <span>School ID: <span className="font-mono text-wk-ink">{school.wizklubSchoolId || school.schoolId}</span></span>
+                      )}
+                    </span>
+                    {!school.hasInventory && (
+                      <span className="mt-1 text-[13px] font-medium text-warning-700">
+                        Not registered in inventory — contact admin to add this school.
+                      </span>
+                    )}
+                  </span>
+                  {school.hasInventory && (
+                    <span className="inv-choice__go">
+                      {isSelecting ? 'Opening…' : 'Open'}
+                      {!isSelecting && <ChevronRight size={18} aria-hidden />}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

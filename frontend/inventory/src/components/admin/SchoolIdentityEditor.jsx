@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Pencil } from 'lucide-react';
 import Button from '../ui/Button';
 import { formatSchoolIdentityPrefix } from '../../utils/componentId';
-import { isSpreadsheetSrCode, resolveSchoolDisplayCodes } from '../../utils/schoolIdentity';
 
 const SchoolIdentityEditor = ({
   school,
@@ -26,10 +25,9 @@ const SchoolIdentityEditor = ({
   }, [school?._id, school?.code, school?.wizklubSchoolId, school?.joiningYear]);
 
   const previewPrefix = useMemo(() => {
-    const srForPrefix = isSpreadsheetSrCode(code) ? code.trim() : '';
-    if (!srForPrefix) return '—';
+    if (!code.trim()) return '—';
     const yearValue = joiningYear.trim() ? Number(joiningYear) : school?.joiningYear;
-    return formatSchoolIdentityPrefix(srForPrefix, yearValue);
+    return formatSchoolIdentityPrefix(code, yearValue);
   }, [code, joiningYear, school?.joiningYear]);
 
   const handleSave = async () => {
@@ -48,7 +46,8 @@ const SchoolIdentityEditor = ({
   };
 
   if (!editing) {
-    const { srCode, wizklubSchoolId: portalId } = resolveSchoolDisplayCodes(school);
+    const srCode = school?.code || previewPrefix;
+    const originalId = school?.wizklubSchoolId;
 
     return (
       <div className={`flex items-start justify-between gap-2 ${className}`}>
@@ -60,16 +59,10 @@ const SchoolIdentityEditor = ({
                 <span className="font-bold text-slate-900">{srCode}</span>
               </span>
             )}
-            {portalId && portalId !== srCode && (
+            {originalId && originalId !== srCode && (
               <span className="inline-flex items-center gap-1 rounded bg-orange-50 px-2 py-0.5 text-brand-primary border border-orange-200">
                 <span className="font-sans font-semibold text-orange-600">School ID:</span>
-                <span className="font-bold text-orange-900">{portalId}</span>
-              </span>
-            )}
-            {!srCode && !portalId && school?.code && (
-              <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-slate-700 border border-slate-200">
-                <span className="font-sans font-semibold text-slate-500">Code:</span>
-                <span className="font-bold text-slate-900">{school.code}</span>
+                <span className="font-bold text-orange-900">{originalId}</span>
               </span>
             )}
           </div>
@@ -91,25 +84,25 @@ const SchoolIdentityEditor = ({
     <div className={`space-y-2 rounded-xl border border-brand-primary/20 bg-brand-primary/5 p-3 ${className}`}>
       <div className={`grid gap-2 ${compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-3'}`}>
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">SR Code</span>
+          <span className="text-sm font-medium text-slate-500">SR Code</span>
           <input
-            className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-mono outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+            className="h-10 rounded-xl border border-wk-control bg-white px-3 text-sm font-mono outline-none focus:border-wk-orange-text focus:ring-1 focus:ring-wk-orange-text"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="SC-009/22"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">School ID (WizKlub)</span>
+          <span className="text-sm font-medium text-slate-500">School ID (WizKlub)</span>
           <input
-            className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-mono outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+            className="h-10 rounded-xl border border-wk-control bg-white px-3 text-sm font-mono outline-none focus:border-wk-orange-text focus:ring-1 focus:ring-wk-orange-text"
             value={wizklubSchoolId}
             onChange={(e) => setWizklubSchoolId(e.target.value)}
             placeholder="beng0010"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Joining year</span>
+          <span className="text-sm font-medium text-slate-500">Joining year</span>
           <input
             type="number"
             min={2000}
@@ -121,7 +114,7 @@ const SchoolIdentityEditor = ({
           />
         </label>
       </div>
-      <p className="text-[10px] text-slate-500">
+      <p className="text-xs text-slate-500">
         Component prefix: <span className="font-mono font-semibold text-brand-primary">{previewPrefix}</span>
       </p>
       <div className="flex gap-2">

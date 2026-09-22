@@ -12,8 +12,8 @@ import {
 } from '../../utils/auditMonth';
 
 const fieldClass =
-  'h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15';
-const labelClass = 'text-[11px] font-bold uppercase tracking-wider text-[#6B7280]';
+  'stitch-input';
+const labelClass = 'stitch-label';
 
 function findWindowForSelection(auditWindows, divisionId, auditMonth) {
   if (!divisionId || !auditMonth) return null;
@@ -165,15 +165,15 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
 
   return (
     <div className="mb-8 space-y-6">
-      <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] border-t-4 border-t-[#F89C28] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+      <section className="overflow-hidden rounded-2xl bg-white shadow-card">
         <div className="p-4 md:p-5">
           <div className="mb-4 flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F89C28]/10 text-[#F89C28]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-wk-peach text-wk-orange-text">
               <CalendarDays size={18} />
             </div>
             <div>
-              <h3 className="font-heading text-base font-bold text-[#1F2937]">Schedule Audit Window</h3>
-              <p className="mt-1 text-[13px] text-[#6B7280]">
+              <h3 className="text-base font-semibold text-wk-ink">Schedule Audit Window</h3>
+              <p className="mt-1 text-[13px] text-wk-muted">
                 Select a division and audit month, then set the dates when schools can submit audits. All schools in
                 that division share the same window.
               </p>
@@ -239,14 +239,14 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs italic text-[#6B7280]">
+              <p className="text-xs italic text-wk-muted">
                 Schools in the selected division can submit {formatAuditMonthLabel(scheduleMonth)} audits only between
                 these dates.
               </p>
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center justify-center rounded-xl bg-[#F89C28] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:bg-[#E88914] disabled:opacity-60"
+                className="inline-flex items-center justify-center rounded-full bg-wk-orange px-6 py-2.5 text-sm font-bold text-wk-navy shadow-brand transition hover:bg-wk-orange-hover disabled:opacity-60"
               >
                 {saving ? 'Saving…' : existingForSelection ? 'Update Audit Window' : 'Save Audit Window'}
               </button>
@@ -255,12 +255,12 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
-        <div className="border-b border-[#E5E7EB] px-4 py-3">
-          <h3 className="font-heading text-base font-bold text-[#1F2937]">
+      <section className="overflow-hidden rounded-2xl bg-white shadow-card">
+        <div className="border-b border-wk-line px-4 py-3">
+          <h3 className="text-base font-semibold text-wk-ink">
             Scheduled for {formatAuditMonthLabel(scheduleMonth)}
           </h3>
-          <p className="mt-1 text-xs text-[#6B7280]">
+          <p className="mt-1 text-xs text-wk-muted">
             Upcoming audit windows for the month you are currently scheduling.
           </p>
         </div>
@@ -268,11 +268,11 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC]">
+                <tr className="border-b border-wk-line bg-wk-cream">
                   {['Division', 'Start', 'End', 'Actions'].map((col) => (
                     <th
                       key={col}
-                      className={`px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-[#6B7280] ${
+                      className={`px-6 py-3 text-sm font-medium text-wk-muted ${
                         col === 'Actions' ? 'text-right' : ''
                       }`}
                     >
@@ -281,21 +281,21 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5E7EB]">
+              <tbody className="divide-y divide-wk-line">
                 {windowsForMonth.map((w) => (
-                  <tr key={w._id} className="hover:bg-[#F8FAFC]">
-                    <td className="px-6 py-3.5 font-bold text-[#1F2937]">{w.divisionId?.name || '—'}</td>
-                    <td className="px-6 py-3.5 text-sm text-[#6B7280]">
+                  <tr key={w._id} className="hover:bg-wk-cream">
+                    <td className="px-6 py-3.5 font-medium text-wk-ink">{w.divisionId?.name || '—'}</td>
+                    <td className="px-6 py-3.5 text-sm text-wk-muted">
                       {new Date(w.startDate).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-3.5 text-sm text-[#6B7280]">
+                    <td className="px-6 py-3.5 text-sm text-wk-muted">
                       {new Date(w.endDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-3.5 text-right">
                       <button
                         type="button"
                         onClick={() => handleDelete(w._id)}
-                        className="rounded-lg p-2 text-[#EF4444] transition hover:bg-[#EF4444] hover:text-white"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-error-600 transition hover:bg-error-50"
                         aria-label="Remove audit window"
                       >
                         <Trash2 size={18} />
@@ -307,34 +307,34 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
             </table>
           </div>
         ) : (
-          <p className="px-6 py-10 text-center text-[#6B7280]">
+          <p className="px-6 py-10 text-center text-wk-muted">
             No audit windows scheduled for {formatAuditMonthLabel(scheduleMonth)} yet.
           </p>
         )}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
-        <div className="border-b border-[#E5E7EB] px-4 py-3">
-          <h3 className="font-heading text-base font-bold text-[#1F2937]">Scheduled audit history</h3>
-          <p className="mt-1 text-xs text-[#6B7280]">
+      <section className="overflow-hidden rounded-2xl bg-white shadow-card">
+        <div className="border-b border-wk-line px-4 py-3">
+          <h3 className="text-base font-semibold text-wk-ink">Scheduled audit history</h3>
+          <p className="mt-1 text-xs text-wk-muted">
             Previously scheduled audit windows for other months.
           </p>
         </div>
         {historyGroups.length > 0 ? (
-          <div className="divide-y divide-[#E5E7EB]">
+          <div className="divide-y divide-wk-line">
             {historyGroups.map(({ month, items }) => (
               <div key={month}>
-                <div className="bg-[#F8FAFC] px-6 py-2.5 text-sm font-bold text-[#1F2937]">
+                <div className="bg-wk-cream px-6 py-2.5 text-sm font-bold text-wk-ink">
                   {formatAuditMonthLabel(month)}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-left">
                     <thead>
-                      <tr className="border-b border-[#E5E7EB]">
+                      <tr className="border-b border-wk-line">
                         {['Division', 'Start', 'End', 'Actions'].map((col) => (
                           <th
                             key={col}
-                            className={`px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-[#6B7280] ${
+                            className={`px-6 py-3 text-sm font-medium text-wk-muted ${
                               col === 'Actions' ? 'text-right' : ''
                             }`}
                           >
@@ -343,21 +343,21 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E5E7EB]">
+                    <tbody className="divide-y divide-wk-line">
                       {items.map((w) => (
-                        <tr key={w._id} className="hover:bg-[#F8FAFC]">
-                          <td className="px-6 py-3.5 font-bold text-[#1F2937]">{w.divisionId?.name || '—'}</td>
-                          <td className="px-6 py-3.5 text-sm text-[#6B7280]">
+                        <tr key={w._id} className="hover:bg-wk-cream">
+                          <td className="px-6 py-3.5 font-medium text-wk-ink">{w.divisionId?.name || '—'}</td>
+                          <td className="px-6 py-3.5 text-sm text-wk-muted">
                             {new Date(w.startDate).toLocaleDateString()}
                           </td>
-                          <td className="px-6 py-3.5 text-sm text-[#6B7280]">
+                          <td className="px-6 py-3.5 text-sm text-wk-muted">
                             {new Date(w.endDate).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-3.5 text-right">
                             <button
                               type="button"
                               onClick={() => handleDelete(w._id)}
-                              className="rounded-lg p-2 text-[#EF4444] transition hover:bg-[#EF4444] hover:text-white"
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-error-600 transition hover:bg-error-50"
                               aria-label="Remove audit window"
                             >
                               <Trash2 size={18} />
@@ -372,7 +372,7 @@ const AdminAuditScheduler = ({ divisions, auditWindows, onRefresh }) => {
             ))}
           </div>
         ) : (
-          <p className="px-6 py-10 text-center text-[#6B7280]">
+          <p className="px-6 py-10 text-center text-wk-muted">
             No previous audit windows scheduled yet.
           </p>
         )}

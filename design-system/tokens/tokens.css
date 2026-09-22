@@ -1,0 +1,125 @@
+/* Copied from frontend/wizklub-testimonials/src/styles/tokens.css + health RAG variables (pages/health.css).
+ * Regenerate with: node design-system/scripts/build_tokens.mjs
+ */
+/*
+ * WizKlub brand on the Infinity Learn layout system (student.infinitylearn.com spec, measured 2026-09-19).
+ * Palette = the WizKlub "Warm canvas" set: sunset-orange chrome, white content panel, logo navy (#02344F) as the ink on orange.
+ * Contrast rules (WCAG AA): navy on tangerine 5.6:1 · orange TEXT on white uses #B4430F (5.1:1) · never white text on bright orange.
+ * Legacy variable names (--brand, --orange…) are kept so every page re-themes from here.
+ */
+:root {
+  /* WizKlub brand */
+  --wk-navy: #02344f;           /* logo wordmark — text/icons on orange, deep fills */
+  --wk-navy-2: #0b4a6b;
+  --wk-orange: #ff8c2b;         /* tangerine — CTAs, progress, active fills (navy text) */
+  --wk-orange-hover: #ff9d47;
+  --wk-orange-edge: #d9661a;    /* chunky button bottom edge */
+  --wk-sun: #ffb547;
+  --wk-orange-text: #b4430f;    /* orange text / icons on white (AA) */
+  --wk-orange-text-hover: #8f3409;
+  --wk-cream: #fff7ee;
+  --wk-peach: #ffe7cf;
+  --wk-peach-2: #ffd1a8;
+  /* Headspace-style chrome: one calm flat orange + a lighter dome rising from the bottom.
+     Navy #02344F on band #F47D31 = 4.87:1, on dome #F28C43 = 5.36:1 (AA). White only for the logo. */
+  --wk-band: #f47d31;
+  /* App frame + menu: a touch deeper so WHITE menu text reaches 3.31:1 (bold/large text + icons, WCAG 1.4.3/1.4.11). */
+  --wk-frame: #e8661e;
+  --wk-dome: #f28c43;
+  --wk-chrome: radial-gradient(ellipse 150% 88% at 50% 100%, var(--wk-dome) 0 99.4%, rgba(242, 140, 67, 0) 100%), var(--wk-band);
+  /* login brand half uses the same chrome */
+  --wk-brand-gradient: var(--wk-chrome);
+  --wk-promo: linear-gradient(120deg, #02344f 0%, #0b4a6b 100%);
+  --on-brand: var(--wk-navy);
+
+  /* Pastel tile tints (IL subject-tile pattern) */
+  --tint-blue: #e6f2ff;
+  --tint-blue-ink: #0062cc;
+  --tint-orange: #ffe7cf;
+  --tint-orange-ink: #b4430f;
+  --tint-green: #d6f4de;
+  --tint-purple: #ede3ff;
+  --tint-purple-ink: #5b2fd6;
+  --tint-gold: #fff3cc;
+  --tint-gold-ink: #8a5500;
+
+  --bg: var(--wk-cream);
+  --bg-accent: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f2f2f2;
+  --surface-hover: var(--wk-cream);
+  --border: #cecfd0;
+  --border-light: #e6e7e8;
+  --border-control: #85878a;
+  /* Logo navy instead of black for all main text (13:1 on white) */
+  --text-primary: #02344f;
+  --text-secondary: #4a5b68;
+  --text-muted: #6c6e72;
+  --brand: var(--wk-orange-text);
+  --brand-hover: var(--wk-orange-text-hover);
+  --brand-pressed: #6e2807;
+  --brand-light: var(--wk-peach);
+  --brand-soft: var(--wk-cream);
+  --orange: var(--brand);
+  --orange-dark: var(--wk-navy);
+  --orange-active: #ffffff;
+  --orange-light: var(--brand-light);
+  --red: #b42323;
+  --red-light: #fef0f0;
+  --green: #04742d;
+  --green-bright: #35c759;
+  --green-light: #d6f4de;
+  --blue: #0062cc;
+  --blue-light: #e6f2ff;
+  --amber: #8a5500;
+  --amber-light: #ffeecc;
+  --gray-badge: #52565c;
+  --gray-badge-light: #f2f2f2;
+  --avatar-bg: var(--wk-peach);
+  --progress-bg: #e6e7e8;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 9999px;
+  --shadow-sm: 0 1px 4px 0 rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 1px 12px 0 rgba(0, 0, 0, 0.16);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-brand: 0 3px 0 var(--wk-orange-edge);
+  --header-height: 56px;
+  --nav-height: 64px;
+  --sidebar-width: 256px;
+  --sidebar-collapsed: 88px;
+  --content-max: 1180px;
+  --page-gutter: 16px;
+  --tag-success: #04742d;
+  --tag-warning: #8a5500;
+  --tag-danger: #b42323;
+  --tag-success-light: #d6f4de;
+  --tag-warning-light: #ffeecc;
+  --tag-danger-light: #fef0f0;
+  --font: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --focus-ring: 0 0 0 3px rgba(2, 52, 79, 0.45);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --page-gutter: 32px;
+  }
+}
+
+/* Health RAG (student / batch / school) */
+:root {
+  --h-g: #04742d;
+  --h-g-bg: #d6f4de;
+  --h-a: #8a5500;
+  --h-a-bg: #ffeecc;
+  --h-r: #b42323;
+  --h-r-bg: #fef0f0;
+  --h-n: #52565c;
+  --h-n-bg: #eef0f2;
+  --h-bar-g: #35c759;
+  --h-bar-a: #ffb020;
+  --h-bar-r: #f03e3e;
+  --h-bar-n: #c9ced3;
+}

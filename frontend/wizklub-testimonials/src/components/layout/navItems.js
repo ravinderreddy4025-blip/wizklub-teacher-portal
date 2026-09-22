@@ -1,4 +1,4 @@
-import { IconAnalytics, IconFeedback, IconHome, IconProfile, IconSchools } from '../icons/Icons'
+import { IconAnalytics, IconFeedback, IconHome, IconInventory, IconProfile, IconSchools } from '../icons/Icons'
 
 export const NAV_ITEMS = [
   { id: 'home', label: 'Dashboard', path: '/dashboard', Icon: IconHome },
@@ -6,6 +6,29 @@ export const NAV_ITEMS = [
   { id: 'analytics', label: 'Analytics', path: '/analytics', Icon: IconAnalytics },
   { id: 'feedback', label: 'Support', path: '/feedback', Icon: IconFeedback },
   { id: 'profile', label: 'Profile', path: '/profile', Icon: IconProfile },
+]
+
+/** Desktop sidebar groups (LMS / CS Portal pattern). Mobile bottom nav keeps NAV_ITEMS. */
+export const NAV_GROUPS = [
+  {
+    label: 'Workspace',
+    items: [
+      { id: 'home', label: 'Dashboard', path: '/dashboard', Icon: IconHome },
+      { id: 'schools', label: 'Schools', path: '/schools', Icon: IconSchools },
+      { id: 'analytics', label: 'Analytics', path: '/analytics', Icon: IconAnalytics },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [{ id: 'inventory', label: 'Kit inventory', path: '/inventory', Icon: IconInventory }],
+  },
+  {
+    label: 'Help',
+    items: [
+      { id: 'feedback', label: 'Support', path: '/feedback', Icon: IconFeedback },
+      { id: 'profile', label: 'Profile', path: '/profile', Icon: IconProfile },
+    ],
+  },
 ]
 
 export function resolveActiveTab(path, active) {
@@ -16,6 +39,7 @@ export function resolveActiveTab(path, active) {
   }
   if (path.startsWith('/analytics')) return 'analytics'
   if (path.startsWith('/feedback')) return 'feedback'
-  if (path.startsWith('/profile') || path.startsWith('/inventory')) return 'profile'
+  if (path.startsWith('/inventory')) return 'inventory'
+  if (path.startsWith('/profile')) return 'profile'
   return undefined
 }

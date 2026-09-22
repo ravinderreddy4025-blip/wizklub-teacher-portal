@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
+import { CheckCircle2, History } from 'lucide-react';
 import api from '../utils/api';
 import toast from '../utils/toast';
 import Card from '../components/ui/Card';
@@ -98,10 +99,12 @@ const DispatchDashboard = () => {
       
       <Card noPadding>
         {activeView === 'pending' && dispatches.length === 0 && (
-          <div className="text-center py-16">
-            <div className="text-3xl mb-4 text-emerald-500 drop-shadow-sm">✅</div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">All tasks complete!</h3>
-            <p className="text-slate-500 font-medium">No pending dispatches to process at this time.</p>
+          <div className="inv-empty m-4 !py-12">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-100 text-success-700">
+              <CheckCircle2 size={28} aria-hidden />
+            </span>
+            <h3 className="inv-empty__title">All tasks complete</h3>
+            <p className="inv-empty__text">No pending dispatches to process at this time.</p>
           </div>
         )}
 
@@ -125,26 +128,26 @@ const DispatchDashboard = () => {
                 {dispatches.map(item => (
                   <tr key={item._id}>
                     <td>
-                      <p className="font-bold text-slate-900">{item.kit?.name}</p>
+                      <p className="font-medium text-wk-ink">{item.kit?.name}</p>
                       <div className="mt-1 space-y-1">
-                        <div className="text-xs text-slate-500 font-bold uppercase tracking-widest">
+                        <div className="text-xs text-wk-body">
                           Kit ID: {item.kitId || '—'}
                         </div>
                         <button
                           type="button"
-                          className="text-xs font-bold text-brand-primary hover:text-brand-primary/80"
+                          className="inv-auth-link !min-h-[28px] !text-[13px]"
                           onClick={() => handleEditKitId(item.dispatchId || item._id, item.kitId)}
                         >
                           Edit Kit ID
                         </button>
                       </div>
                     </td>
-                    <td className="font-bold text-slate-800 text-base">x{item.quantity}</td>
+                    <td className="whitespace-nowrap font-medium text-wk-ink">x{item.quantity}</td>
                     <td className="font-semibold text-slate-700">{formatSchoolDisplayName(item.school?.name)}</td>
-                    <td className="font-mono text-xs text-slate-600">{item.dispatchId || item._id}</td>
-                    <td className="font-mono text-xs text-slate-600">{item.replacementId || '—'}</td>
-                    <td className="font-semibold text-slate-700">{item.category || 'New Dispatch'}</td>
-                    <td className="font-mono text-xs text-slate-600">{item.kitId || '—'}</td>
+                    <td className="whitespace-nowrap font-mono text-xs text-wk-body">{item.dispatchId || item._id}</td>
+                    <td className="whitespace-nowrap font-mono text-xs text-wk-body">{item.replacementId || '—'}</td>
+                    <td className="whitespace-nowrap">{item.category || 'New Dispatch'}</td>
+                    <td className="whitespace-nowrap font-mono text-xs text-wk-body">{item.kitId || '—'}</td>
                     <td className="min-w-56">
                       <Input
                         value={trackingByDispatch[item._id] ?? ''}
@@ -153,7 +156,7 @@ const DispatchDashboard = () => {
                       />
                     </td>
                     <td className="text-right">
-                      <Button variant="gradient" className="text-xs py-2 px-4 shadow-sm" onClick={() => handleDispatch(item._id)}>
+                      <Button variant="gradient" className="whitespace-nowrap px-4 text-[13px]" onClick={() => handleDispatch(item._id)}>
                         Mark Dispatched
                       </Button>
                     </td>
@@ -165,9 +168,10 @@ const DispatchDashboard = () => {
         )}
 
         {activeView === 'history' && history.length === 0 && (
-          <div className="text-center py-16">
-            <h3 className="text-xl font-bold text-slate-900 mb-2">No dispatch history yet</h3>
-            <p className="text-slate-500 font-medium">Once dispatches are created, they’ll appear here.</p>
+          <div className="inv-empty m-4 !py-12">
+            <History size={28} aria-hidden />
+            <h3 className="inv-empty__title">No dispatch history yet</h3>
+            <p className="inv-empty__text">Once dispatches are created, they’ll appear here.</p>
           </div>
         )}
 
@@ -190,16 +194,16 @@ const DispatchDashboard = () => {
               <tbody>
                 {history.map(item => (
                   <tr key={item._id}>
-                    <td className="font-medium">
+                    <td className="whitespace-nowrap">
                       {new Date(item.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                     </td>
-                    <td className="font-semibold text-slate-700">{formatSchoolDisplayName(item.school?.name)}</td>
-                    <td className="font-bold text-slate-900">{item.kit?.name}</td>
-                    <td className="font-mono text-xs text-slate-600">{item.kitId || '—'}</td>
-                    <td className="font-semibold text-slate-700">{item.category || 'New Dispatch'}</td>
-                    <td className="font-mono text-xs text-slate-600">{item.dispatchId || item._id}</td>
-                    <td className="font-mono text-xs text-slate-600">{item.replacementId || '—'}</td>
-                    <td className="font-mono text-xs text-slate-600">{item.trackingId || '—'}</td>
+                    <td className="font-medium">{formatSchoolDisplayName(item.school?.name)}</td>
+                    <td className="min-w-[10rem]">{item.kit?.name}</td>
+                    <td className="whitespace-nowrap font-mono text-xs text-wk-body">{item.kitId || '—'}</td>
+                    <td className="whitespace-nowrap">{item.category || 'New Dispatch'}</td>
+                    <td className="whitespace-nowrap font-mono text-xs text-wk-body">{item.dispatchId || item._id}</td>
+                    <td className="whitespace-nowrap font-mono text-xs text-wk-body">{item.replacementId || '—'}</td>
+                    <td className="whitespace-nowrap font-mono text-xs text-wk-body">{item.trackingId || '—'}</td>
                     <td>
                       <Badge type={item.status === 'Delivery Completed' || item.status === 'Received' || item.status === 'Completed' ? 'success' : item.status === 'Pending' ? 'pending' : item.status === 'Dispatched' ? 'info' : 'error'}>
                         {item.status}

@@ -516,11 +516,17 @@ export function useAssessmentConduct(batchId, sessionId) {
     }
 
     setSubmitResultsByStudentId(nextSubmitResults)
-    // Keep server-side question responses so reopening the assessment still shows
-    // each student's attempted answer. Only clear local pending for successful rows.
     const nextPending = removeSubmittedResponsesFromPending(pendingResponses, submittedResponses)
     setPendingResponses(nextPending)
     writeLocalPending(batchId, sessionId, nextPending)
+
+    if (submittedResponses.length && batchId && sessionId) {
+      await Promise.all(
+        submittedResponses.map((row) =>
+          api.deleteQuestionResponse(batchId, sessionId, row.question_id, row.student_id),
+        ),
+      )
+    }
 
     return {
       ok: true,

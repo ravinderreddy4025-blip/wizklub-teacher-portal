@@ -13,10 +13,10 @@ export default function OperationsKpiPanel({
     <div className={className}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--stitch-primary)]">
+          <p className="text-sm font-medium text-wk-orange-text">
             Operations KPIs
           </p>
-          <p className="mt-0.5 max-w-3xl text-[11px] leading-snug text-[var(--stitch-muted)]">
+          <p className="mt-0.5 max-w-3xl text-xs leading-snug text-wk-muted">
             Sent till date is kits actually shipped. Pending is created this month but not yet shipped.
             Scheduled is sent plus pending. Then acknowledged, mismatched, lost, damaged, and rejected
             (by AM or Admin).
@@ -27,7 +27,7 @@ export default function OperationsKpiPanel({
             type="button"
             disabled={downloading}
             onClick={onDownloadPdf}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-bold text-[#1F2937] transition hover:border-[#F89C28] hover:text-[#F89C28] disabled:opacity-60"
+            className="wk-btn-secondary !min-h-[40px] !px-4 !text-[13px]"
           >
             <FileDown size={14} />
             {downloading ? 'Generating…' : 'Download PDF'}
@@ -35,7 +35,7 @@ export default function OperationsKpiPanel({
         )}
       </div>
       {loading ? (
-        <p className="py-4 text-center text-sm text-[var(--stitch-muted)]">Loading operations KPIs…</p>
+        <p className="py-4 text-center text-sm text-wk-muted">Loading operations KPIs…</p>
       ) : (
         <OperationsKpiStrip summary={summary} />
       )}

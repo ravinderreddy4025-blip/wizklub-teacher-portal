@@ -111,6 +111,17 @@ function mountStaticRoutes(app) {
     res.sendFile('react-toastify-bundle.js', { root: PUBLIC_ROOT_ABS });
   });
 
+  app.get('/po-tokens.css', (req, res) => {
+    const abs = path.join(PUBLIC_ROOT_ABS, 'po-tokens.css');
+    if (!fs.existsSync(abs)) {
+      return res.status(404).type('text/plain').send('Missing po-tokens.css');
+    }
+    if (isProd) res.set('Cache-Control', 'public, max-age=3600');
+    else res.set('Cache-Control', 'no-store');
+    res.type('text/css; charset=utf-8');
+    return res.sendFile('po-tokens.css', { root: PUBLIC_ROOT_ABS });
+  });
+
   app.get('/react-toastify-bundle.css', (req, res) => {
     if (!fs.existsSync(TOAST_CSS_PATH)) {
       return res.status(404).type('text/plain').send('Toast CSS missing — run npm run build:toast.');

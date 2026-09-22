@@ -28,9 +28,9 @@ const isPhaseOne = (index) => index <= 4;
 
 const LifecycleStrip = () => (
   <div className="relative z-10">
-    <div className="mb-3 border-b border-[#E5E7EB] pb-2">
-      <h2 className="font-heading text-base font-bold text-[#1F2937] sm:text-lg">
-        Inventory Lifecycle
+    <div className="mb-3 border-b border-wk-line pb-2">
+      <h2 className="text-base font-semibold text-wk-ink">
+        Inventory lifecycle
       </h2>
     </div>
 
@@ -40,40 +40,39 @@ const LifecycleStrip = () => (
         return (
           <div
             key={stage}
-            className={`relative flex flex-col items-center overflow-hidden rounded-xl border bg-white p-2 text-center shadow-sm transition-shadow hover:shadow-md ${
-              phaseOne ? 'border-[#E5E7EB]' : 'border-[#E5E7EB] opacity-70'
+            className={`relative flex flex-col items-center overflow-hidden rounded-2xl p-3 text-center ${
+              phaseOne ? 'bg-wk-cream' : 'bg-wk-mist'
             }`}
           >
-            {phaseOne && <div className="absolute left-0 top-0 h-1 w-full bg-[#F89C28]" />}
             <div
-              className={`mb-1.5 flex h-8 w-8 items-center justify-center rounded-full shadow-sm ${
+              className={`mb-1.5 flex h-9 w-9 items-center justify-center rounded-full ${
                 phaseOne
-                  ? 'bg-[#F89C28] text-white'
-                  : 'bg-[#F8FAFC] text-[#6B7280]'
+                  ? 'bg-wk-orange text-wk-navy'
+                  : 'bg-white text-wk-muted'
               }`}
             >
               <Icon size={14} />
             </div>
-            <h4 className="text-[10px] font-semibold leading-tight tracking-wide text-[#1F2937]">              {stage}
+            <h4 className="text-xs font-medium leading-tight text-wk-ink">{stage}
             </h4>
             <div
-              className={`mt-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              className={`mt-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
                 phaseOne
-                  ? 'bg-[#22C55E]/10 text-[#22C55E]'
-                  : 'bg-[#F8FAFC] text-[#6B7280]'
+                  ? 'bg-success-100 text-success-700'
+                  : 'bg-white text-wk-body'
               }`}
             >
               {phaseOne ? 'Phase 1' : 'Phase 2'}
             </div>
             {index < LIFECYCLE_STAGES.length - 1 && (
-              <div className="absolute top-1/2 -right-2 hidden h-px w-4 bg-[#E5E7EB] xl:block" />
+              <div className="absolute top-1/2 -right-2 hidden h-px w-4 bg-wk-line xl:block" />
             )}
           </div>
         );
       })}
     </div>
 
-    <p className="mt-4 text-xs text-[#6B7280]">
+    <p className="mt-4 text-[13px] text-wk-body">
       Phase 1 modules cover dispatch, receipt, monthly audit, and replacement. Quarterly audit and
       teacher handover are planned for Phase 2.
     </p>

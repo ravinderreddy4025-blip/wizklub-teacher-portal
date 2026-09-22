@@ -1,150 +1,207 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { Bell, ChevronDown, LogOut, Menu, RefreshCw } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { Bell, LogOut, Menu, RefreshCw } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { getPageTitle, ROUTES } from '../../utils/routes';
+import { getPageTitle } from '../../utils/routes';
 import BrandLogo from '../brand/BrandLogo';
 import { formatSchoolDisplayName, wizklubSchoolNameToBranch } from '../../utils/schoolName';
 import { isEmbeddedInventory } from '../../utils/embed';
+import { ROLE_LABEL } from './navLinks';
 
-const Navbar = ({ onOpenMobileMenu }) => {
-  const { user, logout, switchInstructorSchool } = useContext(AuthContext);
-  const navigate = useNavigate();
+function initialsOf(value) {
+  return (
+    String(value || '')
+      .trim()
+      .split(/[\s@._-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'U'
+  );
+}
+
+function useDismiss(open, setOpen) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
+    };
+    const onKey = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, setOpen]);
+  return ref;
+}
+
+function ProfileMenu({ user, schoolCodes, onLogout, onSwitchSchool }) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(open, setOpen);
+  const initials = initialsOf(user?.name);
+
+  return (
+    <div className="inv-profile" ref={ref}>
+      <button
+        type="button"
+        className="inv-profile__trigger"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Account menu"
+      >
+        <span className="inv-avatar" aria-hidden>{initials}</span>
+        <ChevronDown size={16} className={`inv-profile__chev ${open ? 'is-open' : ''}`} aria-hidden />
+      </button>
+      {open && (
+        <div className="inv-profile__panel" role="menu">
+          <div className="inv-profile__head">
+            <span className="inv-avatar" aria-hidden>{initials}</span>
+            <div className="min-w-0">
+              <p className="inv-profile__name" title={user?.name}>{user?.name || 'Signed in'}</p>
+              {user?.email && <p className="inv-profile__meta">{user.email}</p>}
+              {schoolCodes && <p className="inv-profile__meta">{schoolCodes}</p>}
+              <span className="inv-profile__role">{ROLE_LABEL[user?.role] || user?.role}</span>
+            </div>
+          </div>
+          {onSwitchSchool && (
+            <button
+              type="button"
+              role="menuitem"
+              className="inv-profile__item"
+              onClick={() => {
+                setOpen(false);
+                onSwitchSchool();
+              }}
+            >
+              <RefreshCw size={16} aria-hidden /> Switch school
+            </button>
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            className="inv-profile__item inv-profile__item--danger"
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+            }}
+          >
+            <LogOut size={16} aria-hidden /> Log out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const Navbar = ({ onOpenMobileMenu, onLogout, onSwitchSchool }) => {
+  const { user } = useContext(AuthContext);
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
+  const bellRef = useDismiss(showNotifications, setShowNotifications);
   const pageTitle = getPageTitle(location.pathname);
-  const isAdmin = user?.role === 'Admin';
-  const showNavPageTitle = !isAdmin;
-
-  const handleLogout = async () => {
-    await logout();
-    navigate(ROUTES.home);
-  };
-
-  const handleSwitchSchool = () => {
-    switchInstructorSchool();
-    navigate(ROUTES.login.schoolInstructorSelect);
-  };
 
   const isSchool = user?.role === 'School';
   const schoolDisplayName = isSchool
     ? formatSchoolDisplayName(wizklubSchoolNameToBranch(user?.name))
     : '';
+  const srCode = user?.srCode || user?.schoolCode;
+  const schoolCodes = isSchool && (srCode || user?.wizklubSchoolId)
+    ? [
+      srCode ? `SR: ${srCode}` : null,
+      user?.wizklubSchoolId && user.wizklubSchoolId !== srCode ? `ID: ${user.wizklubSchoolId}` : null,
+    ].filter(Boolean).join(' · ')
+    : '';
   const canSwitchSchool = user?.loginType === 'instructor' && !isEmbeddedInventory();
+  const firstName = String(user?.name || '').trim().split(/\s+/)[0];
 
   return (
-    <header className="z-30 flex h-14 shrink-0 items-center justify-between border-b border-[var(--stitch-border)] bg-white px-3 md:h-16 md:px-6">
-      <div className="flex min-w-0 items-center gap-3">
+    <header className="inv-topbar">
+      <div className="inv-topbar__left">
         {onOpenMobileMenu && (
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="md:hidden nav-btn-light shrink-0"
+            className="inv-icon-btn inv-topbar__menu lg:hidden"
             aria-label="Open navigation menu"
           >
-            <Menu size={22} />
+            <Menu size={22} aria-hidden />
           </button>
         )}
-        <BrandLogo className="h-8 w-auto max-w-[132px] shrink-0" />
-        <span className="hidden shrink-0 items-center rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--stitch-primary)] sm:inline-flex">
-          {user?.role}
-        </span>
-        {isSchool ? (
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <p
-                className="truncate text-[11px] font-bold leading-tight text-brand-primary sm:text-xs"
-                title={schoolDisplayName}
-              >
-                {schoolDisplayName}
-              </p>
-              {(user?.srCode || user?.schoolCode || user?.wizklubSchoolId) && (
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                  {(user?.srCode || user?.schoolCode) && (
-                    <span>SR: <strong className="text-slate-900 font-semibold">{user.srCode || user.schoolCode}</strong></span>
-                  )}
-                  {user?.wizklubSchoolId && user.wizklubSchoolId !== (user.srCode || user.schoolCode) && (
-                    <>
-                      <span className="text-slate-400">•</span>
-                      <span>ID: <strong className="text-slate-900 font-semibold">{user.wizklubSchoolId}</strong></span>
-                    </>
-                  )}
-                </span>
-              )}
-            </div>
-            {showNavPageTitle && (
-              <p className="truncate font-heading text-sm font-bold tracking-tight text-[#1F2937] md:text-base">
-                {pageTitle}
-              </p>
-            )}
-          </div>
-        ) : (
-          showNavPageTitle && (
-            <p className="truncate font-heading text-sm font-bold tracking-tight text-[#1F2937] md:text-base">
-              {pageTitle}
+        <BrandLogo className="inv-topbar__logo" />
+        {isSchool && (
+          <div className="inv-topbar__school-mobile min-w-0 lg:hidden">
+            <p className="truncate text-[13px] font-semibold leading-5 text-wk-ink" title={schoolDisplayName}>
+              {schoolDisplayName}
             </p>
-          )
+            {schoolCodes && <p className="truncate text-xs leading-4 text-wk-muted">{schoolCodes}</p>}
+          </div>
         )}
+        <div className="inv-topbar__context">
+          {isSchool ? (
+            <>
+              <p className="inv-topbar__title truncate" title={schoolDisplayName}>{schoolDisplayName}</p>
+              <p className="inv-topbar__greeting truncate">
+                {schoolCodes || pageTitle}
+              </p>
+            </>
+          ) : (
+            <p className="inv-topbar__greeting truncate">
+              Hi{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span>
+              <span className="mx-2 text-wk-control" aria-hidden>·</span>
+              <span className="text-wk-muted">{ROLE_LABEL[user?.role] || pageTitle}</span>
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 md:gap-4 shrink-0">
+      <div className="inv-topbar__right">
         {canSwitchSchool && (
           <button
             type="button"
-            onClick={handleSwitchSchool}
-            className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-[10px] font-bold text-brand-primary transition-colors hover:bg-orange-100 sm:gap-1.5 sm:px-3 sm:text-xs"
+            onClick={onSwitchSchool}
+            className="wk-btn-secondary !hidden !min-h-[40px] !px-4 sm:!inline-flex"
             aria-label="Switch school"
           >
-            <RefreshCw size={14} />
-            <span className="hidden min-[420px]:inline">Switch school</span>
-            <span className="min-[420px]:hidden">Switch</span>
+            <RefreshCw size={16} aria-hidden />
+            <span className="hidden sm:inline">Switch school</span>
           </button>
         )}
-        <div className="relative">
+        <div className="relative" ref={bellRef}>
           <button
             type="button"
             onClick={() => setShowNotifications(!showNotifications)}
-            className="nav-btn-light relative"
+            className="inv-icon-btn"
             aria-label="Notifications"
             aria-expanded={showNotifications}
           >
-            <Bell size={20} />
+            <Bell size={20} aria-hidden />
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 glass-dropdown z-50">
-              <div className="px-5 py-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-900">Notifications</h3>
+            <div className="absolute right-0 z-50 mt-2 w-72 glass-dropdown" role="dialog" aria-label="Notifications">
+              <div className="border-b border-wk-line px-4 py-3">
+                <h3 className="text-base font-semibold text-wk-ink">Notifications</h3>
               </div>
-              <div className="p-4">
-                <p className="text-sm text-slate-500 text-center py-4">No new notifications</p>
+              <div className="inv-empty m-3 !py-6">
+                <Bell size={20} aria-hidden />
+                <p className="inv-empty__text">No new notifications</p>
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3 pl-3 md:pl-4 border-l border-slate-200">
-          <div className="hidden md:block text-right">
-            <p className="text-sm font-heading font-bold text-slate-900 leading-none mb-1">{user?.name}</p>
-            <p className="text-xs text-slate-500 font-ui leading-none">{user?.role}</p>
-          </div>
-          <div className="w-9 h-9 md:w-10 md:h-10 glass-avatar shrink-0 text-xs font-bold tracking-wide">
-            {(user?.name || 'U')
-              .split(/\s+/)
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((part) => part[0]?.toUpperCase())
-              .join('') || 'U'}
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="nav-btn-light"
-            title="Logout"
-          >
-            <LogOut size={20} />
-          </button>
-        </div>
+        <ProfileMenu
+          user={user}
+          schoolCodes={schoolCodes}
+          onLogout={onLogout}
+          onSwitchSchool={canSwitchSchool ? onSwitchSchool : null}
+        />
       </div>
     </header>
   );

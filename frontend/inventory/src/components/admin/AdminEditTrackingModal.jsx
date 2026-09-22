@@ -35,7 +35,7 @@ const AdminEditTrackingModal = ({
     <Modal isOpen={isOpen} onClose={onClose} title={title} className="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dispatch ID</p>
+          <p className="text-xs font-bold text-slate-500 normal-case tracking-normal">Dispatch ID</p>
           <p className="font-mono text-sm font-bold text-brand-primary break-all">
             {dispatch.dispatchId || dispatch._id}
           </p>

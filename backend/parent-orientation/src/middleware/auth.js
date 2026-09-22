@@ -186,6 +186,12 @@ function requireSalesAdmin(req, res, next) {
   next();
 }
 
+/** School health report: PMO and Super Admin. */
+function requirePmoOrSuperAdmin(req, res, next) {
+  if (req.userRole !== 'pmo' && req.userRole !== 'superadmin') return res.sendStatus(403);
+  next();
+}
+
 function requireSuperAdmin(req, res, next) {
   if (req.userRole !== 'superadmin') return res.sendStatus(403);
   next();
@@ -246,6 +252,7 @@ module.exports = {
   requirePmo,
   requireSalesAdmin,
   requireSuperAdmin,
+  requirePmoOrSuperAdmin,
   roleCookieValue,
   parseRoleCookie,
   sanitizeCookieUsername,

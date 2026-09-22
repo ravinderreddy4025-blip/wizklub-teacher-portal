@@ -229,7 +229,7 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
   if (loading) {
     currentSection = (
       <section className="stitch-card-pad">
-        <p className="text-[var(--stitch-muted)]">Loading audit form…</p>
+        <p className="text-wk-muted">Loading audit form…</p>
       </section>
     );
   } else if (formData?.existingAudit) {
@@ -243,9 +243,9 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
               : null;
     currentSection = (
       <section className="stitch-card overflow-hidden">
-        <div className="space-y-4 border-b border-[var(--stitch-border)] bg-white p-6">
+        <div className="space-y-4 border-b border-wk-line bg-white p-6">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <h2 className="text-lg font-semibold text-[var(--stitch-text)]">
+            <h2 className="text-lg font-semibold text-wk-ink">
               Monthly Audit — {formatAuditMonthLabel(audit.month)}
             </h2>
             <div className="flex flex-wrap items-center gap-2">
@@ -255,13 +255,13 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
                   : audit.workflowStatus}
               </Badge>
               <Badge type={audit.status === 'Mismatch' ? 'error' : 'success'}>{audit.status}</Badge>
-              <span className="ml-1 self-center text-sm text-[var(--stitch-muted)]">
+              <span className="ml-1 self-center text-sm text-wk-muted">
                 Month: {formatAuditMonthLabel(audit.month)}
               </span>
             </div>
           </div>
           {note && (
-            <p className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-[var(--stitch-muted)]">
+            <p className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-wk-muted">
               <span className="font-medium text-blue-800">Note:</span> {note}
             </p>
           )}
@@ -275,7 +275,7 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
     const scheduledMonth = auditWindowInfo?.window?.auditMonth || auditWindowInfo?.month;
     currentSection = (
       <section className="stitch-card-pad">
-        <h2 className="mb-4 text-lg font-semibold text-[var(--stitch-text)]">Monthly Audit</h2>
+        <h2 className="mb-4 text-lg font-semibold text-wk-ink">Monthly Audit</h2>
         <div className="rounded-2xl border border-error-100 bg-error-50 p-8 text-center">
           <h3 className="mb-2 text-xl font-bold text-error-800">Audit Window Closed</h3>
           <p className="font-medium text-error-600">
@@ -289,8 +289,8 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
   } else {
     currentSection = (
       <section className="stitch-card overflow-hidden">
-        <div className="border-b border-[var(--stitch-border)] bg-white px-6 py-5">
-          <h2 className="text-lg font-semibold text-[var(--stitch-text)]">
+        <div className="border-b border-wk-line bg-white px-6 py-5">
+          <h2 className="text-lg font-semibold text-wk-ink">
             Monthly Audit — {formatAuditMonthLabel(formData?.month)}
           </h2>
         </div>
@@ -306,16 +306,16 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
           </div>
 
           {auditItems.length === 0 ? (
-            <p className="py-8 text-center italic text-[var(--stitch-muted)]">No kits in warehouse to audit.</p>
+            <p className="inv-empty inv-empty__text">No kits in warehouse to audit.</p>
           ) : (
             auditItems.map((item, index) => {
               const total = itemQtyTotal(item);
               const balanced = itemQtyBalanced(item);
               const mismatchMsg = itemQtyMismatchMessage(item);
               return (
-                <div key={item.kit} className="space-y-4 rounded-xl border border-[var(--stitch-border)] bg-slate-50/50 p-6">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--stitch-border)] pb-3">
-                    <span className="font-bold text-[var(--stitch-text)]">{item.name}</span>
+                <div key={item.kit} className="space-y-4 rounded-xl border border-wk-line bg-slate-50/50 p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-wk-line pb-3">
+                    <span className="font-bold text-wk-ink">{item.name}</span>
                     <Badge type="info">Warehouse: {item.warehouseQuantity} units</Badge>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -470,8 +470,8 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
       <section className="stitch-card-pad">
         <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--stitch-text)]">Audit history</h2>
-            <p className="mt-1 text-sm text-[var(--stitch-muted)]">
+            <h2 className="text-lg font-semibold text-wk-ink">Audit history</h2>
+            <p className="mt-1 text-sm text-wk-muted">
               View audits submitted in previous months, including status and kit details.
             </p>
           </div>
@@ -491,7 +491,7 @@ export default function SchoolAuditSection({ isAuditWindowOpen, auditWindowInfo 
           </div>
         </div>
         {historyLoading ? (
-          <p className="py-10 text-center text-[var(--stitch-muted)]">Loading audit history…</p>
+          <p className="inv-empty inv-empty__text">Loading audit history…</p>
         ) : (
           <AuditHistoryList
             audits={filteredHistory}

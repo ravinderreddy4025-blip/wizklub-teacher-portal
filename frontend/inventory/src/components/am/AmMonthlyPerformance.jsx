@@ -16,20 +16,20 @@ export default function AmMonthlyPerformance({
   downloading = false,
 }) {
   return (
-    <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
+    <section className="rounded-2xl bg-white shadow-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">
+          <h2 className="text-base font-semibold text-wk-ink">
             Monthly performance — {monthLabel(month)}
-          </p>
-          <p className="mt-1 text-[12px] text-[#6B7280]">What happened this month (kit units).</p>
+          </h2>
+          <p className="mt-0.5 text-[13px] text-wk-body">What happened this month (kit units).</p>
         </div>
         {onDownloadPdf && (
           <button
             type="button"
             onClick={onDownloadPdf}
             disabled={downloading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-xs font-semibold text-[#1F2937] hover:bg-[#F8FAFC]"
+            className="wk-btn-secondary !min-h-[40px] !px-4 !text-[13px]"
           >
             <FileDown size={14} />
             {downloading ? 'Downloading…' : 'Download PDF'}

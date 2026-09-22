@@ -31,7 +31,7 @@
   border-radius: 20px;
   display: grid;
   place-items: center;
-  color: #f47a20;
+  color: var(--brand);
   background: linear-gradient(135deg, rgba(244, 122, 32, 0.16), rgba(27, 63, 139, 0.1));
   border: 1px solid rgba(244, 122, 32, 0.2);
 }
@@ -39,7 +39,7 @@
 .feedback-empty__title {
   margin: 8px 0 0;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
@@ -83,7 +83,7 @@
 
 .feedback-card__id {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   color: #1b3f8b;
 }
 
@@ -130,7 +130,7 @@
 .feedback-card__link {
   font-size: 12px;
   font-weight: 700;
-  color: #f47a20;
+  color: var(--brand);
 }
 
 .feedback-badge {
@@ -178,8 +178,8 @@
 }
 
 .feedback-form__required {
-  color: #f47a20;
-  font-weight: 800;
+  color: var(--brand);
+  font-weight: 600;
   margin-left: 2px;
 }
 
@@ -216,7 +216,7 @@
 }
 
 .feedback-dropzone--active {
-  border-color: #f47a20;
+  border-color: var(--wk-orange);
   background: rgba(244, 122, 32, 0.12);
 }
 
@@ -292,7 +292,7 @@
 .feedback-detail__label {
   margin: 4px 0 0;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #1b3f8b;

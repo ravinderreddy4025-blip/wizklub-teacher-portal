@@ -1,66 +1,173 @@
+/* Compact install card (phones/tablets) + "new version" bar — WizKlub tokens. */
 .pwa-install {
   position: fixed;
-  bottom: calc(var(--nav-height) + 12px);
   left: 12px;
   right: 12px;
+  bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom));
   z-index: 200;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 10px 8px 10px 12px;
   border-radius: var(--radius-md);
   background: var(--surface);
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
+  animation: fade-up 0.3s var(--ease-out) both;
+}
+
+.pwa-install__logo {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--border-light);
+}
+
+.pwa-install__content {
+  flex: 1;
+  min-width: 0;
 }
 
 .pwa-install__title {
   margin: 0;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .pwa-install__text {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.4;
   color: var(--text-secondary);
-}
-
-.pwa-install__actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
 }
 
 .pwa-install__btn {
-  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 40px;
   padding: 0 14px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--wk-orange);
+  color: var(--on-brand);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-brand);
   cursor: pointer;
 }
 
-.pwa-install__btn--ghost {
-  border: 1px solid var(--border-light);
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.pwa-install__btn--primary {
+.pwa-install__close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   border: none;
-  background: var(--brand);
-  color: #fff;
-  box-shadow: var(--shadow-brand);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
 }
 
-@media (min-width: 900px) {
-  .pwa-install {
-    left: auto;
-    right: 24px;
-    bottom: 24px;
-    max-width: 360px;
+.pwa-install__close:hover {
+  background: var(--surface-muted);
+  color: var(--text-primary);
+}
+
+/* New-version bar: one quiet line, pinned top-centre, never a stack of toasts. */
+.pwa-update {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 8px 8px 8px 16px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-pill);
+  background: var(--wk-navy);
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font);
+  font-size: 14px;
+  animation: fade-up 0.3s var(--ease-out) both;
+}
+
+.pwa-update__icon {
+  flex-shrink: 0;
+  color: var(--wk-sun);
+}
+
+.pwa-update__text {
+  margin: 0;
+  font-weight: 500;
+}
+
+.pwa-update__btn {
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--wk-orange);
+  color: var(--on-brand);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pwa-update__btn:disabled {
+  cursor: progress;
+  opacity: 0.8;
+}
+
+.pwa-update__later {
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pwa-update__later:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pwa-update__btn:focus-visible,
+.pwa-update__later:focus-visible {
+  box-shadow: 0 0 0 2px #fff;
+}
+
+@media (max-width: 480px) {
+  .pwa-update {
+    top: auto;
+    bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom));
+  }
+
+  .pwa-update__later {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-install,
+  .pwa-update {
+    animation: none;
   }
 }

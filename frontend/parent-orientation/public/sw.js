@@ -1,5 +1,5 @@
 /* Parent Orientation Tracker — installable PWA shell + offline-friendly static assets */
-const CACHE_VERSION = 'po-pwa-v24';
+const CACHE_VERSION = 'po-pwa-v25';
 
 function getScopePath() {
   try {
@@ -38,6 +38,9 @@ self.addEventListener('install', (event) => {
         absUrl('manifest.webmanifest'),
         absUrl('brand/favicon.svg'),
         absUrl('brand/logo.png'),
+        absUrl('brand/logo-white.png'),
+        absUrl('brand/logo-color.png'),
+        absUrl('brand/wiz-auth-bg.svg'),
         absUrl('pwa-icon.svg'),
       ];
       const cache = await caches.open(CACHE_VERSION);

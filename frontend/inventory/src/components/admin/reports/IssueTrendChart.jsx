@@ -13,18 +13,18 @@ import { ISSUE_COLORS, trendChartData } from '../../../utils/reportsAnalytics';
 
 function TrendEmptyState({ availableMonths }) {
   return (
-    <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-xl border border-dashed border-[#E5E7EB] bg-[#F8FAFC]/80 px-6 py-12 text-center">
-      <p className="font-heading text-base font-bold text-[#1F2937]">Not enough historical data yet</p>
-      <p className="mt-2 max-w-md text-sm text-[#6B7280]">
+    <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-2xl bg-wk-cream px-6 py-12 text-center">
+      <p className="text-base font-semibold text-wk-ink">Not enough historical data yet</p>
+      <p className="mt-2 max-w-md text-sm text-wk-body">
         Issue trends will appear here as monthly data accumulates.
       </p>
       {availableMonths === 1 && (
-        <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#F89C28]">
+        <p className="mt-4 text-[13px] font-medium text-wk-orange-text">
           1 month of data available
         </p>
       )}
       {availableMonths === 0 && (
-        <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#9CA3AF]">
+        <p className="mt-4 text-[13px] font-medium text-wk-muted">
           No reporting months in this scope yet
         </p>
       )}
@@ -40,7 +40,7 @@ export default function IssueTrendChart({ trends, loading }) {
   const chartMonths = trends?.chartMonths ?? data.length;
 
   if (loading) {
-    return <div className="h-72 animate-pulse rounded-2xl bg-[#F1F5F9]" />;
+    return <div className="h-72 animate-pulse rounded-2xl bg-wk-mist" />;
   }
 
   const subtitle = showChart
@@ -50,25 +50,27 @@ export default function IssueTrendChart({ trends, loading }) {
     : 'Issue volume — receipt-issue affected kits by type over time.';
 
   return (
-    <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
+    <section className="rounded-2xl bg-white shadow-card p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">Issue trends</p>
-          <p className="mt-1 text-[13px] text-[#6B7280]">{subtitle}</p>
+          <h2 className="text-base font-semibold text-wk-ink">Issue trends</h2>
+          <p className="mt-0.5 text-[13px] text-wk-body">{subtitle}</p>
         </div>
         {showChart && (
-          <div className="inline-flex rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-0.5 text-xs font-bold">
+          <div className="inline-flex gap-2" role="group" aria-label="Chart measure">
             <button
               type="button"
               onClick={() => setShowRate(false)}
-              className={`rounded-md px-3 py-1.5 transition ${!showRate ? 'bg-white text-[#1F2937] shadow-sm' : 'text-[#6B7280]'}`}
+              aria-pressed={!showRate}
+              className={`wk-seg !min-h-[36px] ${!showRate ? 'wk-seg-active' : ''}`}
             >
               Volume
             </button>
             <button
               type="button"
               onClick={() => setShowRate(true)}
-              className={`rounded-md px-3 py-1.5 transition ${showRate ? 'bg-white text-[#1F2937] shadow-sm' : 'text-[#6B7280]'}`}
+              aria-pressed={showRate}
+              className={`wk-seg !min-h-[36px] ${showRate ? 'wk-seg-active' : ''}`}
             >
               Issue rate
             </button>
@@ -78,16 +80,31 @@ export default function IssueTrendChart({ trends, loading }) {
       {!showChart ? (
         <TrendEmptyState availableMonths={availableMonths} />
       ) : (
-        <div className="h-72 w-full">
+        <figure className="h-80 w-full" aria-label={showRate ? 'Issue rate per month, percent' : 'Affected kits per month by issue type'}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6B7280' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} allowDecimals={showRate} />
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+            <LineChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E6E7E8" vertical={false} />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 12, fill: '#52565C' }}
+                tickLine={false}
+                axisLine={{ stroke: '#CECFD0' }}
+                label={{ value: 'Month', position: 'insideBottom', offset: -16, fontSize: 12, fill: '#52565C' }}
+              />
+              <YAxis
+                tick={{ fontSize: 12, fill: '#52565C' }}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={showRate}
+                label={{ value: showRate ? 'Issue rate (%)' : 'Affected kits (units)', angle: -90, position: 'insideLeft', offset: 4, fontSize: 12, fill: '#52565C', style: { textAnchor: 'middle' } }}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 1px 12px rgba(0,0,0,0.16)', fontFamily: 'Poppins, sans-serif', fontSize: 13 }}
+                formatter={(value, name) => [showRate ? `${value}%` : `${value} kits`, name]}
+              />
+              <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: '#52565C' }} />
               {showRate ? (
-                <Line type="monotone" dataKey="issueRate" name="Issue rate %" stroke={ISSUE_COLORS.rate} strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="issueRate" name="Issue rate %" stroke={ISSUE_COLORS.rate} strokeWidth={2.5} dot={{ r: 3 }} />
               ) : (
                 <>
                   <Line type="monotone" dataKey="mismatch" name="Mismatch" stroke={ISSUE_COLORS.mismatch} strokeWidth={2} dot={false} />
@@ -99,7 +116,7 @@ export default function IssueTrendChart({ trends, loading }) {
               )}
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </figure>
       )}
     </section>
   );

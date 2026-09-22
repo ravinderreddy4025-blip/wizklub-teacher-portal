@@ -129,7 +129,7 @@ const AdminDispatchModal = ({
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Division</label>
+            <label className="text-[13px] font-medium text-wk-body">Division</label>
             <select
               className="saas-input"
               value={form.divisionId}
@@ -148,7 +148,7 @@ const AdminDispatchModal = ({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">School</label>
+            <label className="text-[13px] font-medium text-wk-body">School</label>
             <select
               className="saas-input"
               value={form.school}
@@ -168,7 +168,7 @@ const AdminDispatchModal = ({
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Kits to dispatch</label>
+            <label className="text-[13px] font-medium text-wk-body">Kits to dispatch</label>
             <Button
               type="button"
               variant="outline"
@@ -189,7 +189,7 @@ const AdminDispatchModal = ({
             return (
               <div key={item.key} className="glass-card-frosted p-4 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Kit {index + 1}</span>
+                  <span className="text-xs font-bold text-slate-500 normal-case tracking-normal">Kit {index + 1}</span>
                   {kitLines.length > 1 && (
                     <button
                       type="button"
@@ -204,7 +204,7 @@ const AdminDispatchModal = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Kit Type</label>
+                    <label className="text-xs font-bold text-slate-600 normal-case tracking-normal">Kit Type</label>
                     <select
                       className="saas-input"
                       value={item.kitType}
@@ -231,7 +231,7 @@ const AdminDispatchModal = ({
                     )}
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Kit Name</label>
+                    <label className="text-xs font-bold text-slate-600 normal-case tracking-normal">Kit Name</label>
                     <select
                       className="saas-input"
                       value={item.kit}
@@ -251,7 +251,7 @@ const AdminDispatchModal = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Quantity</label>
+                    <label className="text-xs font-bold text-slate-600 normal-case tracking-normal">Quantity</label>
                     <Input
                       type="number"
                       min="1"
@@ -272,13 +272,13 @@ const AdminDispatchModal = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Category</label>
+            <label className="text-[13px] font-medium text-wk-body">Category</label>
             <select className="saas-input" value={form.category} disabled>
               <option value="New Dispatch">New Dispatch</option>
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+            <label className="text-[13px] font-medium text-wk-body">
               Shipment Consignment No. <span className="normal-case font-medium text-slate-400">(optional)</span>
             </label>
             <Input
@@ -286,22 +286,22 @@ const AdminDispatchModal = ({
               value={form.consignmentNo}
               onChange={(e) => setForm({ ...form, consignmentNo: e.target.value })}
             />
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Optional now — add tracking within 24 hours after dispatch.
             </p>
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Dispatch proof photo (optional)</label>
+          <label className="text-[13px] font-medium text-wk-body">Dispatch proof photo (optional)</label>
           <input
             type="file"
             accept="image/*"
             capture="environment"
-            className="saas-input file:mr-3 file:rounded-lg file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-primary"
+            className="saas-input file:mr-3 file:rounded-lg file:border-0 file:rounded-full file:bg-wk-peach file:px-4 file:py-2 file:text-[13px] file:font-semibold file:text-wk-navy"
             onChange={(e) => setForm({ ...form, proofPhoto: e.target.files?.[0] || null })}
           />
-          <p className="text-[11px] text-slate-500">
+          <p className="text-xs text-slate-500">
             Snap a photo of the package as proof. Visible to the Account Manager and the school.
           </p>
         </div>

@@ -16,8 +16,8 @@ export default function AmOperationsBoard({
 }) {
   if (loading) {
     return (
-      <div className={`rounded-2xl border border-[#E5E7EB] bg-white p-6 ${className}`}>
-        <p className="text-sm text-[#6B7280]">Loading AM operations…</p>
+      <div className={`rounded-2xl bg-white shadow-card p-6 ${className}`}>
+        <p className="text-sm text-wk-muted">Loading AM operations…</p>
       </div>
     );
   }
@@ -35,7 +35,7 @@ export default function AmOperationsBoard({
         queues={attention?.queues}
         eyebrow="My actions"
         title="What needs your intervention"
-        className="border-[#F89C28]/35 shadow-[0_16px_44px_-16px_rgba(248,156,40,0.35)]"
+        className="border-wk-peach-2 shadow-brand"
       />
       <AmOpenIssues current={current} />
     </div>

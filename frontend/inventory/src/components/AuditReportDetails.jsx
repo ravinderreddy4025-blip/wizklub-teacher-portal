@@ -10,7 +10,7 @@ function EvidenceCell({ url, mime }) {
       href={assetUrl(url)}
       target="_blank"
       rel="noreferrer"
-      className="text-sm font-medium text-[var(--stitch-primary)] underline underline-offset-4 decoration-[var(--stitch-primary)]/30 hover:opacity-80"
+      className="text-sm font-medium text-wk-orange-text underline underline-offset-4 decoration-wk-orange-text/40 hover:opacity-80"
     >
       View {isVideo ? 'video' : 'photo'}
     </a>
@@ -23,9 +23,9 @@ function DispatchStatusLine({ label, dispatch, pendingLabel }) {
   const category = dispatch?.category || label;
   const isDone = ['Dispatched', 'Delivery Completed', 'Received', 'Completed'].includes(status);
   return (
-    <p className="font-medium text-[var(--stitch-text)]">
+    <p className="font-medium text-wk-ink">
       {category} -{' '}
-      <span className={isDone ? 'text-green-600' : 'text-[var(--stitch-muted)]'}>
+      <span className={isDone ? 'text-green-600' : 'text-wk-muted'}>
         {dispatch ? status : pendingLabel}
       </span>
     </p>
@@ -61,14 +61,14 @@ const AuditReportDetails = ({ audit, showWorkflow = false }) => {
               {showWorkflow && <th>Dispatch Status</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--stitch-border)] bg-white">
+          <tbody className="divide-y divide-wk-line bg-white">
             {audit.items.map((item, idx) => (
               <tr key={idx} className="transition-colors hover:bg-slate-50">
-                <td className="px-5 py-4 font-medium text-[var(--stitch-text)]">{item.kit?.name || 'Unknown kit'}</td>
-                <td className="px-5 py-4 text-[var(--stitch-muted)]">{item.warehouseQuantity ?? '—'}</td>
-                <td className="px-5 py-4 text-[var(--stitch-muted)]">{item.availableQuantity ?? 0}</td>
-                <td className="px-5 py-4 text-[var(--stitch-muted)]">{item.lostQuantity ?? 0}</td>
-                <td className="px-5 py-4 text-[var(--stitch-muted)]">{item.damagedQuantity ?? 0}</td>
+                <td className="px-5 py-4 font-medium text-wk-ink">{item.kit?.name || 'Unknown kit'}</td>
+                <td className="px-5 py-4 text-wk-muted">{item.warehouseQuantity ?? '—'}</td>
+                <td className="px-5 py-4 text-wk-muted">{item.availableQuantity ?? 0}</td>
+                <td className="px-5 py-4 text-wk-muted">{item.lostQuantity ?? 0}</td>
+                <td className="px-5 py-4 text-wk-muted">{item.damagedQuantity ?? 0}</td>
                 <td className="px-5 py-4"><EvidenceCell url={item.lostEvidenceUrl} mime={item.lostEvidenceMime} /></td>
                 <td className="px-5 py-4"><EvidenceCell url={item.damagedEvidenceUrl} mime={item.damagedEvidenceMime} /></td>
                 {showWorkflow && (

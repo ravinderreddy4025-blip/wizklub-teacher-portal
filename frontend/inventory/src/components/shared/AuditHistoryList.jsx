@@ -20,7 +20,7 @@ export default function AuditHistoryList({
   const isSchool = variant === 'school';
 
   if (!reportsByMonth.length) {
-    return <p className="py-10 text-center text-[var(--stitch-muted)]">{emptyMessage}</p>;
+    return <p className="inv-empty inv-empty__text">{emptyMessage}</p>;
   }
 
   return (
@@ -28,7 +28,7 @@ export default function AuditHistoryList({
       {reportsByMonth.map(([month, monthAudits]) => (
         <div key={month} className={isSchool ? 'space-y-4' : 'space-y-4 p-5'}>
           {!isSchool && (
-            <h4 className="border-b border-slate-100 pb-2 text-sm font-extrabold uppercase tracking-wide text-slate-700">
+            <h4 className="border-b border-slate-100 pb-2 text-sm font-bold normal-case tracking-normal text-slate-700">
               {formatAuditMonthLabel(month)}
             </h4>
           )}
@@ -37,7 +37,7 @@ export default function AuditHistoryList({
               key={audit._id}
               className={
                 isSchool
-                  ? 'overflow-hidden rounded-xl border border-[var(--stitch-border)] shadow-sm'
+                  ? 'overflow-hidden rounded-xl border border-wk-line shadow-sm'
                   : `rounded-xl border p-4 ${
                     audit.status === 'Mismatch'
                       ? 'border-error-200 bg-error-50/20'
@@ -48,17 +48,17 @@ export default function AuditHistoryList({
               <div
                 className={
                   isSchool
-                    ? 'flex flex-wrap items-center justify-between gap-4 border-b border-[var(--stitch-border)] bg-slate-50/50 px-6 py-4'
+                    ? 'flex flex-wrap items-center justify-between gap-4 border-b border-wk-line bg-slate-50/50 px-6 py-4'
                     : 'mb-4 flex flex-wrap items-center justify-between gap-3'
                 }
               >
                 <div className="space-y-1">
                   {isSchool ? (
                     <>
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--stitch-muted)]">
+                      <h3 className="text-sm font-medium text-wk-muted">
                         {formatAuditMonthLabel(audit.month || month)}
                       </h3>
-                      <p className="text-xs text-[var(--stitch-muted)]">
+                      <p className="text-xs text-wk-muted">
                         Submitted {new Date(audit.createdAt).toLocaleDateString()}
                       </p>
                     </>

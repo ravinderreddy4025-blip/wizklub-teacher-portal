@@ -1,3 +1,7 @@
+import { assetUrl } from '../lib/assets.js'
+import { UPLOAD_STATUS } from './constants.js'
+import { buildHealthSnapshot } from './mockHealth.js'
+
 const conductDraftResponses = new Map()
 
 function conductDraftKey(batchId, sessionId, questionId, studentId) {
@@ -199,7 +203,86 @@ function getBatchesForSchool(schoolId) {
   return batches.filter((batch) => batch.school_id === schoolId)
 }
 
+let healthSnapshot = null
+
+/** Demo health snapshot built from the mock roster (usernames = mock student ids). */
+function getHealthSnapshot() {
+  if (!healthSnapshot) {
+    healthSnapshot = buildHealthSnapshot({
+      teacher: { username: 'demo.teacher', name: 'Demo Teacher' },
+      batches: batches.map((batch) => ({
+        batch_id: batch.id,
+        batch_name: batch.name,
+        grade: batch.grade,
+        school_id: batch.school_id,
+        school_name: getSchoolById(batch.school_id)?.name ?? '',
+        students: getStudentsForBatch(batch.id).map((st) => ({ username: st.id, name: st.full_name })),
+      })),
+    })
+  }
+  return healthSnapshot
+}
+
+function healthRun(snapshot) {
+  const { _id, is_latest: _latest, ...rest } = snapshot.run
+  return { id: _id, ...rest }
+}
+
 export const mockStore = {
+  getBatchHealth(batchId) {
+    const teacher = getTeacher()
+    if (!teacher) return null
+    if (!teacherOwnsBatch(teacher.id, batchId)) return { forbidden: true }
+    const snap = getHealthSnapshot()
+    return {
+      run: healthRun(snap),
+      batch: snap.batches.find((b) => b.batch_id === batchId) ?? null,
+      students: snap.students.filter((s) => s.batch_id === batchId),
+    }
+  },
+
+  getStudentHealth(batchId, username) {
+    const teacher = getTeacher()
+    if (!teacher) return null
+    if (!teacherOwnsBatch(teacher.id, batchId)) return { forbidden: true }
+    const snap = getHealthSnapshot()
+    return {
+      run: healthRun(snap),
+      batch: snap.batches.find((b) => b.batch_id === batchId) ?? null,
+      student: snap.students.find((s) => s.batch_id === batchId && s.username === username) ?? null,
+      detail: snap.details.find((d) => d.batch_id === batchId && d.username === username) ?? null,
+    }
+  },
+
+  getHealthAttention() {
+    const teacher = getTeacher()
+    if (!teacher) return null
+    const snap = getHealthSnapshot()
+    const schoolIds = getAssignedSchoolIds(teacher.id)
+    const rows = snap.batches
+      .filter((b) => schoolIds.includes(b.school_id))
+      .map((b) => {
+        const roster = snap.students.filter((s) => s.batch_id === b.batch_id)
+        const held = new Set(roster.flatMap((s) => s.outcomes.assessments.map((a) => a.session_id)))
+        return {
+          batch_id: b.batch_id,
+          batch_name: b.batch_name,
+          school_id: b.school_id,
+          school_name: b.school_name,
+          overall_band: b.overall_band,
+          students: roster.length,
+          red: roster.filter((s) => s.overall_band === 'R').length,
+          not_started: roster.filter((s) => s.participation.not_started).length,
+          pending_assessment: roster.filter((s) => {
+            const taken = new Set(s.outcomes.assessments.map((a) => a.session_id))
+            return [...held].some((id) => !taken.has(id))
+          }).length,
+        }
+      })
+      .sort((a, b) => b.red - a.red || b.not_started - a.not_started)
+    return { run: healthRun(snap), batches: rows }
+  },
+
   getSessionTeacherId: () => sessionTeacherId,
 
   getSessionSummary(batchId) {
@@ -304,6 +387,12 @@ export const mockStore = {
       stats: {
         total_students: assignedStudents.length,
         videos_uploaded: videosUploaded,
+        // Same meaning as the real API: students with at least one upload.
+        testimonials_uploaded: new Set(
+          uploads
+            .filter((upload) => assignedStudents.some((s) => s.id === upload.student_id))
+            .map((upload) => upload.student_id),
+        ).size,
         pending_students: pendingStudents,
       },
       schools: schoolIds.map((schoolId) => {

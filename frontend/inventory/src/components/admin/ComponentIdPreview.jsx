@@ -9,11 +9,11 @@ const ComponentIdPreview = ({
   hint = 'School ID / joining year — kit id — qty (01–NN)',
 }) => (
   <div className="flex flex-col gap-1.5">
-    <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{label}</label>
+    <label className="text-xs font-bold text-slate-600 normal-case tracking-normal">{label}</label>
     <div className="saas-input font-mono text-sm text-brand-primary font-bold bg-brand-primary/5 break-all min-h-[42px] flex items-center">
       {value || '—'}
     </div>
-    {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
+    {hint && <p className="text-xs text-slate-500">{hint}</p>}
   </div>
 );
 

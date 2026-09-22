@@ -138,15 +138,15 @@ export default function AdminAuditDispatchModal({
         />
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Dispatch proof photo (optional)</label>
+          <label className="text-[13px] font-medium text-wk-body">Dispatch proof photo (optional)</label>
           <input
             type="file"
             accept="image/*"
             capture="environment"
-            className="saas-input file:mr-3 file:rounded-lg file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-primary"
+            className="saas-input file:mr-3 file:rounded-lg file:border-0 file:rounded-full file:bg-wk-peach file:px-4 file:py-2 file:text-[13px] file:font-semibold file:text-wk-navy"
             onChange={(e) => setForm({ ...form, proofPhoto: e.target.files?.[0] || null })}
           />
-          <p className="text-[11px] text-slate-500">
+          <p className="text-xs text-slate-500">
             Snap a photo of the package as proof. Visible to the AM and school.
           </p>
         </div>

@@ -22,7 +22,7 @@ function issueStatusBadge(status) {
 export function AdminReceiptIssueTable({ issues, onReject, onApprove, onAuthorize, onShip }) {
   const approveIssue = onApprove || onAuthorize;
   if (!issues.length) {
-    return <p className="text-center py-10 text-slate-500">No receipt issues in this category.</p>;
+    return <p className="inv-empty inv-empty__text">No receipt issues in this category.</p>;
   }
 
   return (
@@ -44,10 +44,10 @@ export function AdminReceiptIssueTable({ issues, onReject, onApprove, onAuthoriz
         <tbody>
           {issues.map((issue) => (
             <tr key={issue._id}>
-              <td className="font-bold text-brand-deep">{formatSchoolDisplayName(issue.school?.name)}</td>
+              <td className="font-medium text-brand-deep">{formatSchoolDisplayName(issue.school?.name)}</td>
               <td>{issue.kit?.name}</td>
               <td><Badge type={issueBadgeType(issue.issueType)}>{issue.issueType}</Badge></td>
-              <td className="font-bold">{issue.quantityAffected}</td>
+              <td className="font-medium">{issue.quantityAffected}</td>
               <td className="hidden font-mono text-xs md:table-cell">{issue.sourceDispatchRef || issue.dispatch?.dispatchId || '—'}</td>
               <td className="hidden lg:table-cell"><IssueShipmentDetailsCell issue={issue} /></td>
               <td><Badge type={issueStatusBadge(issue.status)}>{issue.status}</Badge></td>
@@ -87,7 +87,7 @@ export function AdminReceiptIssueTable({ issues, onReject, onApprove, onAuthoriz
 
 export function AdminReplacementRequestTable({ requests, onReject, onAuthorize }) {
   if (!requests.length) {
-    return <p className="text-center py-10 text-slate-500">No pending replacement requests.</p>;
+    return <p className="inv-empty inv-empty__text">No pending replacement requests.</p>;
   }
 
   return (
@@ -106,14 +106,14 @@ export function AdminReplacementRequestTable({ requests, onReject, onAuthorize }
         <tbody>
           {requests.map((req) => (
             <tr key={req._id}>
-              <td className="font-bold text-brand-deep">{formatSchoolDisplayName(req.school?.name)}</td>
+              <td className="font-medium text-brand-deep">{formatSchoolDisplayName(req.school?.name)}</td>
               <td>
                 <Badge type={req.status === 'Replacement Pending' ? 'warning' : req.type === 'Damaged' ? 'error' : 'pending'}>
                   {req.status || req.type}
                 </Badge>
               </td>
               <td>{req.kit?.name}</td>
-              <td className="font-bold">x{req.quantity}</td>
+              <td className="font-medium">x{req.quantity}</td>
               <td className="max-w-xs whitespace-normal text-slate-600">{req.reasonDetails}</td>
               <td className="text-right">
                 <div className="flex justify-end gap-2">

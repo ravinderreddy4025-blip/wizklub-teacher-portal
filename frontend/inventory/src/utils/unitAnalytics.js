@@ -1,12 +1,12 @@
 import { getDispatchQuantityDisplay } from './schoolDispatch';
 
 const SEGMENTS = [
-  { key: 'acknowledged', label: 'Acknowledged', hint: 'Received OK, including remainder after issues', color: '#16A34A', track: '#DCFCE7' },
-  { key: 'inTransit', label: 'In transit', hint: 'Shipped, not yet received', color: '#F89C28', track: '#FFF4E5' },
-  { key: 'mismatched', label: 'Mismatched', hint: 'Shortfall vs sent quantity', color: '#6366F1', track: '#EEF2FF' },
-  { key: 'lost', label: 'Lost', hint: 'Received, later reported missing', color: '#64748B', track: '#F1F5F9' },
-  { key: 'damaged', label: 'Damaged', hint: 'Damaged remainder of sent qty', color: '#D97706', track: '#FEF3C7' },
-  { key: 'rejected', label: 'Rejected', hint: 'Replacement claim denied', color: '#DC2626', track: '#FEE2E2' },
+  { key: 'acknowledged', label: 'Acknowledged', hint: 'Received OK, including remainder after issues', color: '#04742D', track: '#D6F4DE' },
+  { key: 'inTransit', label: 'In transit', hint: 'Shipped, not yet received', color: '#C2551A', track: '#FFE7CF' },
+  { key: 'mismatched', label: 'Mismatched', hint: 'Shortfall vs sent quantity', color: '#5B2FD6', track: '#EDE3FF' },
+  { key: 'lost', label: 'Lost', hint: 'Received, later reported missing', color: '#52565C', track: '#F2F2F2' },
+  { key: 'damaged', label: 'Damaged', hint: 'Damaged remainder of sent qty', color: '#8A5500', track: '#FFEECC' },
+  { key: 'rejected', label: 'Rejected', hint: 'Replacement claim denied', color: '#B42323', track: '#FEF0F0' },
 ];
 
 export function buildUnitAnalytics(summary, incomingUnits) {

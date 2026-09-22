@@ -4,26 +4,26 @@ import { Truck, CheckCircle2, RefreshCw, Clock, Package, AlertCircle, CheckSquar
 
 function Card({ label, value, hint, secondary, icon: Icon, accent = 'slate', to }) {
   const accents = {
-    slate: 'text-[#6B7280]',
-    orange: 'text-[#F89C28]',
-    green: 'text-[#16A34A]',
-    amber: 'text-[#D97706]',
+    slate: 'text-wk-muted',
+    orange: 'text-wk-orange-text',
+    green: 'text-success-700',
+    amber: 'text-warning-700',
   };
   const inner = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${accents[accent]}`}>{label}</p>
-        {Icon && <Icon size={16} className={accents[accent]} />}
+        <p className="text-[13px] font-medium text-wk-body">{label}</p>
+        {Icon && <Icon size={18} className={accents[accent]} aria-hidden />}
       </div>
-      <p className="mt-2 font-heading text-3xl font-bold tabular-nums text-[#1F2937]">{value}</p>
-      {secondary ? <p className="mt-1 text-sm font-semibold text-[#1F2937]">{secondary}</p> : null}
-      <p className="mt-1 text-[11px] text-[#6B7280]">{hint}</p>
+      <p className="mt-1 text-[28px] font-semibold leading-10 tabular-nums text-wk-ink">{value}</p>
+      {secondary ? <p className="text-sm font-medium text-wk-ink">{secondary}</p> : null}
+      <p className="mt-1 text-xs text-wk-muted">{hint}</p>
     </>
   );
-  const className = 'rounded-xl border border-[#E5E7EB] bg-white p-4';
+  const className = 'rounded-2xl border border-wk-line bg-white p-4';
   if (to) {
     return (
-      <Link to={to} className={`${className} block transition hover:border-[#F89C28]/50 hover:shadow-sm`}>
+      <Link to={to} className={`${className} block transition hover:border-wk-control hover:bg-wk-cream`}>
         {inner}
       </Link>
     );
@@ -50,8 +50,12 @@ export default function AdminOperationsBoard({
 }) {
   if (loading) {
     return (
-      <div className={`rounded-2xl border border-[#E5E7EB] bg-white p-6 ${className}`}>
-        <p className="text-sm text-[#6B7280]">Loading operations…</p>
+      <div className={`rounded-2xl bg-white p-5 shadow-card ${className}`} aria-busy="true">
+        <div className="h-5 w-56 animate-pulse-subtle rounded-md bg-wk-mist" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => <div key={i} className="h-28 animate-pulse-subtle rounded-2xl bg-wk-mist" />)}
+        </div>
+        <p className="sr-only">Loading operations…</p>
       </div>
     );
   }
@@ -62,20 +66,20 @@ export default function AdminOperationsBoard({
 
   return (
     <div className={`space-y-5 ${className}`}>
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
+      <section className="rounded-2xl bg-white shadow-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">
+            <h2 className="text-lg font-semibold text-wk-ink">
               Operations — {monthLabel(month)}
-            </p>
-            <p className="mt-1 text-[12px] text-[#6B7280]">What happened this month (kit units).</p>
+            </h2>
+            <p className="mt-0.5 text-[13px] text-wk-body">What happened this month, in kit units.</p>
           </div>
           {onDownloadPdf && (
             <button
               type="button"
               onClick={onDownloadPdf}
               disabled={downloading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-xs font-semibold text-[#1F2937] hover:bg-[#F8FAFC]"
+              className="wk-btn-secondary !min-h-[40px]"
             >
               <FileDown size={14} />
               {downloading ? 'Downloading…' : 'Download PDF'}
@@ -89,9 +93,9 @@ export default function AdminOperationsBoard({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">Current state</p>
-        <p className="mt-1 text-[12px] text-[#6B7280]">What needs attention right now — not a month total.</p>
+      <section className="rounded-2xl bg-white shadow-card p-5">
+        <h2 className="text-lg font-semibold text-wk-ink">Current state</h2>
+        <p className="mt-0.5 text-[13px] text-wk-body">What needs attention right now — not a month total.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Card
             label="Pending acknowledgement"

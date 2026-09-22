@@ -13,28 +13,28 @@ function monthLabel(month) {
 
 function Card({ label, value, hint, secondary, icon: Icon, accent = 'slate', to, hero = false }) {
   const accents = {
-    slate: 'text-[#6B7280]',
-    orange: 'text-[#F89C28]',
-    green: 'text-[#16A34A]',
-    amber: 'text-[#D97706]',
+    slate: 'text-wk-muted',
+    orange: 'text-wk-orange-text',
+    green: 'text-success-700',
+    amber: 'text-warning-700',
   };
   const inner = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${accents[accent]}`}>{label}</p>
+        <p className={`text-sm font-medium ${accents[accent]}`}>{label}</p>
         {Icon && <Icon size={hero ? 20 : 16} className={accents[accent]} />}
       </div>
-      <p className={`mt-2 font-heading font-bold tabular-nums text-[#1F2937] ${hero ? 'text-4xl' : 'text-3xl'}`}>
+      <p className={`mt-2 font-bold tabular-nums text-wk-ink ${hero ? 'text-4xl' : 'text-3xl'}`}>
         {value}
       </p>
-      {secondary ? <p className="mt-1 text-sm font-semibold text-[#1F2937]">{secondary}</p> : null}
-      {hint ? <p className="mt-1 text-[11px] text-[#6B7280]">{hint}</p> : null}
+      {secondary ? <p className="mt-1 text-sm font-semibold text-wk-ink">{secondary}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-wk-muted">{hint}</p> : null}
     </>
   );
-  const className = `rounded-xl border bg-white p-4 ${hero ? 'border-[#F89C28]/40 shadow-sm' : 'border-[#E5E7EB]'}`;
+  const className = `rounded-xl border bg-white p-4 ${hero ? 'border-wk-peach-2 shadow-sm' : 'border-wk-line'}`;
   if (to) {
     return (
-      <Link to={to} className={`${className} block transition hover:border-[#F89C28]/50 hover:shadow-sm`}>
+      <Link to={to} className={`${className} block transition hover:border-wk-peach-2 hover:shadow-sm`}>
         {inner}
       </Link>
     );
@@ -56,8 +56,8 @@ export default function SchoolOperationsBoard({
 }) {
   if (loading) {
     return (
-      <div className={`rounded-2xl border border-[#E5E7EB] bg-white p-6 ${className}`}>
-        <p className="text-sm text-[#6B7280]">Loading school operations…</p>
+      <div className={`rounded-2xl bg-white shadow-card p-6 ${className}`}>
+        <p className="text-sm text-wk-muted">Loading school operations…</p>
       </div>
     );
   }
@@ -71,20 +71,20 @@ export default function SchoolOperationsBoard({
 
   return (
     <div className={`space-y-5 ${className}`}>
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
+      <section className="rounded-2xl bg-white shadow-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">
+            <h2 className="text-base font-semibold text-wk-ink">
               This month — {monthLabel(month)}
-            </p>
-            <p className="mt-1 text-[12px] text-[#6B7280]">What was sent and received this month.</p>
+            </h2>
+            <p className="mt-0.5 text-[13px] text-wk-body">What was sent and received this month.</p>
           </div>
           {onDownloadPdf && (
             <button
               type="button"
               onClick={onDownloadPdf}
               disabled={downloading}
-              className="rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-xs font-semibold text-[#1F2937] hover:bg-[#F8FAFC]"
+              className="wk-btn-secondary !min-h-[40px] !px-4 !text-[13px]"
             >
               {downloading ? 'Downloading…' : 'Download PDF'}
             </button>
@@ -103,9 +103,9 @@ export default function SchoolOperationsBoard({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">Current status</p>
-        <p className="mt-1 text-[12px] text-[#6B7280]">What you have, what is owed, and what still needs action.</p>
+      <section className="rounded-2xl bg-white shadow-card p-5">
+        <h2 className="text-base font-semibold text-wk-ink">Current status</h2>
+        <p className="mt-0.5 text-[13px] text-wk-body">What you have, what is owed, and what still needs action.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Card
             hero
@@ -150,9 +150,9 @@ export default function SchoolOperationsBoard({
         title="Only items that need your action"
       />
 
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">Inventory health</p>
-        <p className="mt-1 text-[12px] text-[#6B7280]">
+      <section className="rounded-2xl bg-white shadow-card p-5">
+        <h2 className="text-base font-semibold text-wk-ink">Inventory health</h2>
+        <p className="mt-0.5 text-[13px] text-wk-body">
           Available is on-hand stock. Lost, damaged, and mismatch are open problem kits — not added together to invent a larger inventory.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

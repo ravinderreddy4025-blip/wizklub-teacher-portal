@@ -1,0 +1,18 @@
+# WizKlub Design System
+
+> Design tokens, components and rules for WizKlub Futurz web apps (Infinity Learn). Orange chrome, navy ink, Poppins, pills, white cards with soft shadow. Read AGENTS.md before generating UI.
+
+## Core
+- [AGENTS.md](AGENTS.md): golden rules, colour-by-purpose, type scale, decision tree, checklist
+- [components.md](components.md): 14 components + icons + app shell pattern (purpose, variants, props, anatomy, rules, code)
+- [tokens/tokens.json](tokens/tokens.json): W3C DTCG tokens with descriptions, CSS variable and Figma variable per token
+- [tokens/tokens.css](tokens/tokens.css): CSS custom properties (code source of truth copy)
+- [tokens/tailwind.preset.js](tokens/tailwind.preset.js): semantic Tailwind preset
+- [figma.json](figma.json): Figma file ALYUYxBSYECsXW1jI0TPOC, component IDs, property keys
+
+## Key facts
+- Navy #02344F is the ink and the colour of text on orange; never white on bright orange.
+- Primary CTA = tangerine #FF8C2B pill, navy 16/600 label, 3px #D9661A bottom edge; one per view.
+- Orange text on white = #B4430F. Health RAG colours only for health, always labelled.
+- Cards: white, radius 16, padding 16, shadow 0 1px 12px rgba(0,0,0,.16), no border.
+- Desktop at least 1024px: orange frame + 256px sidebar + floating white panel radius 24. Mobile: white page, 56px top bar, 64px bottom nav.

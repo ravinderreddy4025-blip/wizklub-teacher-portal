@@ -1,0 +1,21 @@
+{
+  "name": "@wizklub/design-tokens",
+  "version": "1.0.0",
+  "description": "WizKlub Futurz design tokens (CSS, Tailwind preset, W3C DTCG JSON)",
+  "license": "UNLICENSED",
+  "files": [
+    "tokens/"
+  ],
+  "exports": {
+    "./css": "./tokens/tokens.css",
+    "./tailwind": "./tokens/tailwind.preset.js",
+    "./json": "./tokens/tokens.json"
+  },
+  "scripts": {
+    "build": "node scripts/build_tokens.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "registry": "https://REPLACE_WITH_CODEARTIFACT_REGISTRY"
+  }
+}

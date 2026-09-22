@@ -233,14 +233,14 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
     <>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-md flex-1">
-          <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+          <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-wk-muted" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search managers..."
             aria-label="Search account managers"
-            className="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white py-2 pl-10 pr-4 text-sm text-[#1F2937] outline-none transition focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
+            className="h-10 w-full rounded-xl border border-wk-line bg-white py-2 pl-10 pr-4 text-sm text-wk-ink outline-none transition focus:border-wk-orange focus:ring-2 focus:ring-wk-orange-text/40"
           />
         </div>
         <button
@@ -256,7 +256,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead className="stitch-table-head">
-              <tr className="border-b border-[var(--stitch-border)]">
+              <tr className="border-b border-wk-line">
                 {['Name', 'Email', 'Password', 'Divisions', 'Schools', 'Actions'].map((col) => (
                   <th key={col} className={`px-4 py-3 ${col === 'Actions' ? 'text-right' : ''}`}>
                     {col}
@@ -264,7 +264,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E5E7EB]">
+            <tbody className="divide-y divide-wk-line">
               {filteredAms.map((am) => {
                 const assignedDivisions = amDivisionMap.get(am._id) || [];
                 const totalSchools = assignedDivisions.reduce(
@@ -274,26 +274,26 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                 const revealed = revealedPasswords[am._id];
                 const loadingPassword = viewingId === am._id;
                 return (
-                  <tr key={am._id} className="transition hover:bg-[#F8FAFC]">
+                  <tr key={am._id} className="transition hover:bg-wk-cream">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F89C28]/15 text-xs font-bold text-[#F89C28]">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wk-peach text-xs font-bold text-wk-orange-text">
                           {initials(am.name)}
                         </div>
-                        <span className="text-sm font-bold text-[#1F2937]">{am.name}</span>
+                        <span className="text-sm font-bold text-wk-ink">{am.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-[#6B7280]">{am.email}</td>
+                    <td className="px-4 py-3 text-sm text-wk-muted">{am.email}</td>
                     <td className="px-4 py-3">
                       <div className="flex min-w-[10rem] items-center gap-1">
-                        <span className={`truncate font-mono text-sm ${revealed ? 'text-[#1F2937]' : 'text-[#9CA3AF]'}`}>
+                        <span className={`truncate font-mono text-sm ${revealed ? 'text-wk-ink' : 'text-wk-muted'}`}>
                           {revealed || '••••••••'}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleViewPassword(am)}
                           disabled={loadingPassword}
-                          className="rounded-lg p-1.5 text-[#6B7280] transition hover:bg-[#F89C28]/10 hover:text-[#F89C28] disabled:opacity-50"
+                          className="rounded-lg p-1.5 text-wk-muted transition hover:bg-wk-peach hover:text-wk-orange-text disabled:opacity-50"
                           aria-label={revealed ? 'Hide password' : 'View password'}
                           title={
                             revealed
@@ -315,7 +315,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                           <button
                             type="button"
                             onClick={() => copyPassword(revealed)}
-                            className="rounded-lg p-1.5 text-[#6B7280] transition hover:bg-[#F89C28]/10 hover:text-[#F89C28]"
+                            className="rounded-lg p-1.5 text-wk-muted transition hover:bg-wk-peach hover:text-wk-orange-text"
                             aria-label="Copy password"
                             title="Copy password"
                           >
@@ -333,11 +333,11 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                               <span
                                 key={division._id}
                                 title={`${count} school${count === 1 ? '' : 's'}`}
-                                className="inline-flex rounded-full border border-[#F89C28]/20 bg-[#F89C28]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#F89C28]"
+                                className="inline-flex rounded-full border border-wk-peach-2 bg-wk-peach px-3 py-1 text-sm font-medium text-wk-orange-text"
                               >
                                 {division.name}
                                 {count > 0 && (
-                                  <span className="ml-1.5 font-semibold normal-case tracking-normal text-[#B45309]">
+                                  <span className="ml-1.5 font-semibold normal-case tracking-normal text-warning-700">
                                     ({count})
                                   </span>
                                 )}
@@ -346,12 +346,12 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                           })}
                         </div>
                       ) : (
-                        <span className="inline-flex rounded-full bg-[#EF4444]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#EF4444]">
+                        <span className="inline-flex rounded-full bg-error-50 px-3 py-1 text-sm font-medium text-error-600">
                           Unassigned
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-[#1F2937]">
+                    <td className="px-4 py-3 text-sm font-semibold text-wk-ink">
                       {assignedDivisions.length > 0 ? totalSchools : '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -359,7 +359,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                         <button
                           type="button"
                           onClick={() => openModal(am)}
-                          className="rounded-lg p-2 text-[#6B7280] transition hover:bg-[#F89C28]/10 hover:text-[#F89C28]"
+                          className="rounded-lg p-2 text-wk-muted transition hover:bg-wk-peach hover:text-wk-orange-text"
                           aria-label="Edit account manager"
                         >
                           <Pencil size={18} />
@@ -368,7 +368,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                           type="button"
                           onClick={() => handleRegenerate(am._id, am.name)}
                           disabled={regeneratingId === am._id}
-                          className="rounded-lg p-2 text-[#6B7280] transition hover:bg-[#F89C28]/10 hover:text-[#F89C28] disabled:opacity-50"
+                          className="rounded-lg p-2 text-wk-muted transition hover:bg-wk-peach hover:text-wk-orange-text disabled:opacity-50"
                           aria-label="Regenerate password"
                         >
                           {regeneratingId === am._id ? (
@@ -380,7 +380,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                         <button
                           type="button"
                           onClick={() => handleDelete(am._id)}
-                          className="rounded-lg p-2 text-[#6B7280] transition hover:bg-[#EF4444]/10 hover:text-[#EF4444]"
+                          className="rounded-lg p-2 text-wk-muted transition hover:bg-error-50 hover:text-error-600"
                           aria-label="Delete account manager"
                         >
                           <Trash2 size={18} />
@@ -392,7 +392,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
               })}
               {filteredAms.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-[#6B7280]">
+                  <td colSpan="6" className="px-6 py-12 text-center text-wk-muted">
                     {ams.length === 0
                       ? 'No Account Managers yet. Create a division first, then add an AM.'
                       : 'No managers match your search.'}
@@ -402,7 +402,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
             </tbody>
           </table>
         </div>
-        <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-3 text-sm text-[#6B7280]">
+        <div className="border-t border-wk-line bg-white px-4 py-3 md:px-6 text-sm text-wk-muted">
           Showing {filteredAms.length} of {ams.length} Account Managers
           {' · '}
           {divisions.filter((d) => divisionHasAm(d, ams)).length} of {divisions.length} divisions assigned
@@ -419,7 +419,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
             type="submit"
             form="am-form"
             disabled={saving}
-            className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F89C28] text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:bg-[#E88914] disabled:opacity-60"
+            className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-wk-orange text-sm font-bold text-wk-navy shadow-brand transition hover:bg-wk-orange-hover disabled:opacity-60"
           >
             {saving ? 'Saving…' : form.id ? 'Save Changes' : 'Create AM & Send Credentials'}
             {!saving && <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />}
@@ -448,7 +448,7 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
           </div>
           <div className="space-y-2">
             <label className={labelClass}>Divisions</label>
-            <div className="max-h-56 space-y-1 overflow-y-auto rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-2">
+            <div className="max-h-56 space-y-1 overflow-y-auto rounded-xl border border-wk-line bg-wk-cream p-2">
               {sortedDivisions.map((division) => {
                 const checked = form.divisionIds.map(String).includes(String(division._id));
                 const currentOwner = ownerNameForDivision(division, ams, form.id);
@@ -472,24 +472,24 @@ const AdminAccountManagers = ({ ams, divisions, schoolCountByDivision = {}, onRe
                       onChange={() => toggleDivision(division._id, locked)}
                     />
                     <span className="min-w-0">
-                      <span className="block font-semibold text-[#1F2937]">{division.name}</span>
+                      <span className="block font-semibold text-wk-ink">{division.name}</span>
                       {locked && (
-                        <span className="block text-[11px] text-[#6B7280]">Assigned to {currentOwner}</span>
+                        <span className="block text-xs text-wk-muted">Assigned to {currentOwner}</span>
                       )}
                     </span>
                   </label>
                 );
               })}
               {sortedDivisions.length === 0 && (
-                <p className="px-2 py-3 text-xs text-[#6B7280]">Create a division first, then assign it here.</p>
+                <p className="px-2 py-3 text-xs text-wk-muted">Create a division first, then assign it here.</p>
               )}
             </div>
-            <p className="text-xs text-[#6B7280]">
+            <p className="text-xs text-wk-muted">
               One AM can handle multiple divisions. A division can belong to only one AM. To move a division, uncheck it on the current AM first.
             </p>
           </div>
           {!form.id && (
-            <p className="rounded-xl border border-[#F89C28]/15 bg-[#F89C28]/5 px-3 py-3 text-xs text-[#6B7280]">
+            <p className="rounded-xl border border-wk-peach-2 bg-wk-cream px-3 py-3 text-xs text-wk-muted">
               A secure password will be generated and emailed. Admins can view it anytime from this page.
             </p>
           )}

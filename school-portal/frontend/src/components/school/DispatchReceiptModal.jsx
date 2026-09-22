@@ -72,7 +72,7 @@ const DispatchReceiptModal = ({
 
   const dispatchSummary = (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dispatch ID</p>
+      <p className="text-xs font-bold text-slate-500 normal-case tracking-normal">Dispatch ID</p>
       <p className="font-mono text-sm font-bold text-brand-primary break-all">
         {primary.dispatchId || primary._id}
       </p>
@@ -233,8 +233,8 @@ const DispatchReceiptModal = ({
           <Input label="Receiver name" required value={receiverName} onChange={(e) => setReceiverName(e.target.value)} />
           <Input type="date" label="Received date" required max={todayIso()} value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Photo of delivered boxes (optional)</label>
-            <input type="file" accept="image/*" onChange={(e) => setDeliveryPhoto(e.target.files?.[0] || null)} className="text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-primary/10 file:text-brand-primary file:font-semibold" />
+            <label className="text-[13px] font-medium text-wk-body">Photo of delivered boxes (optional)</label>
+            <input type="file" accept="image/*" onChange={(e) => setDeliveryPhoto(e.target.files?.[0] || null)} className="text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:rounded-full file:bg-wk-peach file:text-wk-navy file:font-semibold" />
           </div>
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(editMode ? 'choose' : 'choose')} disabled={submitting}>Back</Button>

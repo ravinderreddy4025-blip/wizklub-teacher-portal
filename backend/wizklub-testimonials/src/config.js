@@ -13,6 +13,8 @@ export const config = {
   port: Number(process.env.TESTIMONIALS_PORT) || 3001,
   mongoUri,
   mongoDbName,
+  /** Read-only health snapshot database (written by backend/health-snapshot). Same host as MONGO_URI. */
+  healthMongoDbName: String(process.env.HEALTH_MONGO_DB_NAME || '').trim() || 'wizklub_health',
   inventoryApiBaseUrl: String(process.env.INVENTORY_API_BASE_URL || 'http://127.0.0.1:5002/api').replace(/\/$/, ''),
   internalBridgeSecret: String(process.env.INTERNAL_BRIDGE_SECRET || '').trim(),
   gcs: {

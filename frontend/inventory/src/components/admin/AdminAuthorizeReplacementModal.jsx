@@ -67,9 +67,9 @@ const AdminAuthorizeReplacementModal = ({
 
         {isShip && (
           <div className="glass-card-frosted p-4 rounded-xl space-y-3">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Kit IDs for this school</p>
+            <p className="text-xs font-bold text-slate-500 normal-case tracking-normal">Kit IDs for this school</p>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Original Kit ID</label>
+              <label className="text-xs font-bold text-slate-600 normal-case tracking-normal">Original Kit ID</label>
               <div className="saas-input font-mono text-sm text-slate-700 bg-slate-50 break-all min-h-[42px] flex items-center">
                 {originalKitId}
               </div>
@@ -92,13 +92,13 @@ const AdminAuthorizeReplacementModal = ({
               placeholder="Required to ship"
               required
             />
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Required — this is the tracking ID for the replacement shipment.
             </p>
           </div>
         )}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Admin notes</label>
+          <label className="text-[13px] font-medium text-wk-body">Admin notes</label>
           <textarea
             className="saas-input min-h-[80px]"
             value={form.adminNotes}

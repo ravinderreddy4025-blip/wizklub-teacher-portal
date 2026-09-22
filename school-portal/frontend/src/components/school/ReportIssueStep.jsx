@@ -66,7 +66,7 @@ const EvidenceUploadBox = ({ label, hint, accept, multiple, icon: Icon, files, o
           accept={accept}
           multiple={multiple}
           onChange={onChange}
-          className="mt-3 w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-primary file:text-white file:font-semibold file:cursor-pointer"
+          className="mt-3 w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:rounded-full file:bg-wk-orange file:text-wk-navy file:font-semibold file:cursor-pointer"
         />
         {files?.length > 0 && (
           <p className="mt-2 text-xs font-semibold text-success-700">
@@ -200,10 +200,10 @@ const ReportIssueStep = ({ items, receiverName, setReceiverName, receivedDate, s
                     onChange={(e) => updateRow(index, { quantityReceived: e.target.value })}
                   />
                   {Number(row.quantityReceived) > row.quantitySent && (
-                    <p className="text-[10px] text-error-600 mt-1">Max {row.quantitySent}</p>
+                    <p className="text-xs text-error-600 mt-1">Max {row.quantitySent}</p>
                   )}
                 </td>
-                <td className="font-bold text-warning-700">
+                <td className="font-medium text-warning-700">
                   {row.issueType ? affectedQty(row) : '—'}
                 </td>
                 <td>
@@ -244,7 +244,7 @@ const ReportIssueStep = ({ items, receiverName, setReceiverName, receivedDate, s
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Remarks (required)</label>
+            <label className="text-[13px] font-medium text-wk-body">Remarks (required)</label>
             <textarea
               className="saas-input min-h-[72px]"
               required
@@ -263,7 +263,7 @@ const ReportIssueStep = ({ items, receiverName, setReceiverName, receivedDate, s
           {row.issueType === 'Damaged Product' && (
             <>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Damage description (required)</label>
+                <label className="text-[13px] font-medium text-wk-body">Damage description (required)</label>
                 <textarea
                   className="saas-input min-h-[72px]"
                   required
@@ -272,7 +272,7 @@ const ReportIssueStep = ({ items, receiverName, setReceiverName, receivedDate, s
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Severity</label>
+                <label className="text-[13px] font-medium text-wk-body">Severity</label>
                 <select className="saas-input" value={row.severity} onChange={(e) => updateRow(index, { severity: e.target.value })}>
                   <option value="Minor Damage">Minor damage</option>
                   <option value="Major Damage">Major damage</option>
@@ -304,7 +304,7 @@ const ReportIssueStep = ({ items, receiverName, setReceiverName, receivedDate, s
       ))}
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">General notes (optional)</label>
+        <label className="text-[13px] font-medium text-wk-body">General notes (optional)</label>
         <textarea className="saas-input min-h-[64px]" value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
 

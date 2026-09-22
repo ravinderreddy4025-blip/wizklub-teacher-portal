@@ -13,7 +13,7 @@ const DispatchProofPhoto = ({ url, size = 'md', label = 'Dispatch proof' }) => {
   return (
     <div className="space-y-1.5">
       {label && (
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+        <p className="text-xs font-bold text-slate-500 normal-case tracking-normal flex items-center gap-1">
           <Camera size={12} /> {label}
         </p>
       )}

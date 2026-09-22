@@ -307,7 +307,7 @@ const stepStyles = {
     icon: Check,
   },
   current: {
-    dot: 'bg-brand-primary border-brand-primary text-white ring-4 ring-brand-primary/20',
+    dot: 'bg-brand-primary border-brand-primary text-wk-navy ring-4 ring-brand-primary/20',
     line: 'bg-slate-200',
     title: 'text-brand-primary font-bold',
     icon: null,
@@ -407,10 +407,10 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Track dispatch" className="max-w-lg">
       <div className="space-y-5">
-        <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm">
+        <div className="rounded-2xl bg-wk-cream p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              <p className="text-xs font-bold text-slate-500 normal-case tracking-normal">
                 {isRedispatched ? 'Current tracking' : 'Tracking ID'}
               </p>
               <p className="mt-1 font-mono text-lg font-bold text-brand-primary break-all">
@@ -418,7 +418,7 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
               </p>
             </div>
             {isRedispatched && cycleCount >= 2 && (
-              <span className="shrink-0 inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+              <span className="shrink-0 inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-600">
                 {cycleCount} cycles
               </span>
             )}
@@ -448,7 +448,7 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
               )}
             </p>
             {isRedispatched && summary.redispatch?.category && (
-              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">
+              <p className="text-xs text-slate-500 mt-1 normal-case tracking-normal font-semibold">
                 {summary.redispatch.category}
               </p>
             )}
@@ -459,7 +459,7 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-5">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-4">Shipment progress</p>
+          <p className="text-xs font-bold text-slate-500 normal-case tracking-normal mb-4">Shipment progress</p>
           {steps.map((step, index) => (
             <TimelineStep key={step.key} step={step} isLast={index === steps.length - 1} />
           ))}
@@ -468,7 +468,7 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
         <DispatchShipmentHistoryList item={dispatch} />
         {(dispatch.trackingHistory || []).length > 1 && (
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tracking history</p>
+            <p className="text-sm font-medium text-slate-500">Tracking history</p>
             <ul className="mt-2 space-y-1 text-xs text-slate-600">
               {dispatch.trackingHistory.map((row, index) => (
                 <li key={`${row.consignmentNo}-${index}`} className="font-mono">
@@ -481,7 +481,7 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
         )}
         {(dispatch.receiptIssues || []).length > 1 && (
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Issues on this order</p>
+            <p className="text-sm font-medium text-slate-500">Issues on this order</p>
             <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
               {dispatch.receiptIssues.map((issue, index) => (
                 <li key={issue._id || index}>
@@ -533,7 +533,7 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
                     ];
                 return detailRows.filter(([, v]) => v && v !== '—').map(([label, value]) => (
                   <div key={label} className="flex justify-between gap-3 py-1.5 border-b border-slate-50 last:border-0">
-                    <span className="text-xs font-bold text-slate-500 uppercase shrink-0">{label}</span>
+                    <span className="text-xs font-bold text-slate-500 shrink-0">{label}</span>
                     <span className="text-right text-slate-800 font-medium break-all">{value}</span>
                   </div>
                 ));
@@ -545,7 +545,7 @@ const DispatchTrackingModal = ({ dispatch, isOpen, onClose }) => {
         <button
           type="button"
           onClick={onClose}
-          className="w-full rounded-xl bg-brand-primary py-3 text-sm font-bold text-white hover:opacity-95 transition-opacity"
+          className="w-full rounded-xl bg-brand-primary py-3 text-sm font-bold text-wk-navy hover:opacity-95 transition-opacity"
         >
           Done
         </button>

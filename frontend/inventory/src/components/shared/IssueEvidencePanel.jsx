@@ -15,7 +15,7 @@ const IssueEvidencePanel = ({ issue, compact = false }) => {
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
       {photos.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Photos ({photos.length})</p>
+          <p className="text-xs font-bold text-slate-500 normal-case tracking-normal mb-1.5">Photos ({photos.length})</p>
           <div className="flex flex-wrap gap-2">
             {photos.map((url) => (
               <a
@@ -37,7 +37,7 @@ const IssueEvidencePanel = ({ issue, compact = false }) => {
       )}
       {videos.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Video evidence</p>
+          <p className="text-xs font-bold text-slate-500 normal-case tracking-normal mb-1.5">Video evidence</p>
           {videos.map((url) => (
             <video
               key={url}

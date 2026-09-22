@@ -2,18 +2,19 @@ import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+/** Status badge: tint background + AA text, sentence case (IL). */
 const typeStyles = {
-  success: 'bg-success-50/70 text-success-600 border border-success-200/80 backdrop-blur-md',
-  error: 'bg-error-50/70 text-error-600 border border-error-200/80 backdrop-blur-md',
-  pending: 'bg-brand-primary/15 text-brand-deep border border-brand-primary/35 backdrop-blur-md',
-  warning: 'bg-warning-50/70 text-warning-600 border border-warning-200/80 backdrop-blur-md',
-  info: 'bg-brand-orange-light/20 text-brand-orange-deep border border-brand-primary/30 backdrop-blur-md',
-  default: 'bg-brand-orange-light/15 text-brand-deep border border-brand-orange-light/40 backdrop-blur-md',
+  success: 'bg-success-100 text-success-700',
+  error: 'bg-error-50 text-error-700',
+  pending: 'bg-wk-peach text-wk-orange-text',
+  warning: 'bg-warning-100 text-warning-700',
+  info: 'bg-info-50 text-info-600',
+  default: 'bg-wk-mist text-wk-body',
 };
 
 const Badge = ({ children, type = 'default', className = '' }) => {
   return (
-    <span className={twMerge(clsx('font-ui inline-flex items-center px-2.5 py-1 rounded-lg text-xs uppercase tracking-wide', typeStyles[type]), className)}>
+    <span className={twMerge(clsx('wk-badge font-ui', typeStyles[type] || typeStyles.default), className)}>
       {children}
     </span>
   );

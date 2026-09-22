@@ -35,7 +35,7 @@
 .group-photo-sheet__title {
   margin: 0;
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
@@ -162,7 +162,7 @@
   left: 4px;
   padding: 1px 5px;
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #fff;
@@ -373,7 +373,7 @@
 .group-photo-card__title {
   margin: 0;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
@@ -398,8 +398,8 @@
 
 .group-photo-card__btn--camera {
   border: none;
-  background: var(--orange);
-  color: #fff;
+  background: var(--wk-orange);
+  color: var(--on-brand);
 }
 
 /* ── Animations ── */
@@ -411,116 +411,4 @@
 @keyframes gp-slide-up {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
-}
-
-
-/* ── SR Code Card (in StudentList) ── */
-.sr-code-card {
-  margin: 0 16px 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.sr-code-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.sr-code-card__title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.sr-code-card__meta {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.sr-code-card__actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.sr-code-card__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-}
-
-.sr-code-card__btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.sr-code-card__btn--primary {
-  background: var(--orange);
-  color: #fff;
-}
-
-.sr-code-card__btn--secondary {
-  background: rgba(249, 115, 22, 0.12);
-  color: #c2410c;
-}
-
-.sr-code-card__message {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.sr-code-card__message--error {
-  color: #b45309;
-}
-
-.sr-code-card__select-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.sr-code-card__link {
-  border: none;
-  background: none;
-  padding: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--orange);
-  cursor: pointer;
-}
-
-.list-row-wrap--selectable .list-row__select {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  flex-shrink: 0;
-  padding-left: 10px;
-  align-self: stretch;
-}
-
-.list-row__select input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--orange);
-  cursor: pointer;
 }

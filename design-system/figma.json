@@ -1,0 +1,471 @@
+{
+  "$comment": "Machine-readable index of the Figma design-system file. IDs are node IDs inside fileKey; use with Figma MCP (get_design_context, use_figma getNodeByIdAsync). Property keys include Figma's #id suffix and must be used verbatim in setProperties().",
+  "fileKey": "ALYUYxBSYECsXW1jI0TPOC",
+  "url": "https://www.figma.com/design/ALYUYxBSYECsXW1jI0TPOC",
+  "productFiles": {
+    "WizKlub Admin Apps": "8q6lkq4MWJA5vJPw61gwaz"
+  },
+  "pages": {
+    "Cover": "0:1",
+    "Read me — for AI agents": "2:107",
+    "Getting started": "2:108",
+    "Colors": "2:110",
+    "Typography": "2:111",
+    "Spacing, radius & layout": "2:112",
+    "Effects": "2:113",
+    "Icons": "2:114",
+    "Button": "2:116",
+    "Inputs": "2:117",
+    "Chip & Tab pill": "2:118",
+    "Badges": "2:119",
+    "Avatar & Progress": "2:120",
+    "Cards": "2:121",
+    "Navigation": "2:122",
+    "Page header & Empty state": "2:123",
+    "App shell": "2:125"
+  },
+  "variableCollections": {
+    "Primitives": {
+      "modes": [
+        "Value"
+      ],
+      "hidden": true
+    },
+    "Color": {
+      "modes": [
+        "Light"
+      ]
+    },
+    "Spacing & Radius": {
+      "modes": [
+        "Value"
+      ]
+    },
+    "Layout": {
+      "modes": [
+        "Mobile",
+        "Desktop"
+      ]
+    }
+  },
+  "textStyles": [
+    "Display/Welcome",
+    "Title/Page · Desktop",
+    "Title/Page · Mobile",
+    "Title/Hero",
+    "Title/Section",
+    "Number/Stat",
+    "Body/Large",
+    "Body/Default",
+    "Label/Default",
+    "Label/Button",
+    "Label/Button Small",
+    "Caption/Default",
+    "Caption/Badge",
+    "Overline/Nav group"
+  ],
+  "effectStyles": [
+    "Shadow/sm",
+    "Shadow/md",
+    "Shadow/lg",
+    "Shadow/brand-edge",
+    "Focus/ring"
+  ],
+  "components": {
+    "Button": {
+      "id": "4:122",
+      "key": "3ac5046b2a15ca029c89e025340922feda9d5c35",
+      "page": "Button",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "Style": [
+          "Primary",
+          "Secondary",
+          "Ghost",
+          "Danger"
+        ],
+        "Size": [
+          "Large",
+          "Small"
+        ],
+        "State": [
+          "Default",
+          "Hover",
+          "Disabled"
+        ]
+      },
+      "props": {
+        "Label#4:0": "TEXT",
+        "Show icon#4:25": "BOOLEAN",
+        "Icon#4:50": "INSTANCE_SWAP"
+      }
+    },
+    "Input": {
+      "id": "5:22",
+      "key": "bf8010fb404c623c96bcabfea7747f0ffe3d34fe",
+      "page": "Inputs (Input · Search)",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "State": [
+          "Default",
+          "Focus",
+          "Error",
+          "Disabled"
+        ]
+      },
+      "props": {
+        "Label#5:0": "TEXT",
+        "Value#5:5": "TEXT",
+        "Helper#5:10": "TEXT",
+        "Show helper#5:15": "BOOLEAN"
+      }
+    },
+    "Search field": {
+      "id": "5:33",
+      "key": "e695475dbd6bd89b59a82a284835ba6600587a7d",
+      "page": "Inputs (Input · Search)",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "State": [
+          "Default",
+          "Focus"
+        ]
+      },
+      "props": {
+        "Placeholder#5:20": "TEXT"
+      }
+    },
+    "Chip": {
+      "id": "5:91",
+      "key": "ff6ac592786e624a60da0330b0e4b3b0c2c08540",
+      "page": "Chip & Tab pill",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "State": [
+          "Default",
+          "Hover",
+          "Selected"
+        ]
+      },
+      "props": {
+        "Label#5:23": "TEXT",
+        "Count#5:27": "TEXT",
+        "Show count#5:31": "BOOLEAN"
+      }
+    },
+    "Health band": {
+      "id": "5:116",
+      "key": "0ae00843f00e1854d35ac6b4f13f0d2a9491afcf",
+      "page": "Badges (Health band · Status tag)",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "Band": [
+          "G Green",
+          "A Amber",
+          "R Red",
+          "N Not measured"
+        ],
+        "Size": [
+          "Small",
+          "Medium"
+        ]
+      },
+      "props": {}
+    },
+    "Status tag": {
+      "id": "5:127",
+      "key": "cc60d379e0add599e8f7a2fc435c6471746f39f0",
+      "page": "Badges (Health band · Status tag)",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "Tone": [
+          "Success",
+          "Warning",
+          "Danger",
+          "Info",
+          "Neutral"
+        ]
+      },
+      "props": {
+        "Label#5:35": "TEXT"
+      }
+    },
+    "Avatar": {
+      "id": "5:140",
+      "key": "29d95364161b46ec4320e3cbf770b8a91af04fb2",
+      "page": "Avatar & Progress",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "Tone": [
+          "Brand",
+          "Soft"
+        ],
+        "Size": [
+          "32",
+          "40",
+          "48"
+        ]
+      },
+      "props": {
+        "Initials#5:41": "TEXT"
+      }
+    },
+    "Progress bar": {
+      "id": "5:149",
+      "key": "b715ee770d2e602d853d0501e87d7f292ae6689d",
+      "page": "Avatar & Progress",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "Value": [
+          "25",
+          "50",
+          "85",
+          "100"
+        ]
+      },
+      "props": {}
+    },
+    "Card": {
+      "id": "6:2",
+      "key": "61d478869308391741febcc7c60c67e1a5a37951",
+      "page": "Cards (Card · Stat card)",
+      "type": "COMPONENT",
+      "variants": {},
+      "props": {
+        "Title#6:0": "TEXT",
+        "Body#6:1": "TEXT"
+      }
+    },
+    "Stat card": {
+      "id": "6:47",
+      "key": "7dbb1b19440261d012b7ab3c9c562aaa7904e1df",
+      "page": "Cards (Card · Stat card)",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "Tone": [
+          "Orange",
+          "Green",
+          "Red",
+          "Blue"
+        ]
+      },
+      "props": {
+        "Label#6:2": "TEXT",
+        "Value#6:7": "TEXT",
+        "Hint#6:12": "TEXT",
+        "Show hint#6:17": "BOOLEAN",
+        "Icon#6:22": "INSTANCE_SWAP"
+      }
+    },
+    "Sidebar item": {
+      "id": "6:70",
+      "key": "874e1190e0a28f6a71a0ed9d79c076cd8f4e4c25",
+      "page": "Navigation (Sidebar item · Bottom nav item)",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "State": [
+          "Default",
+          "Active"
+        ]
+      },
+      "props": {
+        "Label#6:27": "TEXT",
+        "Icon#6:30": "INSTANCE_SWAP"
+      }
+    },
+    "Bottom nav item": {
+      "id": "6:81",
+      "key": "b685cc4a75e756545fe721d85ac998d8369cba09",
+      "page": "Navigation (Sidebar item · Bottom nav item)",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "State": [
+          "Default",
+          "Active"
+        ]
+      },
+      "props": {
+        "Label#6:33": "TEXT",
+        "Icon#6:36": "INSTANCE_SWAP"
+      }
+    },
+    "Page header": {
+      "id": "6:90",
+      "key": "a95d9a21ef83fa5b2f6201a53f2f302e30afb486",
+      "page": "Page header & Empty state",
+      "type": "COMPONENT_SET",
+      "variants": {
+        "Viewport": [
+          "Desktop",
+          "Mobile"
+        ]
+      },
+      "props": {
+        "Breadcrumb#6:39": "TEXT",
+        "Show breadcrumb#6:42": "BOOLEAN",
+        "Title#6:45": "TEXT",
+        "Subtitle#6:48": "TEXT"
+      }
+    },
+    "Empty state": {
+      "id": "6:91",
+      "key": "821d72cdf8f634baf76eb628dc14cd3921d61721",
+      "page": "Page header & Empty state",
+      "type": "COMPONENT",
+      "variants": {},
+      "props": {
+        "Title#6:51": "TEXT",
+        "Message#6:52": "TEXT",
+        "Show action#6:53": "BOOLEAN",
+        "Icon#6:54": "INSTANCE_SWAP"
+      }
+    }
+  },
+  "icons": {
+    "home": {
+      "id": "3:552",
+      "name": "Icon/home",
+      "size": 24
+    },
+    "school": {
+      "id": "3:560",
+      "name": "Icon/school",
+      "size": 24
+    },
+    "analytics": {
+      "id": "3:566",
+      "name": "Icon/analytics",
+      "size": 24
+    },
+    "inventory": {
+      "id": "3:572",
+      "name": "Icon/inventory",
+      "size": 24
+    },
+    "support": {
+      "id": "3:578",
+      "name": "Icon/support",
+      "size": 24
+    },
+    "profile": {
+      "id": "3:582",
+      "name": "Icon/profile",
+      "size": 24
+    },
+    "logout": {
+      "id": "3:587",
+      "name": "Icon/logout",
+      "size": 24
+    },
+    "arrow-right": {
+      "id": "3:591",
+      "name": "Icon/arrow-right",
+      "size": 24
+    },
+    "chevron-right": {
+      "id": "3:594",
+      "name": "Icon/chevron-right",
+      "size": 24
+    },
+    "chevron-down": {
+      "id": "3:597",
+      "name": "Icon/chevron-down",
+      "size": 24
+    },
+    "search": {
+      "id": "3:601",
+      "name": "Icon/search",
+      "size": 24
+    },
+    "plus": {
+      "id": "3:605",
+      "name": "Icon/plus",
+      "size": 24
+    },
+    "check": {
+      "id": "3:608",
+      "name": "Icon/check",
+      "size": 24
+    },
+    "x": {
+      "id": "3:612",
+      "name": "Icon/x",
+      "size": 24
+    },
+    "camera": {
+      "id": "3:616",
+      "name": "Icon/camera",
+      "size": 24
+    },
+    "upload": {
+      "id": "3:621",
+      "name": "Icon/upload",
+      "size": 24
+    },
+    "bell": {
+      "id": "3:625",
+      "name": "Icon/bell",
+      "size": 24
+    },
+    "heart-pulse": {
+      "id": "3:629",
+      "name": "Icon/heart-pulse",
+      "size": 24
+    },
+    "truck": {
+      "id": "3:636",
+      "name": "Icon/truck",
+      "size": 24
+    },
+    "warehouse": {
+      "id": "3:642",
+      "name": "Icon/warehouse",
+      "size": 24
+    },
+    "clipboard-check": {
+      "id": "3:647",
+      "name": "Icon/clipboard-check",
+      "size": 24
+    },
+    "calendar": {
+      "id": "3:653",
+      "name": "Icon/calendar",
+      "size": 24
+    },
+    "download": {
+      "id": "3:658",
+      "name": "Icon/download",
+      "size": 24
+    },
+    "play": {
+      "id": "3:661",
+      "name": "Icon/play",
+      "size": 24
+    },
+    "life-buoy": {
+      "id": "3:669",
+      "name": "Icon/life-buoy",
+      "size": 24
+    },
+    "users": {
+      "id": "3:675",
+      "name": "Icon/users",
+      "size": 24
+    },
+    "alert-triangle": {
+      "id": "3:680",
+      "name": "Icon/alert-triangle",
+      "size": 24
+    }
+  },
+  "patterns": {
+    "App shell · Desktop 1440": "7:2",
+    "App shell · Mobile 390": "7:156"
+  },
+  "gotchas": [
+    "Variant names use 'Axis=Value, Axis=Value' (e.g. 'Style=Primary, Size=Large, State=Default').",
+    "After an INSTANCE_SWAP on an Icon property, Figma resets stroke overrides: re-apply the text/ or icon/ token.",
+    "Descriptions avoid < > and straight quotes because Figma HTML-escapes them.",
+    "setFileThumbnailNodeAsync is not supported through MCP; the first page (Cover) is the thumbnail."
+  ]
+}

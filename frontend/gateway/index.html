@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#F97316">
+  <meta name="theme-color" content="#f47d31">
   <title>WizKlub Apps</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/brand/logo.png">
   <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg">
@@ -11,156 +11,315 @@
   <link rel="apple-touch-icon" href="/brand/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* WizKlub brand on the Infinity Learn layout — same tokens as the PMO + Teachers portals. */
+    :root {
+      --wk-navy: #02344f;
+      --wk-orange: #ff8c2b;
+      --wk-orange-text: #b4430f;
+      --wk-cream: #fff7ee;
+      /* Chrome: flat orange band + lighter dome rising from the bottom (navy ink passes on both). */
+      --wk-band: #f47d31;
+      --wk-dome: #f28c43;
+      --wk-chrome: radial-gradient(ellipse 150% 88% at 50% 100%, var(--wk-dome) 0 99.4%, rgba(242, 140, 67, 0) 100%), var(--wk-band);
+      --text-primary: #080e14;
+      --text-secondary: #52565c;
+      --text-muted: #6c6e72;
+      --tint-orange: #ffe7cf;
+      --tint-blue: #e6f2ff;
+      --tint-blue-ink: #0062cc;
+      --tint-green: #d6f4de;
+      --tint-green-ink: #04742d;
+      --shadow-md: 0 1px 12px 0 rgba(0, 0, 0, 0.16);
+      --focus-ring: 0 0 0 3px rgba(2, 52, 79, 0.45);
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       min-height: 100vh;
-      font-family: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
-      color: #1c1917;
-      background: linear-gradient(165deg, #fff7ed 0%, #ffffff 42%, #ffedd5 100%);
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-primary);
+      background: var(--wk-band);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Brand half: orange doodle + white logo */
+    .hub-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 48px 88px 48px 48px;
+      position: relative;
+      isolation: isolate;
+      color: var(--wk-navy);
+      text-align: center;
+      background: var(--wk-chrome);
+      overflow: hidden;
+    }
+
+    /* Faint doodles over the flat orange */
+    .hub-brand::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: url('/brand/wiz-auth-bg.svg') center / cover no-repeat;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .hub-brand__logo {
+      width: 260px;
+      max-width: 70%;
+      height: auto;
+      filter: drop-shadow(0 2px 6px rgba(120, 40, 0, 0.25));
+    }
+
+    /* Navy ink on the orange chrome; white is reserved for the logo. */
+    .hub-brand__tagline {
+      margin-top: 8px;
+      font-size: 28px;
+      line-height: 40px;
+      font-weight: 600;
+    }
+
+    .hub-brand__sub {
+      max-width: 380px;
+      font-size: 18px;
+      line-height: 28px;
+      font-weight: 500;
+    }
+
+    /* White panel with the 40px curved edge */
+    .hub {
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      margin-left: -40px;
+      padding: 48px 32px;
+      background: #fff;
+      border-radius: 40px 0 0 40px;
     }
 
-    .hub {
-      width: min(100%, 920px);
-    }
-
-    .hub__header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-
-    .hub__logo {
-      width: min(280px, 85vw);
-      height: auto;
-      object-fit: contain;
-      margin-bottom: 16px;
-      display: block;
-      margin-inline: auto;
+    .hub__col {
+      width: 100%;
+      max-width: 480px;
+      animation: fade-up 0.35s var(--ease-out) both;
     }
 
     .hub__title {
-      font-size: clamp(1.75rem, 4vw, 2.25rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      color: #431407;
+      font-size: 36px;
+      line-height: 54px;
+      font-weight: 500;
+      text-align: center;
     }
 
     .hub__subtitle {
       margin-top: 8px;
-      font-size: 1rem;
-      color: #78716c;
-      max-width: 36rem;
-      margin-inline: auto;
-      line-height: 1.5;
+      font-size: 14px;
+      line-height: 22px;
+      font-weight: 500;
+      text-align: center;
+      color: var(--wk-navy);
     }
 
     .hub__grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 32px;
     }
 
     .hub-card {
       display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding: 22px;
-      border-radius: 18px;
-      background: #ffffff;
-      border: 1px solid rgba(234, 88, 12, 0.14);
-      box-shadow: 0 1px 3px rgba(234, 88, 12, 0.07), 0 12px 32px rgba(251, 146, 60, 0.08);
+      align-items: center;
+      gap: 16px;
+      min-height: 72px;
+      padding: 16px;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow-md);
       text-decoration: none;
       color: inherit;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
     }
 
-    .hub-card:hover,
+    .hub-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
+    }
+
     .hub-card:focus-visible {
-      transform: translateY(-3px);
-      border-color: rgba(234, 88, 12, 0.28);
-      box-shadow: 0 8px 36px rgba(234, 88, 12, 0.14);
       outline: none;
+      box-shadow: var(--focus-ring);
     }
 
-    .hub-card__badge {
+    .hub-card__icon {
       display: inline-flex;
-      align-self: flex-start;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      background: #ffedd5;
-      color: #c2410c;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+    }
+
+    .hub-card--pmo .hub-card__icon { background: var(--tint-orange); color: var(--wk-orange-text); }
+    .hub-card--teachers .hub-card__icon { background: var(--tint-blue); color: var(--tint-blue-ink); }
+    .hub-card--inventory .hub-card__icon { background: var(--tint-green); color: var(--tint-green-ink); }
+
+    .hub-card__body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
     }
 
     .hub-card__title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #431407;
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+    }
+
+    .hub-card__badge {
+      font-size: 13px;
+      line-height: 20px;
+      font-weight: 500;
+      color: var(--wk-orange-text);
     }
 
     .hub-card__text {
-      font-size: 0.92rem;
-      line-height: 1.55;
-      color: #78716c;
-      flex: 1;
+      font-size: 13px;
+      line-height: 20px;
+      color: var(--text-muted);
     }
 
-    .hub-card__cta {
-      margin-top: 4px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: #ea580c;
+    .hub-card__chev {
+      flex-shrink: 0;
+      color: var(--wk-navy);
     }
 
     .hub__footer {
-      margin-top: 28px;
+      margin-top: 24px;
       text-align: center;
-      font-size: 0.82rem;
-      color: #a8a29e;
+      font-size: 13px;
+      line-height: 20px;
+      color: var(--text-muted);
+    }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    /* < 1024: brand block on top, panel becomes a bottom sheet */
+    @media (max-width: 1023px) {
+      body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      .hub-brand {
+        min-height: 34vh;
+        min-height: 34dvh;
+        padding: 32px 24px 64px;
+        gap: 8px;
+      }
+
+      .hub-brand__logo {
+        width: 192px;
+      }
+
+      .hub-brand__tagline {
+        font-size: 22px;
+        line-height: 32px;
+      }
+
+      .hub-brand__sub {
+        display: none;
+      }
+
+      .hub {
+        align-items: flex-start;
+        margin: -32px 0 0;
+        padding: 32px max(16px, env(safe-area-inset-left)) 32px max(16px, env(safe-area-inset-right));
+        border-radius: 32px 32px 0 0;
+      }
+
+      .hub__title {
+        font-size: 28px;
+        line-height: 40px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hub__col { animation: none; }
+      .hub-card { transition: none; }
     }
   </style>
 </head>
 <body>
+  <section class="hub-brand" aria-label="WizKlub Futurz">
+    <img class="hub-brand__logo" src="/brand/logo-white.png" alt="WIZKLUB Futurz — An Infinity Learn initiative" width="260" height="149" decoding="async" fetchpriority="high">
+    <p class="hub-brand__tagline">WizKlub Apps</p>
+    <p class="hub-brand__sub">Parent orientation, teacher tools and kit operations — one sign-in gateway.</p>
+  </section>
+
   <main class="hub">
-    <header class="hub__header">
-      <img class="hub__logo" src="/brand/logo.png" alt="WIZKLUB Futurz">
-      <h1 class="hub__title">WizKlub Apps</h1>
+    <div class="hub__col">
+      <h1 class="hub__title">Welcome</h1>
       <p class="hub__subtitle">Choose an application to continue. All apps run on this same gateway.</p>
-    </header>
 
-    <section class="hub__grid" aria-label="Applications">
-      <a class="hub-card" href="/pmo/">
-        <span class="hub-card__badge">PMO</span>
-        <h2 class="hub-card__title">Parent Orientation</h2>
-        <p class="hub-card__text">Plan sessions, track speaker updates, and manage parent orientation analytics.</p>
-        <span class="hub-card__cta">Open PMO →</span>
-      </a>
+      <section class="hub__grid" aria-label="Applications">
+        <a class="hub-card hub-card--pmo" href="/pmo/">
+          <span class="hub-card__icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+          </span>
+          <span class="hub-card__body">
+            <span class="hub-card__title">Parent Orientation</span>
+            <span class="hub-card__badge">PMO · Speaker · Sales Admin</span>
+            <span class="hub-card__text">Plan sessions, track speaker updates, and manage parent orientation analytics.</span>
+          </span>
+          <svg class="hub-card__chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
 
-      <a class="hub-card" href="/wizklub-testimonials/">
-        <span class="hub-card__badge">Teachers</span>
-        <h2 class="hub-card__title">WizKlub Teachers Portal</h2>
-        <p class="hub-card__text">Teacher portal for student review media, analytics, and school inventory (instructor login).</p>
-        <span class="hub-card__cta">Open Teachers Portal →</span>
-      </a>
+        <a class="hub-card hub-card--teachers" href="/wizklub-testimonials/">
+          <span class="hub-card__icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg>
+          </span>
+          <span class="hub-card__body">
+            <span class="hub-card__title">WizKlub Teachers Portal</span>
+            <span class="hub-card__badge">Teachers</span>
+            <span class="hub-card__text">Teacher portal for student review media, analytics, and school inventory (instructor login).</span>
+          </span>
+          <svg class="hub-card__chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
 
-      <a class="hub-card" href="/inventory/">
-        <span class="hub-card__badge">Operations</span>
-        <h2 class="hub-card__title">Kit Inventory</h2>
-        <p class="hub-card__text">Admin and Account Manager portal for dispatches, warehouse stock, audits, and school kit operations.</p>
-        <span class="hub-card__cta">Open Inventory →</span>
-      </a>
-    </section>
+        <a class="hub-card hub-card--inventory" href="/inventory/">
+          <span class="hub-card__icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+          </span>
+          <span class="hub-card__body">
+            <span class="hub-card__title">Kit Inventory</span>
+            <span class="hub-card__badge">Operations</span>
+            <span class="hub-card__text">Admin and Account Manager portal for dispatches, warehouse stock, audits, and school kit operations.</span>
+          </span>
+          <svg class="hub-card__chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
+      </section>
 
-    <p class="hub__footer">WizKlub internal tools gateway</p>
+      <p class="hub__footer">WizKlub internal tools gateway · An Infinity Learn initiative</p>
+    </div>
   </main>
 </body>
 </html>

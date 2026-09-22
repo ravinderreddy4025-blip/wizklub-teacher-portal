@@ -82,14 +82,14 @@ export default function AdminOperationsAnalytics({
 
   if (loading) {
     return (
-      <div className={`overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white ${className}`}>
+      <div className={`overflow-hidden rounded-2xl bg-white shadow-card ${className}`}>
         <div className="animate-pulse space-y-4 p-5 md:p-6">
-          <div className="h-3 w-40 rounded bg-[#F1F5F9]" />
+          <div className="h-3 w-40 rounded bg-wk-mist" />
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="h-28 rounded-2xl bg-[#F8FAFC]" />
-            <div className="h-28 rounded-2xl bg-[#F8FAFC]" />
+            <div className="h-28 rounded-2xl bg-wk-cream" />
+            <div className="h-28 rounded-2xl bg-wk-cream" />
           </div>
-          <div className="h-4 rounded-full bg-[#F1F5F9]" />
+          <div className="h-4 rounded-full bg-wk-mist" />
         </div>
       </div>
     );
@@ -97,21 +97,18 @@ export default function AdminOperationsAnalytics({
 
   return (
     <section
-      className={`relative rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_12px_40px_-18px_rgba(15,23,42,0.18)] ${className}`}
+      className={`relative rounded-2xl bg-white shadow-card ${className}`}
       aria-label="Unit analytics: shipped, acknowledged, and justification"
     >
-      <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#F89C28]/10 blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-24 left-10 h-48 w-48 rounded-full bg-[#F7941D]/10 blur-3xl" />
-
       <div className="relative z-10 space-y-5 p-5 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#F89C28]">Unit analytics</p>
-            <h3 className="mt-1 font-heading text-lg font-bold text-[#1F2937] md:text-xl">
+            <p className="text-sm font-medium text-wk-orange-text">Unit analytics</p>
+            <h2 className="mt-0.5 text-lg font-semibold text-wk-ink md:text-xl">
               Shipped → acknowledged, then the justification
-            </h3>
-            <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-[#6B7280]">
-              Every number is <span className="font-semibold text-[#1F2937]">kit units</span>, not shipment
+            </h2>
+            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-wk-body">
+              Every number is <span className="font-semibold text-wk-ink">kit units</span>, not shipment
               records. The bar accounts for what left the warehouse this month.
             </p>
           </div>
@@ -120,7 +117,7 @@ export default function AdminOperationsAnalytics({
               type="button"
               disabled={downloading}
               onClick={onDownloadPdf}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs font-bold text-[#1F2937] shadow-sm transition hover:border-[#F89C28] hover:text-[#F89C28] disabled:opacity-60"
+              className="wk-btn-secondary !min-h-[40px]"
             >
               <FileDown size={14} />
               {downloading ? 'Generating…' : 'Download PDF'}
@@ -129,42 +126,42 @@ export default function AdminOperationsAnalytics({
         </div>
 
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr]">
-          <article className="group relative z-0 rounded-2xl bg-gradient-to-br from-[#101828] via-[#1F2937] to-[#7C4A12] p-5 text-white shadow-lg hover:z-[80]">
-            <div className="pointer-events-none absolute -right-6 top-4 opacity-20">
+          <article className="group relative z-0 rounded-2xl bg-wk-promo p-5 text-white hover:z-[80]">
+            <div className="pointer-events-none absolute -right-6 top-4 opacity-20" aria-hidden>
               <Truck size={88} strokeWidth={1.25} />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FBB040]">Shipped</p>
-            <p className="mt-2 font-heading text-4xl font-bold tabular-nums tracking-tight md:text-5xl">
+            <p className="text-sm font-medium text-wk-sun">Shipped</p>
+            <p className="mt-2 text-4xl font-semibold tabular-nums md:text-5xl">
               {formatUnits(shippedCount)}
             </p>
-            <p className="mt-1 text-sm text-white/70">kit units actually sent</p>
+            <p className="mt-1 text-sm text-white/90">kit units actually sent</p>
             <KpiHoverTip
               {...getShippedTooltip(analytics)}
               align="left"
             />
           </article>
 
-          <div className="hidden items-center justify-center text-[#F89C28] lg:flex" aria-hidden="true">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#F89C28]/30 bg-[#FFF8F0]">
+          <div className="hidden items-center justify-center text-wk-orange-text lg:flex" aria-hidden="true">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-wk-peach-2 bg-wk-cream">
               <ArrowRight size={18} />
             </span>
           </div>
 
-          <article className="group relative z-0 rounded-2xl border border-[#BBF7D0] bg-gradient-to-br from-[#F0FDF4] to-white p-5 shadow-sm hover:z-[80]">
-            <div className="pointer-events-none absolute -right-4 top-3 text-[#16A34A]/15">
+          <article className="group relative z-0 rounded-2xl bg-success-100 p-5 hover:z-[80]">
+            <div className="pointer-events-none absolute -right-4 top-3 text-success-700 opacity-15" aria-hidden>
               <CheckCircle2 size={88} strokeWidth={1.25} />
             </div>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#16A34A]">Acknowledged</p>
-                <p className="mt-2 font-heading text-4xl font-bold tabular-nums tracking-tight text-[#14532D] md:text-5xl">
+                <p className="text-sm font-medium text-success-700">Acknowledged</p>
+                <p className="mt-2 text-4xl font-semibold tabular-nums text-success-800 md:text-5xl">
                   {formatUnits(ackCount)}
                 </p>
-                <p className="mt-1 text-sm text-[#4B5563]">units received OK</p>
+                <p className="mt-1 text-sm text-wk-body">units received OK</p>
               </div>
-              <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full border-4 border-[#16A34A] bg-white text-center shadow-sm">
-                <span className="font-heading text-sm font-bold leading-none text-[#14532D]">{analytics.ackRate}%</span>
-                <span className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-[#6B7280]">of sent</span>
+              <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-full border-4 border-success-600 bg-white text-center">
+                <span className="text-sm font-semibold leading-none text-success-800">{analytics.ackRate}%</span>
+                <span className="mt-0.5 text-[11px] font-medium text-wk-body">of sent</span>
               </div>
             </div>
             <KpiHoverTip
@@ -176,23 +173,23 @@ export default function AdminOperationsAnalytics({
 
         <div>
           <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#6B7280]">
+            <p className="text-sm font-medium text-wk-body">
               Justification · {formatUnits(analytics.sent)} units shipped
             </p>
-            <p className={`text-[11px] font-semibold ${analytics.balanced ? 'text-[#16A34A]' : 'text-[#D97706]'}`}>
+            <p className={`text-xs font-semibold ${analytics.balanced ? 'text-success-700' : 'text-warning-700'}`}>
               {analytics.balanced
                 ? 'Adds up exactly'
                 : `Parts total ${formatUnits(analytics.partSum)} · off by ${formatUnits(Math.abs(analytics.shippedBalance))} (audit / reship overlap)`}
             </p>
           </div>
-          <p className="mb-3 flex flex-wrap items-center gap-x-1 gap-y-1 font-heading text-[13px] font-bold tabular-nums text-[#1F2937] sm:text-sm">
-            <span className="text-[#6B7280] font-semibold">Shipped</span>
+          <p className="mb-3 flex flex-wrap items-center gap-x-1 gap-y-1 text-[13px] font-semibold tabular-nums text-wk-ink sm:text-sm">
+            <span className="font-medium text-wk-body">Shipped</span>
             <span>{formatUnits(analytics.sent)}</span>
-            <span className="text-[#9CA3AF]">=</span>
+            <span className="text-wk-muted">=</span>
             {analytics.segments.map((segment, i) => (
               <span key={segment.key} className="inline-flex items-center gap-1">
-                {i > 0 && <span className="text-[#9CA3AF]">+</span>}
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] sm:text-xs" style={{ background: segment.track, color: segment.color }}>
+                {i > 0 && <span className="text-wk-muted">+</span>}
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs sm:text-xs" style={{ background: segment.track, color: segment.color }}>
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: segment.color }} />
                   {segment.label} {formatUnits(segment.units)}
                 </span>
@@ -200,7 +197,7 @@ export default function AdminOperationsAnalytics({
             ))}
           </p>
           <div
-            className="flex h-4 overflow-hidden rounded-full bg-[#F1F5F9] ring-1 ring-inset ring-[#E5E7EB]"
+            className="flex h-4 overflow-hidden rounded-full bg-wk-mist ring-1 ring-inset ring-wk-line"
             role="img"
             aria-label={analytics.segments.map((s) => `${s.label} ${s.units}`).join(', ')}
           >
@@ -226,7 +223,7 @@ export default function AdminOperationsAnalytics({
             return (
               <div
                 key={segment.key}
-                className="group relative z-0 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC]/80 px-3 py-3 transition hover:z-[80] hover:-translate-y-0.5 hover:border-[#F89C28]/40 hover:bg-white hover:shadow-sm"
+                className="group relative z-0 rounded-2xl border border-wk-line bg-white px-3 py-3 transition hover:z-[80] hover:border-wk-control"
               >
                 <div className="mb-2 flex items-center justify-between">
                   <span
@@ -237,11 +234,11 @@ export default function AdminOperationsAnalytics({
                   </span>
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: segment.color }} />
                 </div>
-                <p className="font-heading text-xl font-bold tabular-nums text-[#1F2937]">{formatUnits(segment.units)}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">{segment.label}</p>
-                <p className="mt-0.5 text-[10px] leading-snug text-[#9CA3AF]">{segment.hint}</p>
+                <p className="text-xl font-semibold tabular-nums text-wk-ink">{formatUnits(segment.units)}</p>
+                <p className="text-sm font-medium text-wk-ink">{segment.label}</p>
+                <p className="mt-0.5 text-xs leading-snug text-wk-muted">{segment.hint}</p>
                 {analytics.sent > 0 && (
-                  <p className="mt-1 text-[10px] font-semibold tabular-nums" style={{ color: segment.color }}>
+                  <p className="mt-1 text-xs font-semibold tabular-nums" style={{ color: segment.color }}>
                     {segment.units} of {formatUnits(analytics.sent)} shipped
                   </p>
                 )}
@@ -261,13 +258,13 @@ export default function AdminOperationsAnalytics({
         </div>
 
         {hubRows && (
-          <div className="rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#F89C28]">
+          <div className="rounded-2xl border border-wk-line bg-wk-cream p-4">
+            <h2 className="text-base font-semibold text-wk-ink">
               How the lists map to the cycle
-            </p>
-            <p className="mt-1 text-[12px] text-[#6B7280]">
-              Shipped and acknowledged OK kits are <strong className="text-[#1F2937]">Completed</strong>.
-              The leftover units from that same receipt are <strong className="text-[#1F2937]">Lost / Mismatch / Damaged</strong>.
+            </h2>
+            <p className="mt-0.5 text-[13px] text-wk-body">
+              Shipped and acknowledged OK kits are <strong className="text-wk-ink">Completed</strong>.
+              The leftover units from that same receipt are <strong className="text-wk-ink">Lost / Mismatch / Damaged</strong>.
             </p>
             <div className="mt-3 space-y-2">
               {hubRows.map((row) => {
@@ -277,26 +274,26 @@ export default function AdminOperationsAnalytics({
                   <div
                     key={row.id}
                     className={`rounded-xl border bg-white px-3 py-2.5 ${
-                      differs ? 'border-[#F59E0B]/40' : 'border-[#E5E7EB]'
+                      differs ? 'border-warning-200' : 'border-wk-line'
                     }`}
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <p className="text-[12px] font-bold text-[#1F2937]">
+                      <p className="text-[13px] font-semibold text-wk-ink">
                         {row.leftLabel}{' '}
-                        <span className="tabular-nums text-[#F89C28]">{formatUnits(row.leftUnits)}</span>
-                        <span className="mx-1.5 font-semibold text-[#9CA3AF]">vs</span>
+                        <span className="tabular-nums text-wk-orange-text">{formatUnits(row.leftUnits)}</span>
+                        <span className="mx-1.5 font-semibold text-wk-muted">vs</span>
                         {row.rightLabel}{' '}
                         <span className="tabular-nums">
                           {row.rightUnits == null ? '—' : formatUnits(row.rightUnits)}
                         </span>
                         {row.rightRecords != null && (
-                          <span className="ml-1 font-semibold text-[#9CA3AF]">
+                          <span className="ml-1 font-semibold text-wk-muted">
                             · {row.rightRecords} record{row.rightRecords === 1 ? '' : 's'}
                           </span>
                         )}
                       </p>
                     </div>
-                    <p className="mt-1 text-[11px] leading-snug text-[#6B7280]">{row.why}</p>
+                    <p className="mt-1 text-xs leading-snug text-wk-muted">{row.why}</p>
                   </div>
                 );
               })}
@@ -304,19 +301,19 @@ export default function AdminOperationsAnalytics({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-dashed border-[#E5E7EB] bg-[#FFFAF3]/80 px-4 py-3 text-[12px] text-[#6B7280]">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl bg-wk-cream px-4 py-3 text-[13px] text-wk-body">
           <span className="inline-flex items-center gap-1.5">
-            <Clock size={13} className="text-[#F59E0B]" />
+            <Clock size={13} className="text-warning-700" />
             Pending (not shipped yet):{' '}
-            <strong className="text-[#1F2937]">{formatUnits(analytics.pending)} units</strong>
+            <strong className="text-wk-ink">{formatUnits(analytics.pending)} units</strong>
           </span>
           <span>
             Replacements:{' '}
-            <strong className="text-[#1F2937]">{formatUnits(analytics.replaced)} units</strong>
+            <strong className="text-wk-ink">{formatUnits(analytics.replaced)} units</strong>
           </span>
           <span>
             Scheduled = shipped + pending:{' '}
-            <strong className="text-[#1F2937]">{formatUnits(analytics.scheduled)} units</strong>
+            <strong className="text-wk-ink">{formatUnits(analytics.scheduled)} units</strong>
           </span>
           {analytics.rejected > 0 && (
             <span>

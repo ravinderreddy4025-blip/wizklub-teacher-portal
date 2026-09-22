@@ -249,6 +249,11 @@ async function initMongo() {
   } catch (e) {
     console.error('Session migration/index setup:', e && e.message ? e.message : e);
   }
+  try {
+    await require('./healthService').ensureFollowupIndexes();
+  } catch (e) {
+    console.error('Health follow-up index setup:', e && e.message ? e.message : e);
+  }
 }
 
 async function closeMongo() {

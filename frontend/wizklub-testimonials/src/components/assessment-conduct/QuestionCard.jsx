@@ -1,16 +1,15 @@
 import { bumpRenderCount } from '../../utils/conductPerf'
 
+/* Question card: overline Q-number, question text, answer tiles (A–D) — 1 column mobile, 2 on desktop. */
 export default function QuestionCard({ question, empty }) {
   bumpRenderCount('QuestionCard')
 
   if (empty || !question) {
     return (
-      <section className="conduct-question-card">
-        <div className="empty-state" style={{ padding: '24px 12px' }}>
-          <p className="empty-state__title">No questions</p>
-          <p className="empty-state__text">
-            This assessment has no questions in the curriculum session.
-          </p>
+      <section className="ac-card ac-question">
+        <div className="ac-empty">
+          <p className="ac-empty__title">No questions</p>
+          <p className="ac-empty__text">This assessment has no questions in the curriculum session.</p>
         </div>
       </section>
     )
@@ -20,16 +19,18 @@ export default function QuestionCard({ question, empty }) {
   const images = Array.isArray(question.images) ? question.images : []
 
   return (
-    <section className="conduct-question-card">
-      <p className="conduct-question-card__sequence">Q{question.sequence}</p>
-      <h2 className="conduct-question-card__text">{question.question}</h2>
+    <section className="ac-card ac-question" aria-labelledby={`q-${question.question_id}`}>
+      <p className="ac-question__seq">Question {question.sequence}</p>
+      <h2 className="ac-question__text" id={`q-${question.question_id}`}>
+        {question.question}
+      </h2>
 
       {images.length > 0 ? (
-        <div className="conduct-question-images" aria-label="Question images">
+        <div className="ac-question__images" aria-label="Question images">
           {images.map((src, index) => (
             <img
               key={`${question.question_id}-img-${index}`}
-              className="conduct-question-image"
+              className="ac-img"
               src={src}
               alt=""
               decoding="async"
@@ -39,23 +40,15 @@ export default function QuestionCard({ question, empty }) {
         </div>
       ) : null}
 
-      <ul className="conduct-options" aria-label="Answer options">
+      <ul className="ac-options" aria-label="Answer options">
         {options.map((option) => (
-          <li key={option.key ?? option.id} className="conduct-option">
-            <span className="conduct-option__id">{option.key ?? option.id}</span>
-            <div className="conduct-option__body">
+          <li key={option.key ?? option.id} className="ac-option">
+            <span className="ac-option__key">{option.key ?? option.id}</span>
+            <div className="ac-option__body">
               {option.image_url ? (
-                <img
-                  className="conduct-option__image"
-                  src={option.image_url}
-                  alt=""
-                  decoding="async"
-                  loading="lazy"
-                />
+                <img className="ac-img ac-img--option" src={option.image_url} alt="" decoding="async" loading="lazy" />
               ) : null}
-              {option.text ? (
-                <span className="conduct-option__text">{option.text}</span>
-              ) : null}
+              {option.text ? <span className="ac-option__text">{option.text}</span> : null}
             </div>
           </li>
         ))}

@@ -8,12 +8,15 @@ import AssessmentConduct from './pages/AssessmentConduct'
 import Analytics from './pages/Analytics'
 import Dashboard from './pages/Dashboard'
 import BatchSelection from './pages/BatchSelection'
+import BatchHealth from './pages/BatchHealth'
 import FeedbackDetail from './pages/FeedbackDetail'
+import LiveClass from './pages/LiveClass'
 import FeedbackForm from './pages/FeedbackForm'
 import FeedbackList from './pages/FeedbackList'
 import Profile from './pages/Profile'
 import SchoolsList from './pages/SchoolsList'
 import StudentList from './pages/StudentList'
+import StudentHealth from './pages/StudentHealth'
 import StudentProfile from './pages/StudentProfile'
 import { Router, matchPath, usePath } from './router'
 
@@ -36,10 +39,17 @@ function AppRoutes() {
     path,
     '/schools/:schoolId/batches/:batchId/assessments/:sessionId',
   )
+  const classRoute =
+    matchPath(path, '/schools/:schoolId/batches/:batchId/class') || matchPath(path, '/batches/:batchId/class')
   const studentsRoute = matchPath(path, '/batches/:batchId/students')
   const assessmentRoute = matchPath(path, '/batches/:batchId/assessments/:sessionId')
   const studentRoute = matchPath(path, '/students/:studentId')
   const feedbackDetailRoute = matchPath(path, '/feedback/:feedbackId')
+  const batchHealthRoute =
+    matchPath(path, '/schools/:schoolId/batches/:batchId/health') || matchPath(path, '/batches/:batchId/health')
+  const studentHealthRoute =
+    matchPath(path, '/schools/:schoolId/batches/:batchId/health/students/:username') ||
+    matchPath(path, '/batches/:batchId/health/students/:username')
 
   const isKnownRoute =
     path === '/dashboard' ||
@@ -56,8 +66,11 @@ function AppRoutes() {
     schoolStudentsRoute ||
     schoolAssessmentRoute ||
     studentsRoute ||
+    classRoute ||
     assessmentRoute ||
     studentRoute ||
+    batchHealthRoute ||
+    studentHealthRoute ||
     (feedbackDetailRoute && feedbackDetailRoute.feedbackId !== 'new')
 
   return (
@@ -94,7 +107,29 @@ function AppRoutes() {
           sessionId={assessmentRoute.sessionId}
         />
       )}
+      {classRoute && (
+        <LiveClass
+          key={`${classRoute.schoolId ?? ''}/${classRoute.batchId}`}
+          batchId={classRoute.batchId}
+          schoolId={classRoute.schoolId ?? ''}
+        />
+      )}
       {studentRoute && <StudentProfile studentId={studentRoute.studentId} />}
+      {batchHealthRoute && (
+        <BatchHealth
+          key={`${batchHealthRoute.schoolId ?? ''}/${batchHealthRoute.batchId}`}
+          batchId={batchHealthRoute.batchId}
+          schoolId={batchHealthRoute.schoolId ?? ''}
+        />
+      )}
+      {studentHealthRoute && (
+        <StudentHealth
+          key={`${studentHealthRoute.batchId}/${studentHealthRoute.username}`}
+          batchId={studentHealthRoute.batchId}
+          username={studentHealthRoute.username}
+          schoolId={studentHealthRoute.schoolId ?? ''}
+        />
+      )}
       {path === '/profile' && <Profile />}
     </RequireAuth>
   )

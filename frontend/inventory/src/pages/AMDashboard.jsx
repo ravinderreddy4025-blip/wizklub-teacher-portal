@@ -243,7 +243,7 @@ const AMDashboard = () => {
       const safeName = (selectedDispatchSchool.name || 'school').replace(/[^\w-]+/g, '_').slice(0, 40);
       downloadPdfBlob(res.data, `wizklub-report-${safeName}-${opsMonth}.pdf`);
       toast.success('PDF downloaded');
-    } catch (err) {
+    } catch {
       toast.error('Failed to download school report PDF');
     } finally {
       setDownloadingPdf(false);
@@ -506,51 +506,54 @@ const AMDashboard = () => {
         onClose={() => data.division && setShowRegionPicker(false)}
       />
       {loadError && (
-        <div className="mb-6 p-4 rounded-xl border border-error-200 bg-error-50 text-error-800 text-sm font-medium">
+        <div className="mb-6 flex items-start gap-2.5 rounded-xl bg-error-50 p-4 text-sm text-error-700" role="alert">
           Could not load your division data: {loadError}. Try refreshing the page or signing in again.
         </div>
       )}
-      <section className="stitch-banner relative mb-6 p-6 md:p-7">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--stitch-primary)]">Your region</p>
-            <h2 className="mt-1 font-heading text-3xl font-extrabold text-[var(--stitch-text)]">{divisionName}</h2>
-            {data.division?.description && (
-              <p className="mt-1 text-sm text-[var(--stitch-muted)]">{data.division.description}</p>
-            )}
-            {canSwitchRegion && (
-              <button
-                type="button"
-                onClick={() => setShowRegionPicker(true)}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#F89C28]/30 bg-[#F89C28]/10 px-3 py-1.5 text-xs font-bold text-[#F89C28] transition hover:bg-[#F89C28]/20"
-              >
-                <RefreshCw size={14} />
-                Switch region
-              </button>
-            )}
+      <PageHeader title={headerCopy.title} subtitle={headerCopy.subtitle} />
+
+      <section className="inv-banner mb-6" aria-label="Your region">
+        <div className="relative z-[1] flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <span className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/15 text-white sm:flex" aria-hidden>
+              <MapPin size={26} strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-wk-sun">Your region</p>
+              <p className="mt-0.5 text-2xl font-semibold leading-tight text-white md:text-[28px] md:leading-10">{divisionName}</p>
+              {data.division?.description && (
+                <p className="mt-1 text-sm text-white/90">{data.division.description}</p>
+              )}
+              {canSwitchRegion && (
+                <button
+                  type="button"
+                  onClick={() => setShowRegionPicker(true)}
+                  className="wk-btn mt-3 !min-h-[40px] border border-white/70 bg-transparent !px-4 text-white hover:bg-white/10"
+                >
+                  <RefreshCw size={16} aria-hidden />
+                  Switch region
+                </button>
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:gap-8">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4 lg:gap-x-10">
             {[
               { label: 'Schools', value: data.schools.length },
               { label: 'Dispatches', value: data.dispatches.length },
-              { label: 'Audit Reports', value: data.audits.length },
-              { label: 'Pending', value: totalAmApprovals, muted: totalAmApprovals === 0 },
+              { label: 'Audit reports', value: data.audits.length },
+              { label: 'Pending approvals', value: totalAmApprovals, highlight: totalAmApprovals > 0 },
             ].map((stat) => (
-              <div key={stat.label} className="min-w-[72px] text-center lg:text-left">
-                <p className={`font-heading text-2xl font-extrabold ${stat.muted ? 'text-[#9CA3AF]' : 'text-[var(--stitch-text)]'}`}>
+              <div key={stat.label} className="flex min-w-[80px] flex-col-reverse">
+                <dt className="text-sm text-white/90">{stat.label}</dt>
+                <dd className={`m-0 text-2xl font-semibold tabular-nums ${stat.highlight ? 'text-wk-sun' : 'text-white'}`}>
                   {stat.value}
-                </p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--stitch-muted)]">{stat.label}</p>
+                </dd>
               </div>
             ))}
-          </div>
-          <div className="pointer-events-none absolute right-6 top-1/2 hidden h-16 w-16 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--stitch-primary)]/10 text-[var(--stitch-primary)] xl:flex">
-            <MapPin size={28} strokeWidth={1.5} />
-          </div>
+          </dl>
         </div>
       </section>
 
-      <PageHeader title={headerCopy.title} subtitle={headerCopy.subtitle} />
 
       {activeView === 'schools' && (
         <>
@@ -575,7 +578,7 @@ const AMDashboard = () => {
 
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative max-w-md flex-1">
-              <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+              <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-wk-muted" />
               <input
                 type="search"
                 value={schoolSearch}
@@ -597,44 +600,44 @@ const AMDashboard = () => {
                 <div
                   key={school._id}
                   className={`stitch-card flex flex-col p-5 ${
-                    hasMismatch ? 'border-b-4 border-b-[#EF4444]' : ''
+                    hasMismatch ? 'border-b-4 border-b-error-500' : ''
                   }`}
                 >
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate text-lg font-bold uppercase tracking-wide text-[#1F2937]">
+                      <h3 className="truncate text-lg font-bold normal-case tracking-normal text-wk-ink">
                         {formatSchoolDisplayName(school.name)}
                       </h3>
-                      <p className="mt-1 text-xs font-medium text-[#6B7280]">
+                      <p className="mt-1 text-xs font-medium text-wk-muted">
                         ID: {formatSchoolIdentityPrefix(school.code, school.joiningYear)}
                       </p>
                     </div>
                     {hasMismatch && (
-                      <span className="shrink-0 rounded-full bg-[#EF4444]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#EF4444]">
+                      <span className="shrink-0 rounded-full bg-error-50 px-2.5 py-1 text-sm font-medium text-error-600">
                         Mismatch
                       </span>
                     )}
                   </div>
                   <div className="mb-4 grid grid-cols-2 gap-2">
-                    <div className="rounded-lg bg-[#F8FAFC] px-3 py-2 text-center">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">Dispatches</p>
-                      <p className="text-sm font-bold text-[#1F2937]">{dispatchCount}</p>
+                    <div className="rounded-lg bg-wk-cream px-3 py-2 text-center">
+                      <p className="text-sm font-medium text-wk-muted">Dispatches</p>
+                      <p className="text-sm font-bold text-wk-ink">{dispatchCount}</p>
                     </div>
-                    <div className="rounded-lg bg-[#F8FAFC] px-3 py-2 text-center">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">Audits</p>
-                      <p className="text-sm font-bold text-[#1F2937]">{auditCount}</p>
+                    <div className="rounded-lg bg-wk-cream px-3 py-2 text-center">
+                      <p className="text-sm font-medium text-wk-muted">Audits</p>
+                      <p className="text-sm font-bold text-wk-ink">{auditCount}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleOpenAuditForSchool(school)}
-                    className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--stitch-border)] px-4 py-2.5 text-xs font-bold text-[var(--stitch-text)] transition hover:border-[var(--stitch-primary)] hover:text-[var(--stitch-primary)]"
+                    className="wk-btn-secondary mt-auto w-full !min-h-[40px] !px-4 !text-[13px]"
                   >
                     View Audit Reports
                     <ArrowRight size={14} />
                   </button>
                   {pendingCount > 0 && (
-                    <p className="mt-2 rounded-lg border border-[#F59E0B]/30 bg-[#F59E0B]/10 py-1.5 text-center text-xs font-bold text-[#F59E0B]">
+                    <p className="mt-2 rounded-full bg-warning-100 py-1.5 text-center text-[13px] font-medium text-warning-700">
                       {pendingCount} pending approval(s)
                     </p>
                   )}
@@ -642,9 +645,9 @@ const AMDashboard = () => {
               );
             })}
             {filteredSchoolsList.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#E5E7EB] bg-[#F8FAFC] px-6 py-14 text-center">
-                <GraduationCap size={36} className="mb-3 text-[#D1D5DB]" />
-                <p className="text-sm font-medium text-[#6B7280]">
+              <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-wk-line bg-wk-cream px-6 py-14 text-center">
+                <GraduationCap size={36} className="mb-3 text-wk-muted" />
+                <p className="text-sm font-medium text-wk-muted">
                   {data.schools.length === 0
                     ? 'No schools are assigned to your division yet.'
                     : 'No schools match your search.'}
@@ -659,21 +662,21 @@ const AMDashboard = () => {
         <>
           {!selectedDispatchSchool ? (
             <section className="stitch-card overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--stitch-border)] px-6 py-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wk-line px-6 py-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--stitch-primary)]/10 text-[var(--stitch-primary)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wk-peach text-wk-orange-text">
                     <GraduationCap size={20} />
                   </div>
                   <div>
-                    <h3 className="font-heading text-lg font-bold text-[var(--stitch-text)]">Select a school</h3>
-                    <p className="text-sm text-[var(--stitch-muted)]">Choose a school to view its dispatch history by month or year.</p>
+                    <h3 className="text-lg font-semibold text-wk-ink">Select a school</h3>
+                    <p className="text-sm text-wk-muted">Choose a school to view its dispatch history by month or year.</p>
                   </div>
                 </div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--stitch-muted)]">
+                <p className="text-sm font-medium text-wk-muted">
                   Showing {data.schools.length} school{data.schools.length === 1 ? '' : 's'} available
                 </p>
               </div>
-              <div className="space-y-4 border-b border-[var(--stitch-border)] px-6 py-4">
+              <div className="space-y-4 border-b border-wk-line px-6 py-4">
                 <div className="flex max-w-[180px] flex-col gap-1.5">
                   <label className="stitch-label">Report month</label>
                   <input
@@ -699,41 +702,41 @@ const AMDashboard = () => {
                       key={school._id}
                       type="button"
                       onClick={() => handleSelectDispatchSchool(school)}
-                      className="stitch-card p-5 text-left transition hover:-translate-y-0.5 hover:border-[var(--stitch-primary)]/50"
+                      className="stitch-card p-5 text-left transition hover:-translate-y-0.5 hover:border-wk-peach-2"
                     >
-                      <h3 className="font-bold uppercase tracking-wide text-[var(--stitch-text)]">
+                      <h3 className="font-bold normal-case tracking-normal text-wk-ink">
                         {formatSchoolDisplayName(school.name)}
                       </h3>
-                      <p className="mt-1 text-xs text-[var(--stitch-muted)]">
+                      <p className="mt-1 text-xs text-wk-muted">
                         ID: {formatSchoolIdentityPrefix(school.code, school.joiningYear)}
                       </p>
-                      <p className="mt-3 text-xs font-bold text-[var(--stitch-primary)]">
+                      <p className="mt-3 text-xs font-bold text-wk-orange-text">
                         {count} total dispatch{count === 1 ? '' : 'es'}
                       </p>
                     </button>
                   );
                 })}
                 {data.schools.length === 0 && (
-                  <p className="col-span-full py-8 text-center text-[var(--stitch-muted)]">No schools in your division.</p>
+                  <p className="inv-empty inv-empty__text col-span-full">No schools in your division.</p>
                 )}
               </div>
             </section>
           ) : (
             <section className="stitch-card overflow-hidden">
-              <div className="space-y-4 border-b border-[var(--stitch-border)] px-6 py-6">
+              <div className="space-y-4 border-b border-wk-line px-6 py-6">
                 <button
                   type="button"
                   onClick={() => setSelectedDispatchSchool(null)}
-                  className="inline-flex items-center gap-1.5 text-sm font-bold text-[var(--stitch-primary)] transition hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-wk-orange-text transition hover:underline"
                 >
                   <ArrowLeft size={14} />
                   All schools
                 </button>
                 <div>
-                  <h3 className="font-heading text-xl font-bold text-[var(--stitch-text)]">
+                  <h3 className="text-xl font-semibold text-wk-ink">
                     {formatSchoolDisplayName(selectedDispatchSchool.name)}
                   </h3>
-                  <p className="mt-1 text-xs text-[var(--stitch-muted)]">
+                  <p className="mt-1 text-xs text-wk-muted">
                     School ID: {formatSchoolIdentityPrefix(selectedDispatchSchool.code, selectedDispatchSchool.joiningYear)}
                   </p>
                 </div>
@@ -781,7 +784,7 @@ const AMDashboard = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-sm font-bold text-[var(--stitch-primary)]">
+                <p className="text-sm font-bold text-wk-orange-text">
                   {filteredDispatches.length} dispatch{filteredDispatches.length === 1 ? '' : 'es'} for this period
                 </p>
                 <AmOperationsBoard
@@ -797,15 +800,15 @@ const AMDashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left">
                   <thead className="stitch-table-head">
-                    <tr className="border-b border-[var(--stitch-border)]">
+                    <tr className="border-b border-wk-line">
                       {['Dispatches', 'Kit Details', 'Qty', 'Status', 'Proof', 'Date', 'Action'].map((col) => (
                         <th key={col}>{col}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5E7EB]">
+                  <tbody className="divide-y divide-wk-line">
                     {filteredDispatches.map((d) => (
-                      <tr key={d._id} className="transition hover:bg-[#F8FAFC]">
+                      <tr key={d._id} className="transition hover:bg-wk-cream">
                         <td className="px-5 py-3.5">
                           <DispatchIdCell item={d} onViewHistory={() => setTrackingDispatch(d)} />
                         </td>
@@ -819,21 +822,21 @@ const AMDashboard = () => {
                         <td className="px-5 py-3.5">
                           {d.dispatchProofUrl
                             ? <DispatchProofPhoto url={d.dispatchProofUrl} size="sm" label="" />
-                            : <span className="text-xs text-[#9CA3AF]">—</span>}
+                            : <span className="text-xs text-wk-muted">—</span>}
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-[#6B7280]">{dispatchDate(d)?.toLocaleDateString() || '—'}</td>
+                        <td className="px-5 py-3.5 text-sm text-wk-muted">{dispatchDate(d)?.toLocaleDateString() || '—'}</td>
                         <td className="px-5 py-3.5">
                           <div className="flex flex-col items-start gap-2">
                             <button
                               type="button"
-                              className="text-xs font-bold text-[#F89C28] hover:underline"
+                              className="text-xs font-bold text-wk-orange-text hover:underline"
                               onClick={() => setTrackingDispatch(d)}
                             >
                               View
                             </button>
                             <button
                               type="button"
-                              className="text-xs font-bold text-[#F89C28] hover:underline"
+                              className="text-xs font-bold text-wk-orange-text hover:underline"
                               onClick={async () => {
                                 try {
                                   await downloadDispatchInvoicePdf(api, `/am/dispatches/${d._id}/invoice`);
@@ -851,7 +854,7 @@ const AMDashboard = () => {
                     ))}
                     {filteredDispatches.length === 0 && (
                       <tr>
-                        <td colSpan="7" className="px-5 py-10 text-center text-[#6B7280]">
+                        <td colSpan="7" className="px-5 py-10 text-center text-wk-muted">
                           No dispatches for this school in the selected period.
                         </td>
                       </tr>
@@ -859,7 +862,7 @@ const AMDashboard = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-3 text-sm text-[#6B7280]">
+              <div className="border-t border-wk-line bg-white px-4 py-3 md:px-6 text-sm text-wk-muted">
                 Showing {filteredDispatches.length} dispatch{filteredDispatches.length === 1 ? '' : 'es'}
               </div>
             </section>
@@ -903,35 +906,35 @@ const AMDashboard = () => {
             const reportsByMonth = groupAuditsByMonth(reports);
             return (
               <section key={school._id} className="stitch-card overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--stitch-border)] px-6 py-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--stitch-muted)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wk-line px-6 py-4">
+                  <h3 className="text-sm font-bold normal-case tracking-normal text-wk-muted">
                     {formatSchoolDisplayName(school.name)}
                   </h3>
                   <button
                     type="button"
                     onClick={() => handleOpenAuditForSchool(school)}
-                    className="text-sm font-bold text-[var(--stitch-primary)] hover:underline"
+                    className="text-sm font-bold text-wk-orange-text hover:underline"
                   >
                     View School Profile
                   </button>
                 </div>
                 {reportsByMonth.length > 0 ? (
-                  <div className="divide-y divide-[#E5E7EB]">
+                  <div className="divide-y divide-wk-line">
                     {reportsByMonth.map(([month, monthAudits]) => (
                       <div key={month} className="space-y-4 p-5">
                         {monthAudits.map((audit) => (
                           <div
                             key={audit._id}
                             className={`rounded-xl border p-4 ${
-                              audit.status === 'Mismatch' ? 'border-[#EF4444]/30 bg-[#EF4444]/5' : 'border-[#E5E7EB] bg-white'
+                              audit.status === 'Mismatch' ? 'border-error-200 bg-error-50' : 'border-wk-line bg-white'
                             }`}
                           >
                             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                               <div>
-                                <h4 className="text-sm font-extrabold uppercase tracking-wide text-[#1F2937]">
+                                <h4 className="text-sm font-bold normal-case tracking-normal text-wk-ink">
                                   {formatAuditMonthLabel(month)}
                                 </h4>
-                                <p className="mt-0.5 text-xs text-[#6B7280]">
+                                <p className="mt-0.5 text-xs text-wk-muted">
                                   Submitted: {new Date(audit.createdAt).toLocaleDateString()}
                                 </p>
                               </div>
@@ -948,14 +951,14 @@ const AMDashboard = () => {
                                   <>
                                     <button
                                       type="button"
-                                      className="rounded-lg bg-[#F89C28] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#E88914]"
+                                      className="rounded-full bg-wk-orange px-3 py-1.5 text-xs font-bold text-wk-navy hover:bg-wk-orange-hover"
                                       onClick={() => handleAuditAction(audit._id, 'approve')}
                                     >
                                       Approve
                                     </button>
                                     <button
                                       type="button"
-                                      className="rounded-lg bg-[#EF4444] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#DC2626]"
+                                      className="rounded-lg bg-error-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-error-500"
                                       onClick={() => handleAuditAction(audit._id, 'reject')}
                                     >
                                       Reject
@@ -971,14 +974,14 @@ const AMDashboard = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="py-8 text-center text-[#6B7280]">No audit reports for the selected filters.</p>
+                  <p className="inv-empty inv-empty__text">No audit reports for the selected filters.</p>
                 )}
               </section>
             );
           })}
 
           {visibleAuditSchools.length === 0 && (
-            <div className="rounded-2xl border border-[#E5E7EB] bg-white py-10 text-center text-[#6B7280]">
+            <div className="rounded-2xl bg-white shadow-card py-10 text-center text-wk-muted">
               No schools in your division.
             </div>
           )}
@@ -987,12 +990,12 @@ const AMDashboard = () => {
 
       {isApprovalGrid && (
         <div className="space-y-5">
-          <div className="flex items-start gap-3 rounded-2xl border border-[var(--stitch-border)] bg-[var(--stitch-canvas)] px-5 py-4 text-sm text-[var(--stitch-muted)]">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--stitch-primary)]/15 text-xs font-bold text-[var(--stitch-primary)]">i</span>
+          <div className="flex items-start gap-3 rounded-2xl border border-wk-line bg-wk-cream px-5 py-4 text-sm text-wk-muted">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wk-peach text-xs font-bold text-wk-orange-text">i</span>
             <p>
               All approval requests appear here from two sources:
-              <span className="font-semibold text-[var(--stitch-text)]"> Monthly audit</span> (lost/damaged kits with evidence)
-              and <span className="font-semibold text-[var(--stitch-text)]"> normal dispatch</span> (receipt issues after shipment).
+              <span className="font-semibold text-wk-ink"> Monthly audit</span> (lost/damaged kits with evidence)
+              and <span className="font-semibold text-wk-ink"> normal dispatch</span> (receipt issues after shipment).
             </p>
           </div>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -1002,7 +1005,7 @@ const AMDashboard = () => {
               count={missingApprovalCount}
               icon={PackageX}
               onClick={() => navigate(APPROVAL_CATEGORY_PATHS.missing)}
-              accentClass="border-t-[#EF4444]"
+              accentClass="border-t-error-500"
             />
             <AmApprovalTile
               title="Lost product"
@@ -1010,7 +1013,7 @@ const AMDashboard = () => {
               count={lostApprovalCount}
               icon={PackageMinus}
               onClick={() => navigate(APPROVAL_CATEGORY_PATHS.lost)}
-              accentClass="border-t-[#475569]"
+              accentClass="border-t-wk-control"
             />
             <AmApprovalTile
               title="Damaged product"
@@ -1018,7 +1021,7 @@ const AMDashboard = () => {
               count={damagedApprovalCount}
               icon={ShieldAlert}
               onClick={() => navigate(APPROVAL_CATEGORY_PATHS.damaged)}
-              accentClass="border-t-[#3B82F6]"
+              accentClass="border-t-info-500"
             />
             <AmApprovalTile
               title="Quantity mismatch"
@@ -1026,7 +1029,7 @@ const AMDashboard = () => {
               count={quantityMismatchIssues.length}
               icon={Scale}
               onClick={() => navigate(APPROVAL_CATEGORY_PATHS.mismatch)}
-              accentClass="border-t-[#F89C28]"
+              accentClass="border-t-wk-orange"
             />
           </div>
         </div>
@@ -1036,7 +1039,7 @@ const AMDashboard = () => {
         <>
           <button
             type="button"
-            className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-[#F89C28] hover:underline"
+            className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-wk-orange-text hover:underline"
             onClick={() => navigate(ROUTES.am.approvals)}
           >
             <ArrowLeft size={16} />
@@ -1051,7 +1054,7 @@ const AMDashboard = () => {
             >
               {missingProductIssues.length > 0 && (
                 <>
-                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Normal dispatch — receipt issues</p>
+                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Normal dispatch — receipt issues</p>
                   <ReceiptIssueTable
                     issues={missingProductIssues}
                     onAction={handleReceiptIssueAction}
@@ -1062,7 +1065,7 @@ const AMDashboard = () => {
               {data.requests.length > 0 && (
                 <div className={missingProductIssues.length > 0 ? 'border-t border-slate-100' : ''}>
                   {missingProductIssues.length > 0 && (
-                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Normal dispatch — replacement requests</p>
+                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Normal dispatch — replacement requests</p>
                   )}
                   <ReplacementRequestTable
                     requests={data.requests}
@@ -1072,7 +1075,7 @@ const AMDashboard = () => {
                 </div>
               )}
               {missingApprovalCount === 0 && (
-                <p className="text-center py-10 text-slate-500">No missing product issues pending.</p>
+                <p className="inv-empty inv-empty__text">No missing product issues pending.</p>
               )}
             </AmApprovalSection>
           )}
@@ -1083,7 +1086,7 @@ const AMDashboard = () => {
               subtitle="Monthly audit — approve lost kits only. Damaged kits stay under Damaged product until you approve them separately."
               count={lostApprovalCount}
             >
-              <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly audit — lost kits</p>
+              <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Monthly audit — lost kits</p>
               <AmAuditApprovalList
                 audits={data.audits}
                 lineType="lost"
@@ -1101,7 +1104,7 @@ const AMDashboard = () => {
             >
               {pendingAuditDamagedCount > 0 && (
                 <>
-                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly audit — damaged kits</p>
+                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Monthly audit — damaged kits</p>
                   <AmAuditApprovalList
                     audits={data.audits}
                     lineType="damaged"
@@ -1113,7 +1116,7 @@ const AMDashboard = () => {
               {damagedProductIssues.length > 0 && (
                 <div className={pendingAuditDamagedCount > 0 ? 'border-t border-slate-100' : ''}>
                   {pendingAuditDamagedCount > 0 && (
-                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Normal dispatch — receipt issues</p>
+                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Normal dispatch — receipt issues</p>
                   )}
                   <ReceiptIssueTable
                     issues={damagedProductIssues}
@@ -1123,7 +1126,7 @@ const AMDashboard = () => {
                 </div>
               )}
               {damagedApprovalCount === 0 && (
-                <p className="text-center py-10 text-slate-500">No damaged product issues pending.</p>
+                <p className="inv-empty inv-empty__text">No damaged product issues pending.</p>
               )}
             </AmApprovalSection>
           )}
@@ -1159,7 +1162,7 @@ const AMDashboard = () => {
             <div key={audit._id} className={`border rounded-xl p-5 ${audit.status === 'Mismatch' ? 'border-error-200 bg-error-50/20' : 'border-success-200 bg-success-50/10'}`}>
               <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-200/50">
                 <div>
-                  <h4 className="font-extrabold text-slate-800 text-lg">Month: {audit.month}</h4>
+                  <h4 className="font-bold text-slate-800 text-lg">Month: {audit.month}</h4>
                   <p className="text-xs text-slate-500 mt-1">Submitted on: {new Date(audit.createdAt).toLocaleDateString()}</p>
                 </div>
                 <Badge type={audit.status === 'Mismatch' ? 'error' : 'success'}>{audit.status}</Badge>
@@ -1167,7 +1170,7 @@ const AMDashboard = () => {
               <AuditReportDetails audit={audit} />
             </div>
           ))}
-          {schoolAudits.length === 0 && <p className="text-center py-10 text-slate-500">No audits found for this school.</p>}
+          {schoolAudits.length === 0 && <p className="inv-empty inv-empty__text">No audits found for this school.</p>}
         </div>
       </Modal>
 

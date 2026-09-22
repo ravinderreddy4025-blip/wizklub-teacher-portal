@@ -10,7 +10,7 @@ const TONE_CLASS = {
 function CompareLine({ label, value, tone = 'muted' }) {
   if (!value || value === '—') return null;
   return (
-    <p className={clsx('text-xs uppercase tracking-widest font-semibold', TONE_CLASS[tone])}>
+    <p className={clsx('text-xs normal-case tracking-normal font-semibold', TONE_CLASS[tone])}>
       {label}: {value}
     </p>
   );
@@ -79,7 +79,7 @@ export function DispatchShipmentHistoryList({ item }) {
 
   return (
     <div className="rounded-xl border border-slate-200 overflow-hidden">
-      <p className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide bg-slate-50 border-b border-slate-100">
+      <p className="px-4 py-3 text-xs font-bold text-slate-500 normal-case tracking-normal bg-slate-50 border-b border-slate-100">
         Shipment history ({cycleList.length} cycles)
       </p>
       <ul className="max-h-56 overflow-y-auto divide-y divide-slate-100">
@@ -93,7 +93,7 @@ export function DispatchShipmentHistoryList({ item }) {
               <div className="flex items-start justify-between gap-3">
                 <p
                   className={clsx(
-                    'text-[10px] font-bold uppercase tracking-widest',
+                    'text-sm font-medium',
                     isLatest ? 'text-brand-primary' : 'text-slate-500',
                   )}
                 >
@@ -137,19 +137,19 @@ export function DispatchCompareGrid({ item }) {
   if (cycleList.length > 2) {
     return (
       <div className="rounded-xl border border-slate-200 overflow-hidden">
-        <p className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide bg-slate-50 border-b border-slate-100">
+        <p className="px-4 py-3 text-xs font-bold text-slate-500 normal-case tracking-normal bg-slate-50 border-b border-slate-100">
           Compare fields by cycle
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[480px]">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="text-left px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Field</th>
+                <th className="text-left px-4 py-2 text-xs font-bold text-slate-400">Field</th>
                 {cycleList.map((cycle, index) => (
                   <th
                     key={`${cycle.label}-${index}`}
                     className={clsx(
-                      'text-left px-4 py-2 text-[10px] font-bold uppercase',
+                      'text-left px-4 py-2 text-xs font-bold',
                       index === cycleList.length - 1 ? 'text-brand-primary' : 'text-slate-400',
                     )}
                   >
@@ -166,7 +166,7 @@ export function DispatchCompareGrid({ item }) {
                 { label: 'Tracking', key: 'trackingId' },
               ].map((row) => (
                 <tr key={row.label} className="border-b border-slate-50 last:border-0">
-                  <td className="px-4 py-2.5 text-xs font-bold text-slate-500">{row.label}</td>
+                  <td className="px-4 py-2.5 text-xs font-medium text-slate-500">{row.label}</td>
                   {cycleList.map((cycle, index) => {
                     const raw = cycle[row.key];
                     const value = row.format ? row.format(raw) : (raw || '—');
@@ -201,21 +201,21 @@ export function DispatchCompareGrid({ item }) {
 
   return (
     <div className="rounded-xl border border-slate-200 overflow-hidden">
-      <p className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide bg-slate-50 border-b border-slate-100">
+      <p className="px-4 py-3 text-xs font-bold text-slate-500 normal-case tracking-normal bg-slate-50 border-b border-slate-100">
         Shipment comparison
       </p>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-100">
-            <th className="text-left px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Field</th>
-            <th className="text-left px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Original</th>
-            <th className="text-left px-4 py-2 text-[10px] font-bold text-brand-primary uppercase">Redispatch</th>
+            <th className="text-left px-4 py-2 text-xs font-bold text-slate-400">Field</th>
+            <th className="text-left px-4 py-2 text-xs font-bold text-slate-400">Original</th>
+            <th className="text-left px-4 py-2 text-xs font-bold text-brand-primary">Redispatch</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.label} className="border-b border-slate-50 last:border-0">
-              <td className="px-4 py-2.5 text-xs font-bold text-slate-500">{row.label}</td>
+              <td className="px-4 py-2.5 text-xs font-medium text-slate-500">{row.label}</td>
               <td className="px-4 py-2.5 text-slate-700 font-mono text-xs break-all">{row.original || '—'}</td>
               <td className="px-4 py-2.5 text-brand-primary font-mono text-xs font-semibold break-all">{row.redispatch || '—'}</td>
             </tr>
