@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const School = require('../models/School');
 const wizklubApi = require('./wizklubApiService');
 const { wizklubSchoolNameToBranch } = require('../utils/schoolName');
@@ -12,13 +14,73 @@ const {
   resolvePortalLoginId,
 } = require('./wizklubSchoolMappingService');
 
+const PORTAL_SNAPSHOT_PATH = path.join(__dirname, '../../data/school-portal-code-snapshot.json');
+let portalSnapshotByLoginId = null;
+
+function loadPortalSnapshotByLoginId() {
+  if (portalSnapshotByLoginId) return portalSnapshotByLoginId;
+
+  portalSnapshotByLoginId = new Map();
+  if (!fs.existsSync(PORTAL_SNAPSHOT_PATH)) return portalSnapshotByLoginId;
+
+  try {
+    const rows = JSON.parse(fs.readFileSync(PORTAL_SNAPSHOT_PATH, 'utf8'));
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const loginId = String(row.code || row.id || '').trim().toLowerCase();
+      const branch = wizklubSchoolNameToBranch(row.name);
+      if (loginId && branch) portalSnapshotByLoginId.set(loginId, branch);
+    }
+  } catch (err) {
+    console.warn('[schoolPortalLink] Could not read portal snapshot:', err.message);
+  }
+
+  return portalSnapshotByLoginId;
+}
+
+function findSnapshotBranchForPortalId(portalLoginId) {
+  const key = String(portalLoginId || '').trim().toLowerCase();
+  if (!key) return null;
+  return loadPortalSnapshotByLoginId().get(key) || null;
+}
+
 function escapeRegex(value) {
   return String(value).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function formatSrCode(school) {
-  if (!school?.code) return null;
-  return isSpreadsheetSrCode(school.code) ? String(school.code).trim() : null;
+function resolveSchoolDisplayCodes(school, srIndex = null) {
+  if (!school) {
+    return { srCode: null, wizklubSchoolId: null };
+  }
+
+  const canonical = srIndex
+    ? (resolveSrSchoolFromPortalHit(school, srIndex) || school)
+    : school;
+
+  const primaryCode = String(canonical.code || '').trim();
+  const fallbackCode = String(school.code || '').trim();
+  const wiz = String(canonical.wizklubSchoolId || school.wizklubSchoolId || '').trim();
+
+  let srCode = null;
+  for (const candidate of [primaryCode, fallbackCode, wiz]) {
+    if (isSpreadsheetSrCode(candidate)) {
+      srCode = candidate;
+      break;
+    }
+  }
+
+  let wizklubSchoolId = null;
+  for (const candidate of [wiz, primaryCode, fallbackCode]) {
+    if (isWizklubPortalLoginId(candidate)) {
+      wizklubSchoolId = candidate;
+      break;
+    }
+  }
+
+  return { srCode, wizklubSchoolId };
+}
+
+function formatSrCode(school, srIndex = null) {
+  return resolveSchoolDisplayCodes(school, srIndex).srCode;
 }
 
 async function findSchoolByDirectIdentifier(schoolId) {
@@ -26,17 +88,21 @@ async function findSchoolByDirectIdentifier(schoolId) {
   if (!id) return null;
 
   const escaped = escapeRegex(id);
-  const hit = await School.findOne({
+  const hits = await School.find({
     $or: [
       { code: { $regex: new RegExp(`^${escaped}$`, 'i') } },
       { wizklubSchoolId: { $regex: new RegExp(`^${escaped}$`, 'i') } },
     ],
   });
-  if (!hit) return null;
+  if (!hits.length) return null;
 
   const allSchools = await School.find({});
   const srIndex = buildSrSchoolIndex(allSchools);
-  return resolveSrSchoolFromPortalHit(hit, srIndex);
+
+  const srHit = hits.find((row) => isSpreadsheetSrCode(row.code));
+  if (srHit) return srHit;
+
+  return resolveSrSchoolFromPortalHit(hits[0], srIndex);
 }
 
 async function findSchoolByBranchName(branchName) {
@@ -111,7 +177,9 @@ async function findInventorySchoolByIdentifier(schoolId, {
       return maybeLinkPortalLoginId(school, id, { commit: commitLink });
     }
 
-    const branchName = wizklubBranchName || await fetchWizklubBranchName(id, wizklubTokens);
+    const branchName = wizklubBranchName
+      || findSnapshotBranchForPortalId(id)
+      || await fetchWizklubBranchName(id, wizklubTokens);
     if (branchName) {
       school = await findSchoolByBranchName(branchName);
       if (school) {
@@ -141,6 +209,8 @@ async function instructorCanAccessSchool(decoded, school, options = {}) {
 
 module.exports = {
   formatSrCode,
+  resolveSchoolDisplayCodes,
+  buildSrSchoolIndex,
   findSchoolByDirectIdentifier,
   findSchoolByBranchName,
   findInventorySchoolByIdentifier,

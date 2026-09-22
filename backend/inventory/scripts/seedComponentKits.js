@@ -5,7 +5,7 @@
  * Usage:
  *   node backend/inventory/scripts/seedComponentKits.js
  *
- * Also runs automatically on container start (see backend/start-backends.sh).
+ * Run manually when the kit catalog JSON changes (not on server start).
  */
 const mongoose = require('mongoose');
 const { loadRootEnv, resolveInventoryMongoUri } = require('../src/config/loadEnv');

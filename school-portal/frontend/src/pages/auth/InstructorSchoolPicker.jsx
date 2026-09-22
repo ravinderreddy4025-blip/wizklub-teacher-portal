@@ -7,6 +7,7 @@ import { ROUTES } from '@school-portal/routes/constants';
 import { AuthContext } from '@inventory/context/AuthContext';
 import BrandLogo from '@inventory/components/brand/BrandLogo';
 import { formatSchoolDisplayName } from '@inventory/utils/schoolName';
+import { resolveSchoolDisplayFromApi } from '@inventory/utils/schoolIdentity';
 
 function readInstructorSession() {
   try {
@@ -126,6 +127,7 @@ const InstructorSchoolPicker = () => {
               {schools.map((school) => {
                 const isSelecting = selectingCode === school.schoolCode;
                 const disabled = !school.hasInventory || Boolean(selectingCode);
+                const { srCode, wizklubSchoolId } = resolveSchoolDisplayFromApi(school);
 
                 return (
                   <button
@@ -149,16 +151,16 @@ const InstructorSchoolPicker = () => {
                             {formatSchoolDisplayName(school.name)}
                           </p>
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs">
-                            {school.srCode && (
+                            {srCode && (
                               <span className="inline-flex items-center gap-1 font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                                 <span className="font-semibold text-slate-500">SR Code:</span>
-                                <span className="font-bold text-slate-900">{school.srCode}</span>
+                                <span className="font-bold text-slate-900">{srCode}</span>
                               </span>
                             )}
-                            {(school.wizklubSchoolId || school.schoolId) && (
+                            {wizklubSchoolId && wizklubSchoolId !== srCode && (
                               <span className="inline-flex items-center gap-1 font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                                 <span className="font-semibold text-slate-500">School ID:</span>
-                                <span className="font-bold text-slate-900">{school.wizklubSchoolId || school.schoolId}</span>
+                                <span className="font-bold text-slate-900">{wizklubSchoolId}</span>
                               </span>
                             )}
                           </div>

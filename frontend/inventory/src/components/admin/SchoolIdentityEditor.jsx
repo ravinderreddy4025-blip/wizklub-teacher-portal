@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Pencil } from 'lucide-react';
 import Button from '../ui/Button';
 import { formatSchoolIdentityPrefix } from '../../utils/componentId';
+import { isSpreadsheetSrCode, resolveSchoolDisplayCodes } from '../../utils/schoolIdentity';
 
 const SchoolIdentityEditor = ({
   school,
@@ -25,9 +26,10 @@ const SchoolIdentityEditor = ({
   }, [school?._id, school?.code, school?.wizklubSchoolId, school?.joiningYear]);
 
   const previewPrefix = useMemo(() => {
-    if (!code.trim()) return '—';
+    const srForPrefix = isSpreadsheetSrCode(code) ? code.trim() : '';
+    if (!srForPrefix) return '—';
     const yearValue = joiningYear.trim() ? Number(joiningYear) : school?.joiningYear;
-    return formatSchoolIdentityPrefix(code, yearValue);
+    return formatSchoolIdentityPrefix(srForPrefix, yearValue);
   }, [code, joiningYear, school?.joiningYear]);
 
   const handleSave = async () => {
@@ -46,8 +48,7 @@ const SchoolIdentityEditor = ({
   };
 
   if (!editing) {
-    const srCode = school?.code || previewPrefix;
-    const originalId = school?.wizklubSchoolId;
+    const { srCode, wizklubSchoolId: portalId } = resolveSchoolDisplayCodes(school);
 
     return (
       <div className={`flex items-start justify-between gap-2 ${className}`}>
@@ -59,10 +60,16 @@ const SchoolIdentityEditor = ({
                 <span className="font-bold text-slate-900">{srCode}</span>
               </span>
             )}
-            {originalId && originalId !== srCode && (
+            {portalId && portalId !== srCode && (
               <span className="inline-flex items-center gap-1 rounded bg-orange-50 px-2 py-0.5 text-brand-primary border border-orange-200">
                 <span className="font-sans font-semibold text-orange-600">School ID:</span>
-                <span className="font-bold text-orange-900">{originalId}</span>
+                <span className="font-bold text-orange-900">{portalId}</span>
+              </span>
+            )}
+            {!srCode && !portalId && school?.code && (
+              <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-slate-700 border border-slate-200">
+                <span className="font-sans font-semibold text-slate-500">Code:</span>
+                <span className="font-bold text-slate-900">{school.code}</span>
               </span>
             )}
           </div>

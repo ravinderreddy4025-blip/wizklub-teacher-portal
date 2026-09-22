@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const School = require('../models/School');
 const wizklubApi = require('./wizklubApiService');
 const { wizklubSchoolNameToBranch } = require('../utils/schoolName');
@@ -234,6 +236,81 @@ async function syncPortalMappingsFromDatabase({ commit = true, log = () => {} } 
   };
 }
 
+function loadPortalSnapshotRows() {
+  const snapshotPath = path.join(__dirname, '../../data/school-portal-code-snapshot.json');
+  if (!fs.existsSync(snapshotPath)) return [];
+
+  try {
+    const rows = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    return Array.isArray(rows) ? rows : [];
+  } catch (err) {
+    console.warn('[wizklubSchoolMapping] Could not read portal snapshot:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Link SR schools using baked portal login snapshot (name → portal id).
+ * Used after Excel rebuild removes legacy portal-only Mongo rows.
+ */
+async function syncPortalMappingsFromSnapshot({ commit = true, log = () => {} } = {}) {
+  const snapshot = loadPortalSnapshotRows();
+  if (!snapshot.length) return null;
+
+  const inventorySchools = await School.find({ code: /^(SC|NSC)-\d+\/\d{2}$/i }).sort({ name: 1 });
+  const srIndex = buildSrSchoolIndex(inventorySchools);
+
+  let linked = 0;
+  let skipped = 0;
+  let unmatched = 0;
+  let conflicts = 0;
+
+  for (const row of snapshot) {
+    const portalLoginId = resolveApiPortalLoginId({ code: row.code, id: row.code });
+    if (!portalLoginId) continue;
+
+    const branchKey = normalizeSchoolNameKey(wizklubSchoolNameToBranch(row.name));
+    const srSchool = pickUniqueMatch(srIndex.get(branchKey));
+    if (!srSchool) {
+      unmatched += 1;
+      continue;
+    }
+
+    if (srSchool.wizklubSchoolId === portalLoginId) {
+      skipped += 1;
+      continue;
+    }
+
+    const inUse = await School.findOne({
+      wizklubSchoolId: portalLoginId,
+      _id: { $ne: srSchool._id },
+    });
+    if (inUse) {
+      conflicts += 1;
+      continue;
+    }
+
+    log(`  🔗 snapshot ${srSchool.name}: SR ${srSchool.code} ↔ portal ${portalLoginId}`);
+    if (commit) {
+      await School.updateOne(
+        { _id: srSchool._id },
+        { $set: { wizklubSchoolId: portalLoginId } },
+      );
+    }
+    linked += 1;
+  }
+
+  return {
+    ok: true,
+    source: 'snapshot',
+    snapshotRows: snapshot.length,
+    linked,
+    skipped,
+    unmatched,
+    conflicts,
+  };
+}
+
 /**
  * Optional fallback: link via WizKlub API when admin credentials are configured.
  */
@@ -310,11 +387,13 @@ async function syncPortalMappingsFromApi({ commit = true, log = () => {} } = {})
  */
 async function syncWizklubSchoolMappings({ commit = true, log = console.log } = {}) {
   const dbResult = await syncPortalMappingsFromDatabase({ commit, log });
+  const snapshotResult = await syncPortalMappingsFromSnapshot({ commit, log });
   const apiResult = await syncPortalMappingsFromApi({ commit, log });
 
   return {
     ok: true,
     database: dbResult,
+    snapshot: snapshotResult,
     api: apiResult,
   };
 }
@@ -330,6 +409,7 @@ module.exports = {
   findSrSchoolForWizklubApiSchool,
   resolveSrSchoolFromPortalHit,
   syncPortalMappingsFromDatabase,
+  syncPortalMappingsFromSnapshot,
   syncPortalMappingsFromApi,
   syncWizklubSchoolMappings,
 };

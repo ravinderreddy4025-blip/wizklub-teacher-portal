@@ -96,12 +96,6 @@ TESTIMONIALS_PID=$!
         ;;
     esac
   fi
-  # Inventory bootstrap: kit catalog + two acknowledged spreadsheets (FINAL_DATA + combined 2026).
-  node scripts/ensureBootstrapAdmin.js
-  node scripts/seedComponentKits.js
-  node scripts/syncSchoolDivisionOverrides.js || echo "School division override sync notice: $?"
-  node scripts/ensureExcelInventorySync.js --commit
-  node scripts/syncWizklubSchoolMappings.js --commit || echo "WizKlub school mapping notice: $?"
   node server.js
 ) &
 INVENTORY_PID=$!

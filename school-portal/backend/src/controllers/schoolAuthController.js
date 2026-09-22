@@ -11,6 +11,8 @@ const { User, School } = models;
 const wizklubApi = services.wizklubApi;
 const {
   formatSrCode,
+  resolveSchoolDisplayCodes,
+  buildSrSchoolIndex,
   findInventorySchoolByIdentifier,
   instructorCanAccessSchool,
 } = services.schoolPortalLink;
@@ -90,6 +92,8 @@ async function buildInstructorSchoolList(decoded) {
   }
 
   const tokens = [decoded.wizklubToken, serviceAdminToken].filter(Boolean);
+  const allSchools = await School.find({});
+  const srIndex = buildSrSchoolIndex(allSchools);
 
   const schools = await Promise.all(
     (decoded.schoolIds || []).map(async (schoolId) => {
@@ -119,14 +123,18 @@ async function buildInstructorSchoolList(decoded) {
         commitLink: true,
       });
 
-      const srCode = formatSrCode(localSchool);
-      const wizklubSchoolId = localSchool?.wizklubSchoolId || schoolId;
-      const portalLoginId = localSchool?.wizklubSchoolId || schoolId;
+      const { srCode, wizklubSchoolId: resolvedPortalId } = resolveSchoolDisplayCodes(
+        localSchool,
+        srIndex,
+      );
+      const wizklubSchoolId = resolvedPortalId || schoolId;
+      const portalLoginId = resolvedPortalId || schoolId;
 
       return {
         schoolId,
         wizklubSchoolId,
         srCode,
+        inventoryCode: localSchool?.code || null,
         name: displayName
           || (localSchool?.name ? wizklubSchoolNameToBranch(localSchool.name) : schoolId),
         schoolCode: portalLoginId,
@@ -183,15 +191,18 @@ async function openInstructorSchool(decoded, schoolCode, instructorToken = null)
   }
 
   const user = await ensureSchoolPortalUser(school);
+  const allSchools = await School.find({});
+  const srIndex = buildSrSchoolIndex(allSchools);
+  const { srCode, wizklubSchoolId: resolvedPortalId } = resolveSchoolDisplayCodes(school, srIndex);
 
   return {
     _id: user._id,
     name: school.name,
     email: user.email,
     role: user.role,
-    schoolCode: school.wizklubSchoolId || formatSrCode(school) || school.code,
-    srCode: formatSrCode(school),
-    wizklubSchoolId: school.wizklubSchoolId || decoded.schoolId || null,
+    schoolCode: resolvedPortalId || srCode || school.code,
+    srCode,
+    wizklubSchoolId: resolvedPortalId || decoded.schoolId || null,
     loginType: 'instructor',
     instructorName: decoded.instructorName,
     instructorToken,
