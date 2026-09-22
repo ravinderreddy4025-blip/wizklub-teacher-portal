@@ -32,6 +32,8 @@ const {
 } = require('../controllers/adminListController');
 const {
   createDivision,
+  setupDivision,
+  assignDivisionAm,
   updateDivision,
   deleteDivision,
   createAM,
@@ -45,6 +47,11 @@ const {
   regenerateSchoolPassword,
 } = require('../controllers/entityController');
 const { createKit, updateKit, deleteKit, getWarehouse, bulkUploadKits } = require('../controllers/kitController');
+const {
+  previewSchoolMerge,
+  executeSchoolMerge,
+  listSchoolMergeLogs,
+} = require('../controllers/schoolMergeController');
 const { listAuditWindows, upsertAuditWindow, deleteAuditWindow } = require('../controllers/auditWindowController');
 const { approveAuditAdmin, rejectAuditAdmin, dispatchAuditKit } = require('../controllers/auditController');
 const { getMonthlyReport, getAdminOperations, getSchoolInventory, downloadSchoolReportPdf } = require('../controllers/reportController');
@@ -94,6 +101,8 @@ router.delete('/kits/:id', deleteKit);
 router.post('/kits/bulk-upload', excelUpload.single('file'), bulkUploadKits);
 
 router.post('/divisions', createDivision);
+router.post('/divisions/setup', setupDivision);
+router.put('/divisions/:id/am', assignDivisionAm);
 router.put('/divisions/:id', updateDivision);
 router.delete('/divisions/:id', deleteDivision);
 
@@ -107,6 +116,9 @@ router.delete('/ams/:id', deleteAM);
 router.get('/ams/:id/password', getAMPassword);
 router.post('/ams/:id/regenerate-password', regenerateAMPassword);
 
+router.post('/schools/merge/preview', previewSchoolMerge);
+router.post('/schools/merge', executeSchoolMerge);
+router.get('/schools/merge-logs', listSchoolMergeLogs);
 router.post('/schools', createSchool);
 router.put('/schools/:id', updateSchool);
 router.delete('/schools/:id', deleteSchool);

@@ -95,10 +95,60 @@ async function assignDivisionsToAm(am, nextDivisionIds) {
   return divisions;
 }
 
-// --- DIVISION (no bundled AM) ---
+async function assignAmToDivision(divisionId, { regionalManagerId, newAm } = {}) {
+  const division = await Division.findById(divisionId);
+  if (!division) {
+    const error = new Error('Division not found');
+    error.status = 404;
+    throw error;
+  }
+
+  let am = null;
+  if (regionalManagerId) {
+    am = await User.findById(regionalManagerId);
+    if (!am || am.role !== 'AM') {
+      const error = new Error('Account Manager not found');
+      error.status = 404;
+      throw error;
+    }
+  } else if (newAm?.name?.trim() && newAm?.email?.trim()) {
+    const normalizedEmail = newAm.email.trim().toLowerCase();
+    const emailTaken = await User.findOne({ email: normalizedEmail });
+    if (emailTaken) {
+      const error = new Error('A user with this email already exists');
+      error.status = 400;
+      throw error;
+    }
+    const plainPassword = generateSecurePassword(12);
+    am = await User.create({
+      name: newAm.name.trim(),
+      email: normalizedEmail,
+      password: await hashPassword(plainPassword),
+      passwordEncrypted: encryptSecret(plainPassword),
+      role: 'AM',
+    });
+    am._generatedPassword = plainPassword;
+  }
+
+  if (am) {
+    const ownedDivisions = await Division.find({ regionalManagerId: am._id }).select('_id');
+    const divisionIds = [...new Set([...ownedDivisions.map((d) => String(d._id)), String(divisionId)])];
+    await assignDivisionsToAm(am, divisionIds);
+  }
+
+  const populated = await Division.findById(divisionId).populate('regionalManagerId', 'name email');
+  const accountManager = await getDivisionManager(divisionId);
+  return {
+    division: populated,
+    accountManager: formatAM(accountManager),
+    generatedPassword: am?._generatedPassword || null,
+  };
+}
+
+// --- DIVISION (optional bundled AM) ---
 const createDivision = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, regionalManagerId, newAm } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({ message: 'Division name is required' });
@@ -114,9 +164,51 @@ const createDivision = async (req, res) => {
       description: description?.trim() || '',
     });
 
-    res.status(201).json({ division });
+    if (regionalManagerId || newAm?.name) {
+      const result = await assignAmToDivision(division._id, { regionalManagerId, newAm });
+      return res.status(201).json(result);
+    }
+
+    res.status(201).json({ division, accountManager: null });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.status || 500).json({ message: error.message });
+  }
+};
+
+const setupDivision = async (req, res) => {
+  try {
+    const { name, description, regionalManagerId, newAm } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ message: 'Division name is required' });
+    }
+
+    const existingDivision = await Division.findOne({ name: name.trim() });
+    if (existingDivision) {
+      return res.status(400).json({ message: 'Division with this name already exists' });
+    }
+
+    const division = await Division.create({
+      name: name.trim(),
+      description: description?.trim() || '',
+    });
+
+    const result = await assignAmToDivision(division._id, { regionalManagerId, newAm });
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
+  }
+};
+
+const assignDivisionAm = async (req, res) => {
+  try {
+    const { regionalManagerId, newAm } = req.body;
+    if (!regionalManagerId && !newAm?.name?.trim()) {
+      return res.status(400).json({ message: 'Select an Account Manager or create a new one' });
+    }
+    const result = await assignAmToDivision(req.params.id, { regionalManagerId, newAm });
+    res.json(result);
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
   }
 };
 
@@ -553,6 +645,8 @@ const deleteSchool = async (req, res) => {
 
 module.exports = {
   createDivision,
+  setupDivision,
+  assignDivisionAm,
   updateDivision,
   deleteDivision,
   createAM,

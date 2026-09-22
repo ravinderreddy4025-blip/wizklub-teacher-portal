@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { useLocation, Navigate, useNavigate, Link } from 'react-router-dom';
-import { Building2, Package, Boxes, AlertTriangle, ClipboardList, Truck, Pencil, KeyRound, Trash2, ArrowLeft, ArrowRight, PackageX, PackageMinus, ShieldAlert, Scale, GraduationCap, Users, FileDown } from 'lucide-react';
+import { Building2, Package, Boxes, AlertTriangle, ClipboardList, Truck, Pencil, KeyRound, Trash2, ArrowLeft, ArrowRight, PackageX, PackageMinus, ShieldAlert, Scale, GraduationCap, Users, FileDown, GitMerge } from 'lucide-react';
 import api from '../utils/api';
 import toast from '../utils/toast';
 import * as XLSX from 'xlsx';
@@ -50,6 +50,8 @@ import { formatSchoolDisplayName, normalizeBranchName } from '../utils/schoolNam
 import { preserveSchoolLoginId } from '../utils/schoolCode';
 import { formatSchoolIdentityPrefix } from '../utils/componentId';
 import SchoolIdentityEditor from '../components/admin/SchoolIdentityEditor';
+import DivisionAmSelector from '../components/admin/DivisionAmSelector';
+import SchoolMergeWizard from '../components/admin/SchoolMergeWizard';
 import { isReplacementInTransit } from '../utils/schoolDispatch';
 import Pagination from '../components/shared/Pagination';
 import ListToolbar from '../components/shared/ListToolbar';
@@ -165,6 +167,10 @@ const AdminDashboard = () => {
   // Entity Management Modals
   const [isDivisionModalOpen, setIsDivisionModalOpen] = useState(false);
   const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
+  const [isMergeWizardOpen, setIsMergeWizardOpen] = useState(false);
+  const [mergePrimarySchool, setMergePrimarySchool] = useState(null);
+  const [mergeSchoolOptions, setMergeSchoolOptions] = useState([]);
+  const [mergeSchoolsLoading, setMergeSchoolsLoading] = useState(false);
 
   // Forms
   const [dispatchForm, setDispatchForm] = useState(emptyDispatchForm());
@@ -213,7 +219,7 @@ const AdminDashboard = () => {
   const [wizklubAmSyncReport, setWizklubAmSyncReport] = useState(null);
   const [wizklubBulkLoading, setWizklubBulkLoading] = useState(false);
   const [wizklubBulkReport, setWizklubBulkReport] = useState(null);
-  const [wizklubRegionMappings, setWizklubRegionMappings] = useState([]);
+  const [_wizklubRegionMappings, setWizklubRegionMappings] = useState([]);
   const [manualDivisionBySchool, setManualDivisionBySchool] = useState({});
   const [selectedWizklubSchoolKey, setSelectedWizklubSchoolKey] = useState('');
   const [schoolRegistryTab, setSchoolRegistryTab] = useState('registered');
@@ -544,7 +550,7 @@ const AdminDashboard = () => {
         toast.success('Replacement request rejected.');
       }
       afterMutation();
-    } catch (err) { toast.error(`Failed to ${action} request`); }
+    } catch { toast.error(`Failed to ${action} request`); }
   };
 
   const showGeneratedPassword = (password, meta) => {
@@ -581,7 +587,7 @@ const AdminDashboard = () => {
     return data.ams.find((a) => (a.divisionId?._id || a.divisionId) === divisionId);
   };
 
-  const divisionsWithAM = useMemo(
+  const _divisionsWithAM = useMemo(
     () => data.divisions.filter((d) => getAMForDivision(d._id)),
     [data.divisions, data.ams]
   );
@@ -817,7 +823,7 @@ const AdminDashboard = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Dispatches Registry');
     XLSX.writeFile(workbook, `Dispatch_Registry_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast.success('Excel file generated successfully!');
-    } catch (err) {
+    } catch {
       toast.error('Failed to export dispatches');
     }
   };
@@ -837,6 +843,21 @@ const AdminDashboard = () => {
 
   const handleSchoolDivisionChange = (divisionId) => {
     setSchoolForm((prev) => ({ ...prev, divisionId }));
+  };
+
+  const openMergeWizard = async (primarySchool = null) => {
+    setMergePrimarySchool(primarySchool);
+    setIsMergeWizardOpen(true);
+    setMergeSchoolsLoading(true);
+    try {
+      const schools = await fetchAllPages('/admin/schools');
+      setMergeSchoolOptions(schools);
+    } catch {
+      setMergeSchoolOptions([]);
+      toast.error('Failed to load schools for merge');
+    } finally {
+      setMergeSchoolsLoading(false);
+    }
   };
 
   const loadWizklubRegionMappings = async () => {
@@ -1152,14 +1173,14 @@ const AdminDashboard = () => {
            <div className="h-64 w-full mt-4">
              {pieData.length > 0 ? (
                <ResponsiveContainer width="100%" height="100%">
-                 <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">{pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.name === 'Sent / Healthy' ? '#34D399' : entry.name === 'Damaged' ? '#F87171' : '#FBBF24'} />))}</Pie><Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><Legend verticalAlign="bottom" height={36} iconType="circle" /></PieChart>
+                 <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">{pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.name === 'Sent / Healthy' ? '#04742D' : entry.name === 'Damaged' ? '#B42323' : '#8A5500'} />))}</Pie><Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 1px 12px rgba(0,0,0,0.16)', fontFamily: 'Poppins, sans-serif', fontSize: 13 }} formatter={(value, name) => [`${value} kits`, name]} /><Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 12, color: '#52565C' }} /></PieChart>
                </ResponsiveContainer>
              ) : <p className="text-center text-slate-500 mt-10">No kit data found.</p>}
            </div>
            <div className="grid grid-cols-3 gap-4 mt-6 w-full text-center">
-             <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-lg"><p className="text-xs text-emerald-600 font-bold">Sent</p><p className="text-xl font-extrabold text-emerald-700">{totalExpected}</p></div>
-             <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg"><p className="text-xs text-amber-600 font-bold">Lost</p><p className="text-xl font-extrabold text-amber-700">{totalLost}</p></div>
-             <div className="bg-red-50 border border-red-100 p-3 rounded-lg"><p className="text-xs text-red-600 font-bold">Damaged</p><p className="text-xl font-extrabold text-red-700">{totalDamaged}</p></div>
+             <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-lg"><p className="text-xs text-emerald-600 font-bold">Sent</p><p className="text-xl font-bold text-emerald-700">{totalExpected}</p></div>
+             <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg"><p className="text-xs text-amber-600 font-bold">Lost</p><p className="text-xl font-bold text-amber-700">{totalLost}</p></div>
+             <div className="bg-red-50 border border-red-100 p-3 rounded-lg"><p className="text-xs text-red-600 font-bold">Damaged</p><p className="text-xl font-bold text-red-700">{totalDamaged}</p></div>
            </div>
          </div>
        );
@@ -1169,7 +1190,7 @@ const AdminDashboard = () => {
        kitStatusContent = (
          <div className="text-center py-10">
            <p className="text-slate-500 mb-2">No audits submitted yet for this school.</p>
-           <div className="bg-brand-primary/10 border border-brand-primary/20 p-6 rounded-xl inline-block mt-4"><h3 className="text-md font-semibold text-brand-primary mb-1">Total Kits Dispatched</h3><p className="text-4xl font-black text-brand-primary drop-shadow-sm">{totalSent}</p></div>
+           <div className="bg-brand-primary/10 border border-brand-primary/20 p-6 rounded-xl inline-block mt-4"><h3 className="text-md font-semibold text-brand-primary mb-1">Total Kits Dispatched</h3><p className="text-4xl font-bold text-brand-primary">{totalSent}</p></div>
          </div>
        );
     }
@@ -1240,9 +1261,15 @@ const AdminDashboard = () => {
           subtitle={headerCopy.subtitle}
           action={
             activeView === 'schools' ? (
-              <button type="button" onClick={() => openSchoolModal()} className="stitch-btn-primary">
-                + Add School
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => openMergeWizard()} className="stitch-btn-secondary">
+                  <GitMerge size={16} className="inline mr-1" />
+                  Merge schools
+                </button>
+                <button type="button" onClick={() => openSchoolModal()} className="stitch-btn-primary">
+                  + Add School
+                </button>
+              </div>
             ) : activeView === 'divisions' ? (
               <Button onClick={() => openDivisionModal()} variant="gradient">
                 + Add Division
@@ -1260,49 +1287,99 @@ const AdminDashboard = () => {
         <>
           <PageHeader
             eyebrow={`Hello ${adminDisplayName}`}
-            title="System Overview"
-            subtitle="Action queues first, then this month’s operations, then live current state."
+            title="System overview"
+            subtitle="This month at a glance, then live stock, then the queues that need you."
             action={
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">Status:</span>
-                <div className="flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-3 py-1.5 shadow-sm">
-                  <span className={`h-2 w-2 rounded-full ${metrics.pendingAdminApprovals > 0 ? 'bg-[#F59E0B]' : 'bg-[#22C55E]'} animate-pulse`} />
-                  <span className="text-[11px] font-semibold text-[#1F2937]">
-                    {metrics.pendingAdminApprovals > 0 ? 'Needs attention' : 'Optimal'}
-                  </span>
-                </div>
+              <div className="flex items-center gap-2" role="status">
+                <span className="text-[13px] font-medium text-wk-body">Status</span>
+                <span
+                  className={`wk-badge ${metrics.pendingAdminApprovals > 0 ? 'bg-warning-100 text-warning-700' : 'bg-success-100 text-success-700'}`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${metrics.pendingAdminApprovals > 0 ? 'bg-warning-700' : 'bg-success-700'}`} aria-hidden />
+                  {metrics.pendingAdminApprovals > 0 ? 'Needs attention' : 'Optimal'}
+                </span>
               </div>
             }
           />
 
+          {(() => {
+            const fulfillment = opsData?.current?.fulfillment || {};
+            const rate = Math.max(0, Math.min(100, Number(fulfillment.rate) || 0));
+            return (
+              <section className="inv-banner mb-6 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between" aria-label="This month's fulfilment">
+                <div className="relative z-[1] min-w-0 flex-1">
+                  <p className="mb-1.5 text-sm font-medium text-wk-sun">This month&apos;s fulfilment</p>
+                  <p className="text-xl font-medium leading-snug sm:text-[22px]">
+                    {opsLoading ? 'Loading this month…' : `${rate}% of dispatch lines fulfilled`}
+                  </p>
+                  <div
+                    className="mt-4 h-2.5 w-full max-w-xl overflow-hidden rounded-full bg-white/20"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={rate}
+                    aria-label="Fulfilment rate"
+                  >
+                    <span className="block h-full min-w-[10px] rounded-full bg-wk-orange transition-[width] duration-500" style={{ width: `${rate}%` }} />
+                  </div>
+                  <p className="mt-2.5 text-sm text-white/90">
+                    <strong className="font-semibold text-white">{fulfillment.fulfilledDsps ?? 0} / {fulfillment.eligibleDsps ?? 0}</strong> DSPs fulfilled
+                    {' · '}
+                    <strong className="font-semibold text-white">{opsData?.period?.shippedKits ?? 0}</strong> kits shipped
+                  </p>
+                </div>
+                <div className="relative z-[1] flex flex-wrap gap-3">
+                  <button type="button" onClick={openDispatchModal} className="wk-btn-primary">
+                    <Truck size={18} aria-hidden />
+                    New dispatch
+                  </button>
+                  {metrics.pendingAdminApprovals > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(ROUTES.admin.replacements)}
+                      className="wk-btn border border-white/70 bg-transparent text-white hover:bg-white/10"
+                    >
+                      Review approvals
+                    </button>
+                  )}
+                </div>
+              </section>
+            );
+          })()}
+
           {metrics.pendingAdminApprovals > 0 && (
-            <Card className={`mb-6 border-l-4 border-l-warning-500 bg-warning-50/40 ${metrics.pendingReceiptIssues > 0 ? 'approval-section-pending' : ''}`}>
+            <Card className={`mb-6 border-l-4 border-l-warning-700 bg-warning-50 ${metrics.pendingReceiptIssues > 0 ? 'approval-section-pending' : ''}`}>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-bold text-warning-800">
+                  <p className="text-sm font-semibold text-warning-800">
                     {metrics.pendingAdminApprovals} approval{metrics.pendingAdminApprovals === 1 ? '' : 's'} waiting after AM review
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className="mt-1 text-[13px] text-wk-body">
                     {metrics.pendingReceiptIssues > 0 && `${metrics.pendingReceiptIssues} receipt issue(s) from dispatch reports. `}
                     {metrics.pendingReplacementRequests > 0 && `${metrics.pendingReplacementRequests} replacement request(s).`}
                     {' '}Approve first, then ship replacements with a tracking ID.
                   </p>
                 </div>
-                <Button variant="gradient" className="text-sm" onClick={() => navigate(ROUTES.admin.replacements)}>
+                <Button variant="outline" className="text-sm" onClick={() => navigate(ROUTES.admin.replacements)}>
                   Review approvals
                 </Button>
               </div>
             </Card>
           )}
 
-          <AttentionQueues
-            className="mb-5"
-            queues={opsData?.attention?.queues}
-            loading={opsLoading}
-          />
+          <section className="mb-6" aria-labelledby="admin-kpi-heading">
+            <h2 id="admin-kpi-heading" className="sr-only">Key numbers</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              <StatCard label="Total schools" value={metrics.totalSchools} accent="primary" icon={Building2} />
+              <StatCard label="Warehouse stock" value={data.warehouseTotal || metrics.warehouseStock || 0} hint="Units in global warehouse" accent="blue" icon={Package} />
+              <StatCard label="Active inventory" value={metrics.activeInventory} hint="Units received at schools" accent="success" icon={Boxes} />
+              <StatCard label="Missing inventory" value={metrics.missingInventory} hint="Lost units from audits" accent="error" icon={AlertTriangle} />
+              <StatCard label="Pending audits" value={metrics.pendingAudits} hint="Schools without this month" accent="warning" icon={ClipboardList} />
+            </div>
+          </section>
 
           <AdminOperationsBoard
-            className="mb-5"
+            className="mb-6"
             month={opsData?.month}
             period={opsData?.period}
             current={opsData?.current}
@@ -1310,24 +1387,18 @@ const AdminDashboard = () => {
             clickable
           />
 
-          <div className="command-deep-shadow relative mb-5 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 md:p-6">
-            <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-[#F89C28]/5" />
+          <AttentionQueues
+            className="mb-6"
+            queues={opsData?.attention?.queues}
+            loading={opsLoading}
+          />
 
-            <div className="relative z-10 mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
-              <StatCard label="Total Schools" value={metrics.totalSchools} accent="primary" icon={Building2} />
-              <StatCard label="Warehouse Stock" value={data.warehouseTotal || metrics.warehouseStock || 0} hint="Units in global warehouse" accent="blue" icon={Package} />
-              <StatCard label="Active Inventory" value={metrics.activeInventory} hint="Units received at schools" accent="success" icon={Boxes} />
-              <StatCard label="Missing Inventory" value={metrics.missingInventory} hint="Lost units from audits" accent="error" icon={AlertTriangle} />
-              <StatCard label="Pending Audits" value={metrics.pendingAudits} hint="Schools without this month" accent="warning" icon={ClipboardList} />
-            </div>
-
+          <div className="mb-6 rounded-2xl bg-white p-4 shadow-card md:p-6">
             <LifecycleStrip />
           </div>
 
-          <div className="mb-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
-            <div className="xl:col-span-12">
-              <ModuleQuickLink metrics={metrics} />
-            </div>
+          <div className="mb-4">
+            <ModuleQuickLink metrics={metrics} />
           </div>
         </>
       )}
@@ -1347,40 +1418,47 @@ const AdminDashboard = () => {
                 key={division._id}
                 type="button"
                 onClick={() => navigate(ROUTES.admin.dispatchesDivision(division._id))}
-                className="text-left w-full rounded-xl border bg-white shadow-sm transition-all duration-200 border-t-[3px] border-t-brand-primary p-4 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50"
+                className="group flex w-full flex-col rounded-2xl bg-white p-4 text-left shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-hover"
               >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="w-9 h-9 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0">
-                    <Building2 size={18} strokeWidth={2} />
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-wk-peach text-wk-orange-text">
+                    <Building2 size={22} strokeWidth={1.75} aria-hidden />
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Dispatches</p>
-                    <span className={`text-lg font-extrabold ${dispatchCount > 0 ? 'text-slate-800' : 'text-slate-300'}`}>
+                    <p className="text-xs text-wk-muted">Dispatches</p>
+                    <span className={`text-xl font-semibold tabular-nums ${dispatchCount > 0 ? 'text-wk-ink' : 'text-wk-muted'}`}>
                       {dispatchCount}
                     </span>
                   </div>
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 leading-snug">{division.name}</h3>
+                <h3 className="text-base font-medium leading-snug text-wk-ink">{division.name}</h3>
                 {division.description && (
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">{division.description}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[13px] text-wk-muted">{division.description}</p>
                 )}
-                <div className="flex flex-wrap gap-2 mt-3 text-xs font-semibold text-slate-600">
-                  <span className="bg-slate-100 px-2 py-1 rounded inline-flex items-center gap-1">
-                    <GraduationCap size={12} />
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-wk-body">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-wk-mist px-2.5 py-1">
+                    <GraduationCap size={14} aria-hidden />
                     {schoolCount} school{schoolCount === 1 ? '' : 's'}
                   </span>
                   {am && (
-                    <span className="bg-slate-100 px-2 py-1 rounded inline-flex items-center gap-1">
-                      <Users size={12} />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-wk-mist px-2.5 py-1">
+                      <Users size={14} aria-hidden />
                       {am.name}
                     </span>
                   )}
                 </div>
+                <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-wk-orange-text">
+                  Open division <ArrowRight size={16} aria-hidden className="transition-transform group-hover:translate-x-0.5" />
+                </span>
               </button>
             );
           })}
           {productionDivisions.length === 0 && (
-            <p className="col-span-full text-center text-slate-500 py-10">No divisions yet. Add a division to start dispatching.</p>
+            <div className="inv-empty col-span-full">
+              <Building2 size={24} aria-hidden />
+              <p className="inv-empty__title">No divisions yet</p>
+              <p className="inv-empty__text">Add a division to start dispatching.</p>
+            </div>
           )}
         </div>
       )}
@@ -1389,10 +1467,10 @@ const AdminDashboard = () => {
         <>
           <Button
             variant="outline"
-            className="mb-6 text-sm"
+            className="mb-5 text-sm"
             onClick={() => navigate(ROUTES.admin.dispatches)}
           >
-            <ArrowLeft size={16} className="mr-2" />
+            <ArrowLeft size={16} aria-hidden />
             All divisions
           </Button>
           <ListToolbar
@@ -1402,9 +1480,9 @@ const AdminDashboard = () => {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {divisionSchoolsList.items.map((school) => (
-              <Card key={school._id} className="flex flex-col shadow-sm">
+              <Card key={school._id} className="flex flex-col">
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-slate-900 leading-tight">{formatSchoolDisplayName(school.name)}</h3>
+                  <h3 className="text-base font-medium leading-snug text-wk-ink">{formatSchoolDisplayName(school.name)}</h3>
                   <div className="mt-2">
                     <SchoolIdentityEditor
                       school={school}
@@ -1412,21 +1490,21 @@ const AdminDashboard = () => {
                       compact
                     />
                   </div>
-                  <p className="text-xs font-semibold text-brand-primary mt-3">
+                  <p className="mt-3 text-[13px] font-medium text-wk-orange-text">
                     {school.dispatchCount || 0} dispatch{(school.dispatchCount || 0) === 1 ? '' : 'es'}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 gap-2 mt-auto">
+                <div className="mt-auto grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
-                    className="text-xs py-2"
+                    className="px-3 text-[13px]"
                     onClick={() => navigate(ROUTES.admin.dispatchesSchool(dispatchNav.divisionId, school._id))}
                   >
                     View dispatches
                   </Button>
                   <Button
                     variant="gradient"
-                    className="text-xs py-2"
+                    className="px-3 text-[13px]"
                     onClick={() => openDispatchForSchool(dispatchNav.divisionId, school._id)}
                   >
                     Create dispatch
@@ -1435,7 +1513,10 @@ const AdminDashboard = () => {
               </Card>
             ))}
             {!divisionSchoolsList.loading && divisionSchoolsList.items.length === 0 && (
-              <p className="col-span-full text-center text-slate-500 py-10">No schools in this division yet.</p>
+              <div className="inv-empty col-span-full">
+                <GraduationCap size={24} aria-hidden />
+                <p className="inv-empty__title">No schools in this division yet</p>
+              </div>
             )}
           </div>
           <Pagination
@@ -1459,37 +1540,28 @@ const AdminDashboard = () => {
 
       {activeView === 'schools' && (
         <div className="space-y-5">
-          <div className="flex flex-wrap gap-2 rounded-xl bg-[#F3F4F6] p-1 w-fit">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="School registry view">
             <button
               type="button"
               onClick={() => setSchoolRegistryTab('registered')}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                schoolRegistryTab === 'registered'
-                  ? 'bg-white text-[#1F2937] shadow-sm'
-                  : 'text-[#6B7280] hover:text-[#1F2937]'
-              }`}
+              aria-pressed={schoolRegistryTab === 'registered'}
+              className={`wk-seg ${schoolRegistryTab === 'registered' ? 'wk-seg-active' : ''}`}
             >
               Registered in inventory ({schoolsRegistry.total || schoolsRegistry.items.length})
             </button>
             <button
               type="button"
               onClick={() => setSchoolRegistryTab('mapped')}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                schoolRegistryTab === 'mapped'
-                  ? 'bg-white text-[#1F2937] shadow-sm'
-                  : 'text-[#6B7280] hover:text-[#1F2937]'
-              }`}
+              aria-pressed={schoolRegistryTab === 'mapped'}
+              className={`wk-seg ${schoolRegistryTab === 'mapped' ? 'wk-seg-active' : ''}`}
             >
               Mapped ({wizklubStats.mappedCount ?? (wizklubSchoolsLoading ? '…' : 0)})
             </button>
             <button
               type="button"
               onClick={() => setSchoolRegistryTab('notMapped')}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                schoolRegistryTab === 'notMapped'
-                  ? 'bg-white text-[#1F2937] shadow-sm'
-                  : 'text-[#6B7280] hover:text-[#1F2937]'
-              }`}
+              aria-pressed={schoolRegistryTab === 'notMapped'}
+              className={`wk-seg ${schoolRegistryTab === 'notMapped' ? 'wk-seg-active' : ''}`}
             >
               Not mapped ({wizklubStats.notMappedCount ?? (wizklubSchoolsLoading ? '…' : 0)})
             </button>
@@ -1497,18 +1569,18 @@ const AdminDashboard = () => {
 
           {(schoolRegistryTab === 'mapped' || schoolRegistryTab === 'notMapped') && (
             <div className="stitch-card flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-2 text-sm text-[#6B7280]">
+              <div className="space-y-2 text-sm text-wk-muted">
                 <p>
                   {wizklubStats.total > 0
                     ? `${wizklubStats.mappedCount} mapped · ${wizklubStats.notMappedCount} not mapped · ${wizklubMappedPendingCount} pending registration`
                     : 'Load schools from WizKlub using your admin session.'}
                 </p>
                 {operationalListStats?.total > 0 && (
-                  <details className="rounded-lg border border-[#3B82F6]/20 bg-[#3B82F6]/5 px-3 py-2 text-[#1F2937]">
+                  <details className="rounded-lg border border-info-100 bg-info-50 px-3 py-2 text-wk-ink">
                     <summary className="cursor-pointer font-semibold text-sm">
                       Your operational list ({operationalListStats.total} schools)
                     </summary>
-                    <p className="mt-2 text-sm text-[#6B7280]">
+                    <p className="mt-2 text-sm text-wk-muted">
                       {operationalListStats.mapped} mapped in WizKlub · {operationalListStats.gaps} gap(s) waiting on WizKlub.
                       {' '}
                       The &quot;Not mapped&quot; tab ({wizklubStats.notMappedCount}) is the full WizKlub catalog without a region — not the same as your 192-school list.
@@ -1540,9 +1612,9 @@ const AdminDashboard = () => {
           )}
 
           {wizklubAmSyncReport && (schoolRegistryTab === 'mapped' || schoolRegistryTab === 'notMapped') && (
-            <div className="stitch-card space-y-2 p-4 text-sm text-[#1F2937]">
+            <div className="stitch-card space-y-2 p-4 text-sm text-wk-ink">
               <p className="font-semibold">Account Manager sync report</p>
-              <ul className="list-inside list-disc text-[#6B7280]">
+              <ul className="list-inside list-disc text-wk-muted">
                 <li>Divisions linked: {wizklubAmSyncReport.divisionsAssigned?.length || 0}</li>
                 <li>AM accounts created: {wizklubAmSyncReport.amUsersCreated?.length || 0}</li>
                 <li>Schools updated with AM: {(wizklubAmSyncReport.schoolsUpdated || []).reduce((n, row) => n + (row.count || 0), 0)}</li>
@@ -1551,9 +1623,9 @@ const AdminDashboard = () => {
           )}
 
           {wizklubBulkReport && schoolRegistryTab === 'mapped' && (
-            <div className="stitch-card space-y-2 p-4 text-sm text-[#1F2937]">
+            <div className="stitch-card space-y-2 p-4 text-sm text-wk-ink">
               <p className="font-semibold">Bulk registration report</p>
-              <ul className="list-inside list-disc text-[#6B7280]">
+              <ul className="list-inside list-disc text-wk-muted">
                 <li>Registered: {wizklubBulkReport.registered?.length || 0}</li>
                 <li>Already registered: {wizklubBulkReport.skippedAlreadyRegistered?.length || 0}</li>
                 <li>No division mapped: {wizklubBulkReport.skippedNoDivision?.length || 0}</li>
@@ -1598,7 +1670,7 @@ const AdminDashboard = () => {
               {schoolsRegistry.items.length > 0 ? (
                 <table className="w-full border-collapse text-left">
                   <thead className="stitch-table-head">
-                    <tr className="border-b border-[var(--stitch-border)]">
+                    <tr className="border-b border-wk-line">
                       {['School', 'Code', 'Division', 'Account Manager', 'Portal', 'Contact Email', 'Actions'].map((col) => (
                         <th
                           key={col}
@@ -1611,7 +1683,7 @@ const AdminDashboard = () => {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5E7EB]">
+                  <tbody className="divide-y divide-wk-line">
                     {schoolsRegistry.items.map((school) => {
                       const divisionId = school.divisionId?._id || school.divisionId;
                       const am = getAMForDivision(divisionId);
@@ -1628,49 +1700,52 @@ const AdminDashboard = () => {
                         : (school.contactEmail ? 'No password' : 'Add email later');
                       const portalBadgeType = school.portalUser ? 'success' : (school.contactEmail ? 'warning' : 'info');
                       return (
-                        <tr key={school._id} className="transition hover:bg-[#F8FAFC]">
+                        <tr key={school._id} className="transition hover:bg-wk-cream">
                           <td className="px-3 py-2.5 lg:px-4">
                             <div className="flex min-w-0 items-center gap-2.5">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F89C28]/10 text-xs font-bold text-[#F89C28]">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-wk-peach text-xs font-bold text-wk-orange-text">
                                 {schoolInitials}
                               </div>
-                              <span className="truncate font-bold text-[#1F2937] min-w-[8rem]" title={displayName}>{displayName}</span>
+                              <span className="truncate font-bold text-wk-ink min-w-[8rem]" title={displayName}>{displayName}</span>
                             </div>
                           </td>
-                          <td className="hidden px-3 py-2.5 font-mono text-xs whitespace-nowrap text-[#6B7280] md:table-cell lg:px-4">
+                          <td className="hidden px-3 py-2.5 font-mono text-xs whitespace-nowrap text-wk-muted md:table-cell lg:px-4">
                             <div>{school.code}</div>
                             {school.wizklubSchoolId && school.wizklubSchoolId !== school.code && (
-                              <div className="text-[10px] text-orange-600 font-semibold">ID: {school.wizklubSchoolId}</div>
+                              <div className="text-xs text-orange-600 font-semibold">ID: {school.wizklubSchoolId}</div>
                             )}
                           </td>
                           <td className="px-3 py-2.5 lg:px-4">
                             {school.divisionId?.name ? (
-                              <span className="inline-flex rounded-full border border-[#3B82F6]/20 bg-[#3B82F6]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#3B82F6]">
+                              <span className="inline-flex rounded-full border border-info-100 bg-info-50 px-3 py-1 text-sm font-medium text-info-600">
                                 {school.divisionId.name}
                               </span>
                             ) : '—'}
                           </td>
-                          <td className="px-3 py-2.5 text-sm text-[#1F2937] lg:px-4">
-                            {am?.name || <span className="text-[#6B7280]">Assign later</span>}
+                          <td className="px-3 py-2.5 text-sm text-wk-ink lg:px-4">
+                            {am?.name || <span className="text-wk-muted">Assign later</span>}
                           </td>
                           <td className="px-3 py-2.5 lg:px-4">
                             <Badge type={portalBadgeType}>{portalStatus}</Badge>
                           </td>
-                          <td className="hidden max-w-[16rem] truncate px-3 py-2.5 text-sm font-medium text-[#F89C28] xl:table-cell lg:px-4" title={email}>
+                          <td className="hidden max-w-[16rem] truncate px-3 py-2.5 text-sm font-medium text-wk-orange-text xl:table-cell lg:px-4" title={email}>
                             {email}
                           </td>
                           <td className="px-3 py-2.5 lg:px-4">
                             <div className="flex items-center justify-end gap-1">
-                              <button type="button" onClick={() => openSchoolAuditHistory(school)} className="rounded-lg p-2 text-[#6B7280] transition hover:bg-[#F89C28]/10 hover:text-[#F89C28]" aria-label="Audit history">
+                              <button type="button" onClick={() => openSchoolAuditHistory(school)} className="rounded-lg p-2 text-wk-muted transition hover:bg-wk-peach hover:text-wk-orange-text" aria-label="Audit history">
                                 <ClipboardList size={18} />
                               </button>
-                              <button type="button" onClick={() => openSchoolModal(school)} className="rounded-lg p-2 text-[#6B7280] transition hover:bg-[#F89C28]/10 hover:text-[#F89C28]" aria-label="Edit school">
+                              <button type="button" onClick={() => openMergeWizard(school)} className="rounded-lg p-2 text-wk-muted transition hover:bg-wk-peach hover:text-wk-orange-text" aria-label="Merge school">
+                                <GitMerge size={18} />
+                              </button>
+                              <button type="button" onClick={() => openSchoolModal(school)} className="rounded-lg p-2 text-wk-muted transition hover:bg-wk-peach hover:text-wk-orange-text" aria-label="Edit school">
                                 <Pencil size={18} />
                               </button>
-                              <button type="button" onClick={() => handleRegenerateSchoolPassword(school)} className="rounded-lg p-2 text-[#6B7280] transition hover:bg-[#F89C28]/10 hover:text-[#F89C28]" aria-label="Reset password">
+                              <button type="button" onClick={() => handleRegenerateSchoolPassword(school)} className="rounded-lg p-2 text-wk-muted transition hover:bg-wk-peach hover:text-wk-orange-text" aria-label="Reset password">
                                 <KeyRound size={18} />
                               </button>
-                              <button type="button" onClick={() => handleDeleteSchool(school._id)} className="rounded-lg p-2 text-[#6B7280] transition hover:bg-[#EF4444]/10 hover:text-[#EF4444]" aria-label="Delete school">
+                              <button type="button" onClick={() => handleDeleteSchool(school._id)} className="rounded-lg p-2 text-wk-muted transition hover:bg-error-50 hover:text-error-600" aria-label="Delete school">
                                 <Trash2 size={18} />
                               </button>
                             </div>
@@ -1681,12 +1756,12 @@ const AdminDashboard = () => {
                   </tbody>
                 </table>
               ) : (
-                <p className="py-16 text-center text-[#6B7280]">
+                <p className="inv-empty inv-empty__text">
                   {schoolsRegistry.loading ? 'Loading schools…' : 'No schools found.'}
                 </p>
               )}
             </div>
-            <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-4">
+            <div className="border-t border-wk-line bg-white px-4 py-3 md:px-6">
               <Pagination
                 page={schoolsRegistry.page}
                 totalPages={schoolsRegistry.totalPages}
@@ -1700,13 +1775,13 @@ const AdminDashboard = () => {
 
           {schoolRegistryTab === 'mapped' && (
             <section className="stitch-card overflow-hidden">
-              <div className="border-b border-[var(--stitch-border)] bg-[#F8FAFC]/50 px-6 py-4">
-                <h3 className="text-lg font-semibold text-[#1F2937]">Mapped schools</h3>
-                <p className="mt-1 text-sm text-[#6B7280]">
+              <div className="border-b border-wk-line bg-wk-cream px-6 py-4">
+                <h3 className="text-lg font-semibold text-wk-ink">Mapped schools</h3>
+                <p className="mt-1 text-sm text-wk-muted">
                   WizKlub region is linked to an inventory division. Register now — add AM, email, and portal password later.
                 </p>
               </div>
-              <div className="flex flex-col gap-3 border-b border-[var(--stitch-border)] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-b border-wk-line p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                 <input
                   type="search"
@@ -1738,11 +1813,11 @@ const AdminDashboard = () => {
               </div>
               <div className="overflow-x-auto">
                 {wizklubSchoolsLoading ? (
-                  <p className="py-16 text-center text-[#6B7280]">Loading schools from WizKlub…</p>
+                  <p className="inv-empty inv-empty__text">Loading schools from WizKlub…</p>
                 ) : wizklubMappedTotal > 0 ? (
                   <table className="w-full border-collapse text-left">
                     <thead className="stitch-table-head">
-                      <tr className="border-b border-[var(--stitch-border)]">
+                      <tr className="border-b border-wk-line">
                         {['School', 'Code', 'Region / Division', 'Account Manager', 'Status', 'Action'].map((col) => (
                           <th key={col} className={`px-6 py-4 ${col === 'Action' ? 'text-right' : ''}`}>
                             {col}
@@ -1750,7 +1825,7 @@ const AdminDashboard = () => {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E5E7EB]">
+                    <tbody className="divide-y divide-wk-line">
                       {wizklubMappedItems.map((school) => {
                         const key = String(school.code || school.id);
                         const displayName = formatSchoolDisplayName(school.name || key);
@@ -1763,36 +1838,36 @@ const AdminDashboard = () => {
                         const amName = school.divisionAmName || school.suggestedAmName;
                         const amEmail = school.divisionAmEmail || school.suggestedAmEmail;
                         return (
-                          <tr key={key} className="transition hover:bg-[#F8FAFC]">
-                            <td className="px-6 py-4 font-semibold text-[#1F2937]">
+                          <tr key={key} className="transition hover:bg-wk-cream">
+                            <td className="px-6 py-4 font-semibold text-wk-ink">
                               <div className="flex flex-col gap-0.5">
                                 <span>{displayName}</span>
                                 {school.inOperationalList && school.operationalSchoolId && (
-                                  <span className="text-[11px] font-normal text-[#6B7280]">{school.operationalSchoolId}</span>
+                                  <span className="text-xs font-normal text-wk-muted">{school.operationalSchoolId}</span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4 font-mono text-xs text-[#6B7280]">{school.code || school.id || '—'}</td>
+                            <td className="px-6 py-4 font-mono text-xs text-wk-muted">{school.code || school.id || '—'}</td>
                             <td className="px-6 py-4">
                               {school.region ? (
-                                <span className="inline-flex rounded-full border border-[#3B82F6]/20 bg-[#3B82F6]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#3B82F6]">
+                                <span className="inline-flex rounded-full border border-info-100 bg-info-50 px-3 py-1 text-sm font-medium text-info-600">
                                   {school.suggestedDivisionName || school.region}
                                 </span>
                               ) : '—'}
                             </td>
-                            <td className="px-6 py-4 text-sm text-[#1F2937]">
+                            <td className="px-6 py-4 text-sm text-wk-ink">
                               {amName ? (
                                 <div className="flex flex-col gap-0.5">
                                   <span>{amName}</span>
                                   {amEmail && (
-                                    <span className="text-[11px] text-[#6B7280]">{amEmail}</span>
+                                    <span className="text-xs text-wk-muted">{amEmail}</span>
                                   )}
                                   {!school.divisionAmName && school.suggestedAmName && (
-                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#F59E0B]">From spreadsheet</span>
+                                    <span className="text-[13px] font-medium text-warning-700">From spreadsheet</span>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[#6B7280]">Assign later</span>
+                                <span className="text-wk-muted">Assign later</span>
                               )}
                             </td>
                             <td className="px-6 py-4">
@@ -1813,11 +1888,11 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 ) : (
-                  <p className="py-16 text-center text-[#6B7280]">No mapped schools found.</p>
+                  <p className="inv-empty inv-empty__text">No mapped schools found.</p>
                 )}
               </div>
               {!wizklubSchoolsLoading && wizklubMappedTotal > 0 && (
-                <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-4">
+                <div className="border-t border-wk-line bg-white px-4 py-3 md:px-6">
                   <Pagination
                     page={wizklubMappedPage}
                     totalPages={wizklubMappedTotalPages}
@@ -1832,13 +1907,13 @@ const AdminDashboard = () => {
 
           {schoolRegistryTab === 'notMapped' && (
             <section className="stitch-card overflow-hidden">
-              <div className="border-b border-[var(--stitch-border)] bg-[#F8FAFC]/50 px-6 py-4">
-                <h3 className="text-lg font-semibold text-[#1F2937]">Not mapped schools</h3>
-                <p className="mt-1 text-sm text-[#6B7280]">
+              <div className="border-b border-wk-line bg-wk-cream px-6 py-4">
+                <h3 className="text-lg font-semibold text-wk-ink">Not mapped schools</h3>
+                <p className="mt-1 text-sm text-wk-muted">
                   Missing WizKlub region or division link. Pick a division manually to register, or wait for WizKlub region data.
                 </p>
               </div>
-              <div className="flex flex-col gap-3 border-b border-[var(--stitch-border)] p-4 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-3 border-b border-wk-line p-4 sm:flex-row sm:items-center">
                 <input
                   type="search"
                   value={wizklubCatalogSearch}
@@ -1860,7 +1935,7 @@ const AdminDashboard = () => {
                 </select>
               </div>
               {wizklubListFilter === 'operational_gaps' && operationalListStats?.gapsNotInWizklub?.length > 0 && (
-                <div className="border-b border-[var(--stitch-border)] bg-[#FEF3C7]/40 px-6 py-3 text-sm text-[#92400E]">
+                <div className="border-b border-wk-line bg-warning-50 px-6 py-3 text-sm text-warning-800">
                   {operationalListStats.gapsNotInWizklub.length} school(s) from your operational list are not in WizKlub yet
                   ({operationalListStats.gapsNotInWizklub.map((g) => g.schoolId).slice(0, 5).join(', ')}
                   {operationalListStats.gapsNotInWizklub.length > 5 ? '…' : ''}).
@@ -1868,11 +1943,11 @@ const AdminDashboard = () => {
               )}
               <div className="overflow-x-auto">
                 {wizklubSchoolsLoading ? (
-                  <p className="py-16 text-center text-[#6B7280]">Loading schools from WizKlub…</p>
+                  <p className="inv-empty inv-empty__text">Loading schools from WizKlub…</p>
                 ) : wizklubNotMappedTotal > 0 ? (
                   <table className="w-full border-collapse text-left">
                     <thead className="stitch-table-head">
-                      <tr className="border-b border-[var(--stitch-border)]">
+                      <tr className="border-b border-wk-line">
                         {['School', 'Code', 'Assign division', 'AM', 'Status', 'Action'].map((col) => (
                           <th key={col} className={`px-6 py-4 ${col === 'Action' ? 'text-right' : ''}`}>
                             {col}
@@ -1880,7 +1955,7 @@ const AdminDashboard = () => {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E5E7EB]">
+                    <tbody className="divide-y divide-wk-line">
                       {wizklubNotMappedItems.map((school) => {
                         const key = String(school.code || school.id);
                         const displayName = formatSchoolDisplayName(school.name || key);
@@ -1888,16 +1963,16 @@ const AdminDashboard = () => {
                         const amName = school.suggestedAmName;
                         const amEmail = school.suggestedAmEmail;
                         return (
-                          <tr key={key} className="transition hover:bg-[#F8FAFC]">
-                            <td className="px-6 py-4 font-semibold text-[#1F2937]">
+                          <tr key={key} className="transition hover:bg-wk-cream">
+                            <td className="px-6 py-4 font-semibold text-wk-ink">
                               <div className="flex flex-col gap-0.5">
                                 <span>{displayName}</span>
                                 {school.inOperationalList && school.operationalSchoolId && (
-                                  <span className="text-[11px] font-normal text-[#6B7280]">{school.operationalSchoolId}</span>
+                                  <span className="text-xs font-normal text-wk-muted">{school.operationalSchoolId}</span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4 font-mono text-xs text-[#6B7280]">{school.code || school.id || '—'}</td>
+                            <td className="px-6 py-4 font-mono text-xs text-wk-muted">{school.code || school.id || '—'}</td>
                             <td className="px-6 py-4">
                               <select
                                 className="stitch-input min-w-[180px] text-sm"
@@ -1912,14 +1987,14 @@ const AdminDashboard = () => {
                                 ))}
                               </select>
                             </td>
-                            <td className="px-6 py-4 text-sm text-[#1F2937]">
+                            <td className="px-6 py-4 text-sm text-wk-ink">
                               {amName ? (
                                 <div className="flex flex-col gap-0.5">
                                   <span>{amName}</span>
-                                  {amEmail && <span className="text-[11px] text-[#6B7280]">{amEmail}</span>}
+                                  {amEmail && <span className="text-xs text-wk-muted">{amEmail}</span>}
                                 </div>
                               ) : (
-                                <span className="text-[#6B7280]">—</span>
+                                <span className="text-wk-muted">—</span>
                               )}
                             </td>
                             <td className="px-6 py-4">
@@ -1949,11 +2024,11 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 ) : (
-                  <p className="py-16 text-center text-[#6B7280]">No not-mapped schools — all WizKlub schools are linked to divisions.</p>
+                  <p className="inv-empty inv-empty__text">No not-mapped schools — all WizKlub schools are linked to divisions.</p>
                 )}
               </div>
               {!wizklubSchoolsLoading && wizklubNotMappedTotal > 0 && (
-                <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-4">
+                <div className="border-t border-wk-line bg-white px-4 py-3 md:px-6">
                   <Pagination
                     page={wizklubNotMappedPage}
                     totalPages={wizklubNotMappedTotalPages}
@@ -1980,10 +2055,10 @@ const AdminDashboard = () => {
             <StatCard label="Mismatches" value={metrics.auditMismatches} accent="error" icon={AlertTriangle} />
             <StatCard label="Pending This Month" value={metrics.pendingAudits} accent="warning" icon={Package} />
           </div>
-          <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
-            <div className="border-b border-[#E5E7EB] px-6 py-5">
-              <h3 className="font-heading text-lg font-bold text-[#1F2937]">Audit history</h3>
-              <p className="mt-1 text-sm text-[#6B7280]">
+          <section className="overflow-hidden rounded-2xl bg-white shadow-card">
+            <div className="border-b border-wk-line px-6 py-5">
+              <h3 className="text-lg font-semibold text-wk-ink">Audit history</h3>
+              <p className="mt-1 text-sm text-wk-muted">
                 Browse audits across all previous months. Filter by school, month, status, or workflow.
               </p>
             </div>
@@ -1995,7 +2070,7 @@ const AdminDashboard = () => {
                 filters={(
                   <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
                     <div className="flex min-w-[180px] flex-col gap-1.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]" htmlFor="audit-school-filter">School</label>
+                      <label className="text-sm font-medium text-wk-muted" htmlFor="audit-school-filter">School</label>
                       <select id="audit-school-filter" className="saas-input" value={auditSchoolFilter} onChange={(e) => setAuditSchoolFilter(e.target.value)}>
                         <option value="">All schools</option>
                         {auditSchoolOptions.map((school) => (
@@ -2006,7 +2081,7 @@ const AdminDashboard = () => {
                       </select>
                     </div>
                     <div className="flex min-w-[140px] flex-col gap-1.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]" htmlFor="audit-status-filter">Status</label>
+                      <label className="text-sm font-medium text-wk-muted" htmlFor="audit-status-filter">Status</label>
                       <select id="audit-status-filter" className="saas-input" value={auditStatusFilter} onChange={(e) => setAuditStatusFilter(e.target.value)}>
                         <option value="All">All</option>
                         <option value="Normal">Normal</option>
@@ -2014,7 +2089,7 @@ const AdminDashboard = () => {
                       </select>
                     </div>
                     <div className="flex min-w-[160px] flex-col gap-1.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]" htmlFor="audit-month-filter">Month</label>
+                      <label className="text-sm font-medium text-wk-muted" htmlFor="audit-month-filter">Month</label>
                       <input
                         id="audit-month-filter"
                         type="month"
@@ -2024,7 +2099,7 @@ const AdminDashboard = () => {
                       />
                     </div>
                     <div className="flex min-w-[180px] flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]" htmlFor="audit-workflow-filter">Workflow</label>
+                      <label className="text-sm font-medium text-wk-muted" htmlFor="audit-workflow-filter">Workflow</label>
                       <select id="audit-workflow-filter" className="saas-input" value={auditWorkflowFilter} onChange={(e) => setAuditWorkflowFilter(e.target.value)}>
                         <option value="All">All</option>
                         <option value="Pending AM Approval">Pending AM Approval</option>
@@ -2041,11 +2116,11 @@ const AdminDashboard = () => {
               {auditsList.items.length > 0 ? (
                 <table className="w-full border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC]">
+                    <tr className="border-b border-wk-line bg-wk-cream">
                       {['School', 'Month', 'Variance', 'Workflow', 'Submitted', 'Action'].map((col) => (
                         <th
                           key={col}
-                          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-[#6B7280] ${
+                          className={`px-6 py-3 text-sm font-medium text-wk-muted ${
                             col === 'Action' ? 'text-right' : ''
                           }`}
                         >
@@ -2054,11 +2129,11 @@ const AdminDashboard = () => {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5E7EB]">
+                  <tbody className="divide-y divide-wk-line">
                     {auditsList.items.map((audit) => (
-                      <tr key={audit._id} className={`transition hover:bg-[#F8FAFC] ${audit.status === 'Mismatch' ? 'bg-[#EF4444]/5' : ''}`}>
-                        <td className="px-6 py-3.5 font-bold text-[#1F2937]">{formatSchoolDisplayName(audit.school?.name)}</td>
-                        <td className="px-6 py-3.5 text-sm text-[#6B7280]">{formatAuditMonthLabel(audit.month)}</td>
+                      <tr key={audit._id} className={`transition hover:bg-wk-cream ${audit.status === 'Mismatch' ? 'bg-error-50' : ''}`}>
+                        <td className="px-6 py-3.5 font-medium text-wk-ink">{formatSchoolDisplayName(audit.school?.name)}</td>
+                        <td className="px-6 py-3.5 text-sm text-wk-muted">{formatAuditMonthLabel(audit.month)}</td>
                         <td className="px-6 py-3.5"><Badge type={audit.status === 'Mismatch' ? 'error' : 'success'}>{audit.status}</Badge></td>
                         <td className="px-6 py-3.5">
                           <Badge type={
@@ -2069,11 +2144,11 @@ const AdminDashboard = () => {
                             {audit.workflowStatus || 'Pending AM Approval'}
                           </Badge>
                         </td>
-                        <td className="px-6 py-3.5 text-sm text-[#6B7280]">{new Date(audit.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-3.5 text-sm text-wk-muted">{new Date(audit.createdAt).toLocaleDateString()}</td>
                         <td className="px-6 py-3.5 text-right">
                           <button
                             type="button"
-                            className="rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-xs font-bold text-[#1F2937] transition hover:border-[#F89C28] hover:text-[#F89C28]"
+                            className="wk-btn-secondary !min-h-[40px] !px-4 !text-[13px]"
                             onClick={() => openAuditReview(audit, true)}
                           >
                             View
@@ -2084,12 +2159,12 @@ const AdminDashboard = () => {
                   </tbody>
                 </table>
               ) : (
-                <p className="py-16 text-center text-[#6B7280]">
+                <p className="inv-empty inv-empty__text">
                   {auditsList.loading ? 'Loading audits…' : 'No audit submissions found.'}
                 </p>
               )}
             </div>
-            <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-4">
+            <div className="border-t border-wk-line bg-white px-4 py-3 md:px-6">
               <Pagination
                 page={auditsList.page}
                 totalPages={auditsList.totalPages}
@@ -2103,24 +2178,24 @@ const AdminDashboard = () => {
 
       {activeView === 'auditReview' && (
         <div className="space-y-6">
-          <div className="flex items-start gap-3 rounded-2xl border border-[#F89C28]/20 bg-[#F89C28]/5 px-5 py-4 text-sm text-[#6B7280]">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F89C28]/15 text-xs font-bold text-[#F89C28]">i</span>
+          <div className="flex items-start gap-3 rounded-2xl border border-wk-peach-2 bg-wk-cream px-5 py-4 text-sm text-wk-muted">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wk-peach text-xs font-bold text-wk-orange-text">i</span>
             <p>
               Review AM-approved monthly audits here. Approve reported quantities, then dispatch lost/damaged replacements.
               For normal dispatch receipt issues, use{' '}
-              <button type="button" className="font-semibold text-[#F89C28] hover:underline" onClick={() => navigate(ROUTES.admin.replacements)}>
+              <button type="button" className="font-semibold text-wk-orange-text hover:underline" onClick={() => navigate(ROUTES.admin.replacements)}>
                 Replacements
               </button>.
             </p>
           </div>
 
-          <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#E5E7EB] px-6 py-5">
+          <section className="overflow-hidden rounded-2xl bg-white shadow-card">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-wk-line px-6 py-5">
               <div>
-                <h3 className="font-heading text-lg font-bold text-[#1F2937]">Pending quantity review</h3>
-                <p className="mt-1 text-sm text-[#6B7280]">AM-approved audits awaiting admin sign-off.</p>
+                <h3 className="text-lg font-semibold text-wk-ink">Pending quantity review</h3>
+                <p className="mt-1 text-sm text-wk-muted">AM-approved audits awaiting admin sign-off.</p>
               </div>
-              <span className="rounded-full bg-[#F89C28]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#F89C28]">
+              <span className="rounded-full bg-wk-peach px-3 py-1 text-sm font-medium text-wk-orange-text">
                 {pendingAdminAudits.length} pending
               </span>
             </div>
@@ -2132,13 +2207,13 @@ const AdminDashboard = () => {
             />
           </section>
 
-          <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#E5E7EB] px-6 py-5">
+          <section className="overflow-hidden rounded-2xl bg-white shadow-card">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-wk-line px-6 py-5">
               <div>
-                <h3 className="font-heading text-lg font-bold text-[#1F2937]">Approved — dispatch replacements</h3>
-                <p className="mt-1 text-sm text-[#6B7280]">Create audit lost/damaged dispatches after quantity approval.</p>
+                <h3 className="text-lg font-semibold text-wk-ink">Approved — dispatch replacements</h3>
+                <p className="mt-1 text-sm text-wk-muted">Create audit lost/damaged dispatches after quantity approval.</p>
               </div>
-              <span className="rounded-full bg-[#3B82F6]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#3B82F6]">
+              <span className="rounded-full bg-info-50 px-3 py-1 text-sm font-medium text-info-600">
                 {approvedAuditsForDispatch.length} ready
               </span>
             </div>
@@ -2155,11 +2230,11 @@ const AdminDashboard = () => {
 
       {activeView === 'replacements' && isReplacementGrid && (
         <div className="space-y-5">
-          <div className="rounded-2xl border border-[#E5E7EB] bg-[#F1F5F9]/80 px-5 py-4 text-sm text-[#6B7280]">
+          <div className="rounded-2xl border border-wk-line bg-wk-mist px-5 py-4 text-sm text-wk-muted">
             <p>
               All replacement requests appear here from two sources:
-              <span className="font-semibold text-[#1F2937]"> Monthly audit</span> (lost/damaged kits with evidence)
-              and <span className="font-semibold text-[#1F2937]"> normal dispatch</span> (receipt issues after shipment).
+              <span className="font-semibold text-wk-ink"> Monthly audit</span> (lost/damaged kits with evidence)
+              and <span className="font-semibold text-wk-ink"> normal dispatch</span> (receipt issues after shipment).
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -2225,7 +2300,7 @@ const AdminDashboard = () => {
             >
               {filteredReplacementIssues.length > 0 && (
                 <>
-                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Normal dispatch — receipt issues</p>
+                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Normal dispatch — receipt issues</p>
                   <AdminReceiptIssueTable
                     issues={filteredReplacementIssues.slice(
                       (replacementPageSafe - 1) * REPLACEMENT_PAGE_SIZE,
@@ -2240,7 +2315,7 @@ const AdminDashboard = () => {
               {filteredReplacementRequests.length > 0 && (
                 <div className={filteredReplacementIssues.length > 0 ? 'border-t border-slate-100' : ''}>
                   {filteredReplacementIssues.length > 0 && (
-                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Normal dispatch — replacement requests</p>
+                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Normal dispatch — replacement requests</p>
                   )}
                   <AdminReplacementRequestTable
                     requests={filteredReplacementRequests}
@@ -2250,7 +2325,7 @@ const AdminDashboard = () => {
                 </div>
               )}
               {replacementListTotal === 0 && (
-                <p className="text-center py-10 text-slate-500">No missing product items pending admin approval.</p>
+                <p className="inv-empty inv-empty__text">No missing product items pending admin approval.</p>
               )}
               {filteredReplacementIssues.length > REPLACEMENT_PAGE_SIZE && (
                 <div className="px-5 pb-5">
@@ -2273,7 +2348,7 @@ const AdminDashboard = () => {
             >
               {pendingAuditLostReviewCount > 0 && (
                 <>
-                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly audit — pending quantity review</p>
+                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Monthly audit — pending quantity review</p>
                   <AdminAuditReplacementList
                     audits={pendingAdminAudits}
                     lineType="lost"
@@ -2286,7 +2361,7 @@ const AdminDashboard = () => {
               {pendingAuditLostDispatchCount > 0 && (
                 <div className={pendingAuditLostReviewCount > 0 ? 'border-t border-slate-100' : ''}>
                   {pendingAuditLostReviewCount > 0 && (
-                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly audit — pending dispatch</p>
+                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Monthly audit — pending dispatch</p>
                   )}
                   <AdminAuditReplacementList
                     audits={approvedAuditsForDispatch}
@@ -2298,7 +2373,7 @@ const AdminDashboard = () => {
                 </div>
               )}
               {lostApprovalCount === 0 && (
-                <p className="text-center py-10 text-slate-500">No lost product items from monthly audit.</p>
+                <p className="inv-empty inv-empty__text">No lost product items from monthly audit.</p>
               )}
             </AmApprovalSection>
           )}
@@ -2311,7 +2386,7 @@ const AdminDashboard = () => {
             >
               {pendingAuditDamagedReviewCount > 0 && (
                 <>
-                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly audit — pending quantity review</p>
+                  <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Monthly audit — pending quantity review</p>
                   <AdminAuditReplacementList
                     audits={pendingAdminAudits}
                     lineType="damaged"
@@ -2324,7 +2399,7 @@ const AdminDashboard = () => {
               {pendingAuditDamagedDispatchCount > 0 && (
                 <div className={pendingAuditDamagedReviewCount > 0 ? 'border-t border-slate-100' : ''}>
                   {pendingAuditDamagedReviewCount > 0 && (
-                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly audit — pending dispatch</p>
+                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Monthly audit — pending dispatch</p>
                   )}
                   <AdminAuditReplacementList
                     audits={approvedAuditsForDispatch}
@@ -2338,7 +2413,7 @@ const AdminDashboard = () => {
               {damagedProductIssues.length > 0 && (
                 <div className={(pendingAuditDamagedReviewCount > 0 || pendingAuditDamagedDispatchCount > 0) ? 'border-t border-slate-100' : ''}>
                   {(pendingAuditDamagedReviewCount > 0 || pendingAuditDamagedDispatchCount > 0) && (
-                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wide">Normal dispatch — receipt issues</p>
+                    <p className="px-5 pt-4 pb-2 text-xs font-bold text-slate-500 normal-case tracking-normal">Normal dispatch — receipt issues</p>
                   )}
                   <AdminReceiptIssueTable
                     issues={filteredReplacementIssues.slice(
@@ -2352,7 +2427,7 @@ const AdminDashboard = () => {
                 </div>
               )}
               {damagedApprovalCount === 0 && (
-                <p className="text-center py-10 text-slate-500">No damaged product items pending.</p>
+                <p className="inv-empty inv-empty__text">No damaged product items pending.</p>
               )}
               {filteredReplacementIssues.length > REPLACEMENT_PAGE_SIZE && (
                 <div className="px-5 pb-5">
@@ -2433,7 +2508,7 @@ const AdminDashboard = () => {
                         </td>
                         <td className="text-sm text-slate-700">
                           {d.wizklubRegionName ? (
-                            <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-blue-700">
+                            <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-sm font-medium text-blue-700">
                               {d.wizklubRegionName}
                             </span>
                           ) : '—'}
@@ -2471,7 +2546,7 @@ const AdminDashboard = () => {
             </div>
           </Card>
         ) : (
-          <p className="text-slate-500 glass-card p-8 text-center">No divisions yet. They are created automatically when WizKlub schools are loaded.</p>
+          <p className="inv-empty inv-empty__text">No divisions yet. They are created automatically when WizKlub schools are loaded.</p>
         )
       )}
 
@@ -2489,13 +2564,13 @@ const AdminDashboard = () => {
         <AdminReportsSection
           divisions={productionDivisions}
           registrySection={(
-            <section className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E7EB] px-6 py-5">
-                <h3 className="font-heading text-lg font-bold text-[#1F2937]">Global Dispatch Registry</h3>
+            <section className="overflow-hidden rounded-2xl bg-white shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wk-line px-6 py-5">
+                <h3 className="text-lg font-semibold text-wk-ink">Global Dispatch Registry</h3>
                 <button
                   type="button"
                   onClick={handleExportExcel}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-4 py-2 text-xs font-bold text-[#1F2937] shadow-sm transition hover:border-[#F89C28] hover:text-[#F89C28]"
+                  className="wk-btn-secondary !min-h-[40px] !px-4 !text-[13px]"
                 >
                   <FileDown size={14} />
                   Export to Excel
@@ -2511,28 +2586,28 @@ const AdminDashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC]">
+                    <tr className="border-b border-wk-line bg-wk-cream">
                       {['Dispatch ID', 'Auth. Date', 'Destination', 'Kit Details', 'Qty', 'Status', 'Action'].map((col) => (
-                        <th key={col} className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
+                        <th key={col} className="px-5 py-3 text-sm font-medium text-wk-muted">
                           {col}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5E7EB]">
+                  <tbody className="divide-y divide-wk-line">
                     {reportsDispatches.items.map((d) => {
                       const canEdit = canAdminEditTracking(d);
                       const hasTracking = !!getDispatchTrackingValue(d);
                       const overdue = isTrackingOverdue(d);
                       return (
-                        <tr key={d._id} className="transition hover:bg-[#F8FAFC]">
+                        <tr key={d._id} className="transition hover:bg-wk-cream">
                           <td className="px-5 py-3.5">
                             <DispatchIdCell item={d} onViewHistory={() => setTrackingDispatch(d)} />
                           </td>
-                          <td className="px-5 py-3.5 text-sm font-medium text-[#6B7280]">
+                          <td className="px-5 py-3.5 text-sm font-medium text-wk-muted">
                             {new Date(d.createdAt).toLocaleDateString()}
                           </td>
-                          <td className="px-5 py-3.5 font-bold text-[#1F2937]">
+                          <td className="px-5 py-3.5 font-medium text-wk-ink">
                             {formatSchoolDisplayName(d.school?.name)}
                           </td>
                           <td className="px-5 py-3.5"><KitDetailsCell item={d} showShippedDate={false} /></td>
@@ -2546,7 +2621,7 @@ const AdminDashboard = () => {
                             <div className="flex flex-col items-start gap-2">
                               <button
                                 type="button"
-                                className="rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-xs font-bold text-[#1F2937] transition hover:border-[#F89C28] hover:text-[#F89C28]"
+                                className="wk-btn-secondary !min-h-[40px] !px-4 !text-[13px]"
                                 onClick={() => setTrackingDispatch(d)}
                               >
                                 View
@@ -2555,7 +2630,7 @@ const AdminDashboard = () => {
                                 <button
                                   type="button"
                                   className={`rounded-lg px-3 py-1.5 text-xs font-bold text-white transition ${
-                                    overdue ? 'bg-[#EF4444] hover:bg-[#DC2626]' : 'bg-[#F89C28] hover:bg-[#E88914]'
+                                    overdue ? 'bg-error-500 hover:bg-error-500' : 'bg-wk-orange hover:bg-wk-orange-hover'
                                   }`}
                                   onClick={() => setEditTrackingDispatch(d)}
                                 >
@@ -2569,13 +2644,13 @@ const AdminDashboard = () => {
                     })}
                     {!reportsDispatches.loading && reportsDispatches.items.length === 0 && (
                       <tr>
-                        <td colSpan="7" className="px-5 py-10 text-center text-[#6B7280]">No dispatches found.</td>
+                        <td colSpan="7" className="px-5 py-10 text-center text-wk-muted">No dispatches found.</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
-              <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]/50 px-6 py-4">
+              <div className="border-t border-wk-line bg-white px-4 py-3 md:px-6">
                 <Pagination
                   page={reportsDispatches.page}
                   totalPages={reportsDispatches.totalPages}
@@ -2592,11 +2667,11 @@ const AdminDashboard = () => {
       <Modal isOpen={isDivisionModalOpen} onClose={() => setIsDivisionModalOpen(false)} title={divisionForm.id ? 'Edit Division' : 'Add Division'}>
         <form onSubmit={handleSaveDivision} className="space-y-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Division Name</label>
+            <label className="text-[13px] font-medium text-wk-body">Division Name</label>
             <Input value={divisionForm.name} onChange={(e) => setDivisionForm({ ...divisionForm, name: e.target.value })} required placeholder="e.g. North Region" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Description</label>
+            <label className="text-[13px] font-medium text-wk-body">Description</label>
             <Input value={divisionForm.description} onChange={(e) => setDivisionForm({ ...divisionForm, description: e.target.value })} placeholder="Optional description..." />
           </div>
           <Button variant="gradient" type="submit" className="w-full mt-2 py-3">
@@ -2616,18 +2691,18 @@ const AdminDashboard = () => {
           </p>
           {passwordMeta.credentialType === 'school' && passwordMeta.schoolCode && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">School ID (login)</label>
+              <label className="text-[13px] font-medium text-wk-body">School ID (login)</label>
               <Input readOnly value={passwordMeta.schoolCode} className="font-mono" />
             </div>
           )}
           {passwordMeta.credentialType === 'am' && passwordMeta.email && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Email (login)</label>
+              <label className="text-[13px] font-medium text-wk-body">Email (login)</label>
               <Input readOnly value={passwordMeta.email} />
             </div>
           )}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Password</label>
+            <label className="text-[13px] font-medium text-wk-body">Password</label>
             <div className="flex items-center gap-2">
               <Input readOnly value={generatedPassword || ''} className="font-mono" />
               <Button type="button" variant="secondary" onClick={copyPassword}>Copy</Button>
@@ -2635,7 +2710,7 @@ const AdminDashboard = () => {
           </div>
           {passwordMeta.credentialType !== 'school' && !passwordMeta.emailSent && (
             <p className="text-xs text-warning-600 bg-warning-50/80 border border-warning-100 rounded-lg p-3">
-              Configure Amazon SES in the project root <code className="text-[11px]">.env</code> (SES_REGION, SES_FROM_EMAIL, AWS_NOTIF_*) to email credentials automatically.
+              Configure Amazon SES in the project root <code className="text-xs">.env</code> (SES_REGION, SES_FROM_EMAIL, AWS_NOTIF_*) to email credentials automatically.
             </p>
           )}
         </div>
@@ -2651,7 +2726,7 @@ const AdminDashboard = () => {
           <button
             type="submit"
             form="school-form"
-            className="group flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#F89C28] text-base font-bold text-white shadow-lg shadow-orange-200 transition hover:bg-[#E88914] hover:shadow-xl active:scale-[0.99]"
+            className="group flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-wk-orange text-base font-bold text-wk-navy shadow-brand transition hover:bg-wk-orange-hover hover:shadow-xl active:scale-[0.99]"
           >
             {schoolForm.id ? 'Save Changes' : 'Create School'}
             <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
@@ -2661,14 +2736,14 @@ const AdminDashboard = () => {
         <form id="school-form" onSubmit={handleSaveSchool} className="space-y-5">
           {!schoolForm.id && (
             <div className="space-y-2">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
+              <label className="block text-sm font-medium text-wk-muted">
                 WizKlub School
               </label>
               {wizklubSchoolsLoading ? (
-                <p className="text-sm text-[#6B7280]">Loading schools from WizKlub…</p>
+                <p className="text-sm text-wk-muted">Loading schools from WizKlub…</p>
               ) : (
                 <select
-                  className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-sm text-[#1F2937] outline-none focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
+                  className="stitch-input"
                   value={selectedWizklubSchoolKey}
                   onChange={(e) => handleWizklubSchoolPick(e.target.value)}
                 >
@@ -2684,55 +2759,48 @@ const AdminDashboard = () => {
                   })}
                 </select>
               )}
-              <p className="text-xs text-[#6B7280]">
+              <p className="text-xs text-wk-muted">
                 Schools are fetched from WizKlub using your admin session. Pick one to pre-fill details, or enter them manually below.
               </p>
             </div>
           )}
+          <DivisionAmSelector
+            divisionId={schoolForm.divisionId}
+            onDivisionChange={handleSchoolDivisionChange}
+            divisions={data.divisions}
+            ams={data.ams}
+            onRefresh={afterMutation}
+            allowCreate
+          />
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Division Mapping</label>
-            <select
-              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-sm text-[#1F2937] outline-none focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
-              value={schoolForm.divisionId}
-              onChange={(e) => handleSchoolDivisionChange(e.target.value)}
-              required
-            >
-              <option value="">Select Division</option>
-              {data.divisions.map((d) => (
-                <option key={d._id} value={d._id}>{d.name}</option>
-              ))}
-            </select>
-            <p className="text-xs text-[#6B7280]">Account Manager can be assigned later under Divisions or Account Managers.</p>
-          </div>
-          <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Unique School ID</label>
+            <label className="block text-sm font-medium text-wk-muted">Unique School ID</label>
             <input
-              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-sm text-[#1F2937] outline-none focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
+              className="stitch-input"
               value={schoolForm.code}
               onChange={(e) => setSchoolForm({ ...schoolForm, code: e.target.value })}
               required
               placeholder="BENG-0010 or beng0010"
             />
-            <p className="text-xs text-[#6B7280]">Used for portal login and component ID prefix (e.g. BENG-0010).</p>
+            <p className="text-xs text-wk-muted">Used for portal login and component ID prefix (e.g. BENG-0010).</p>
           </div>
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Joining year</label>
+            <label className="block text-sm font-medium text-wk-muted">Joining year</label>
             <input
               type="number"
               min={2000}
               max={2099}
-              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-sm text-[#1F2937] outline-none focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
+              className="stitch-input"
               value={schoolForm.joiningYear}
               onChange={(e) => setSchoolForm({ ...schoolForm, joiningYear: e.target.value })}
               placeholder="2025"
             />
-            <p className="text-xs text-[#6B7280]">
+            <p className="text-xs text-wk-muted">
               Year the school joined WizKlub — appears as /25 in component IDs
               {schoolForm.code.trim() && (
                 <>
                   {' '}
                   (preview:{' '}
-                  <span className="font-mono font-semibold text-[#F89C28]">
+                  <span className="font-mono font-semibold text-wk-orange-text">
                     {formatSchoolIdentityPrefix(
                       schoolForm.code,
                       schoolForm.joiningYear === '' ? null : Number(schoolForm.joiningYear),
@@ -2744,9 +2812,9 @@ const AdminDashboard = () => {
             </p>
           </div>
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Branch Name</label>
+            <label className="block text-sm font-medium text-wk-muted">Branch Name</label>
             <input
-              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-sm text-[#1F2937] outline-none focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
+              className="stitch-input"
               value={schoolForm.name}
               onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
               required
@@ -2754,15 +2822,15 @@ const AdminDashboard = () => {
             />
           </div>
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Portal Login Email (optional)</label>
+            <label className="block text-sm font-medium text-wk-muted">Portal Login Email (optional)</label>
             <input
               type="email"
-              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 text-sm text-[#1F2937] outline-none focus:border-[#F89C28] focus:ring-2 focus:ring-[#F89C28]/15"
+              className="stitch-input"
               value={schoolForm.contactEmail}
               onChange={(e) => setSchoolForm({ ...schoolForm, contactEmail: e.target.value })}
               placeholder="school@example.com — add later"
             />
-            <p className="text-xs text-[#6B7280]">
+            <p className="text-xs text-wk-muted">
               Optional for now. Add email later and use Reset Password to generate portal credentials. Login ID is the Unique School ID above.
             </p>
           </div>
@@ -2805,7 +2873,7 @@ const AdminDashboard = () => {
         }}
       />
 
-      <Modal isOpen={isReplacementDispatchModalOpen} onClose={() => setIsReplacementDispatchModalOpen(false)} title="Generate Replacement Dispatch"><form onSubmit={handleGenerateReplacementDispatch} className="space-y-4"><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Replacement ID</label><Input disabled value={replacementDispatchForm.replacementId || ''} /></div><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">School Destination</label><Input disabled value={replacementDispatchForm.schoolName || ''} /></div><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Kit Configuration</label><select className="saas-input" value={replacementDispatchForm.kit} disabled required>{data.kits.map(k => <option key={k._id} value={k._id}>{k.name}</option>)}</select></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Category</label><select className="saas-input" value={replacementDispatchForm.category} disabled required><option value="Lost Dispatch">Lost Dispatch</option><option value="Damaged Dispatch">Damaged Dispatch</option></select></div><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quantity</label><Input type="number" min="1" disabled value={replacementDispatchForm.quantity} /></div></div><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Assigned AM (Optional)</label><select className="saas-input" value={replacementDispatchForm.reportingManager} onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, reportingManager: e.target.value })}><option value="">None / Auto-Assign</option>{data.ams.map((am) => <option key={am._id} value={am._id}>{am.name}</option>)}</select></div><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Kit ID (Physical)</label><Input placeholder="Enter physical kit ID" value={replacementDispatchForm.kitId} onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, kitId: e.target.value })} /></div><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Details/Tracking</label><Input placeholder="E.g. Expedited shipping req" value={replacementDispatchForm.dispatchDetails} onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, dispatchDetails: e.target.value })} /></div><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Admin Notes (Optional)</label><textarea className="saas-input min-h-[80px] resize-y" value={replacementDispatchForm.adminNotes} onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, adminNotes: e.target.value })} placeholder="Notes for the replacement approval..." /></div><div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Dispatch proof photo (optional)</label><input type="file" accept="image/*" capture="environment" className="saas-input file:mr-3 file:rounded-lg file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-primary" onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, proofPhoto: e.target.files?.[0] || null })} /><p className="text-[11px] text-slate-500">Snap a photo of the package as proof. Visible to the AM and school.</p></div><div className="pt-4"><Button variant="gradient" type="submit" className="w-full text-base py-3">Generate Dispatch Directive</Button></div></form></Modal>
+      <Modal isOpen={isReplacementDispatchModalOpen} onClose={() => setIsReplacementDispatchModalOpen(false)} title="Generate Replacement Dispatch"><form onSubmit={handleGenerateReplacementDispatch} className="space-y-4"><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Replacement ID</label><Input disabled value={replacementDispatchForm.replacementId || ''} /></div><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">School Destination</label><Input disabled value={replacementDispatchForm.schoolName || ''} /></div><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Kit Configuration</label><select className="saas-input" value={replacementDispatchForm.kit} disabled required>{data.kits.map(k => <option key={k._id} value={k._id}>{k.name}</option>)}</select></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Category</label><select className="saas-input" value={replacementDispatchForm.category} disabled required><option value="Lost Dispatch">Lost Dispatch</option><option value="Damaged Dispatch">Damaged Dispatch</option></select></div><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Quantity</label><Input type="number" min="1" disabled value={replacementDispatchForm.quantity} /></div></div><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Assigned AM (Optional)</label><select className="saas-input" value={replacementDispatchForm.reportingManager} onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, reportingManager: e.target.value })}><option value="">None / Auto-Assign</option>{data.ams.map((am) => <option key={am._id} value={am._id}>{am.name}</option>)}</select></div><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Kit ID (Physical)</label><Input placeholder="Enter physical kit ID" value={replacementDispatchForm.kitId} onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, kitId: e.target.value })} /></div><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Details/Tracking</label><Input placeholder="E.g. Expedited shipping req" value={replacementDispatchForm.dispatchDetails} onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, dispatchDetails: e.target.value })} /></div><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Admin Notes (Optional)</label><textarea className="saas-input min-h-[80px] resize-y" value={replacementDispatchForm.adminNotes} onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, adminNotes: e.target.value })} placeholder="Notes for the replacement approval..." /></div><div className="flex flex-col gap-1.5"><label className="text-[13px] font-medium text-wk-body">Dispatch proof photo (optional)</label><input type="file" accept="image/*" capture="environment" className="saas-input file:mr-3 file:rounded-lg file:border-0 file:rounded-full file:bg-wk-peach file:px-4 file:py-2 file:text-[13px] file:font-semibold file:text-wk-navy" onChange={e => setReplacementDispatchForm({ ...replacementDispatchForm, proofPhoto: e.target.files?.[0] || null })} /><p className="text-xs text-slate-500">Snap a photo of the package as proof. Visible to the AM and school.</p></div><div className="pt-4"><Button variant="gradient" type="submit" className="w-full text-base py-3">Generate Dispatch Directive</Button></div></form></Modal>
       <Modal
         isOpen={isAuditModalOpen}
         onClose={() => {
@@ -2816,7 +2884,7 @@ const AdminDashboard = () => {
         className="max-w-4xl max-h-[85vh] overflow-y-auto"
       >
         {schoolAuditsLoading ? (
-          <p className="text-center py-10 text-slate-500">Loading audit history…</p>
+          <p className="inv-empty inv-empty__text">Loading audit history…</p>
         ) : (
           <AuditHistoryList
             audits={schoolAudits}
@@ -2825,7 +2893,23 @@ const AdminDashboard = () => {
         )}
       </Modal>
       <Modal isOpen={isKitStatusModalOpen} onClose={() => setIsKitStatusModalOpen(false)} title={`Kit Tracking & Status | ${formatSchoolDisplayName(selectedSchool?.name)}`} className="max-w-2xl">{kitStatusContent}</Modal>
-      <Modal isOpen={isReplacementsModalOpen} onClose={() => setIsReplacementsModalOpen(false)} title={`Pending Replacements | ${selectedSchool?.name}`} className="max-w-4xl max-h-[85vh] overflow-y-auto"><div className="overflow-x-auto">{schoolRequests.length > 0 ? (<table className="clean-table w-full"><thead><tr><th>Type</th><th>Kit Details</th><th>Reasoning / Context</th><th className="text-right">Action Directives</th></tr></thead><tbody>{schoolRequests.map(req => (<tr key={req._id}><td><Badge type={req.type === 'Damaged' ? 'error' : 'pending'}>{req.type}</Badge></td><td><p className="font-bold text-slate-800 text-[13px]">{req.kit?.name}</p><p className="font-extrabold text-slate-600 mt-1 bg-slate-100 px-2 py-0.5 rounded text-[10px] border border-slate-200 inline-block uppercase tracking-wider">Qty Request: {req.quantity}</p></td><td className="max-w-[300px] whitespace-normal"><p className="text-xs text-slate-700 leading-relaxed font-medium">{req.reasonDetails}</p>{req.amNotes && <p className="text-[11px] mt-2 text-slate-600 bg-slate-50 border border-slate-100 shadow-inner-soft p-2 rounded leading-relaxed"><span className="font-bold">AM Validation:</span> {req.amNotes}</p>}</td><td className="text-right align-middle"><div className="flex justify-end gap-2 flex-col sm:flex-row"><Button variant="danger" className="text-[11px] py-1.5 px-3" onClick={() => handleAction(req._id, 'reject')}>Deny Request</Button><Button variant="gradient" className="text-[11px] py-1.5 px-3" onClick={() => { setIsReplacementsModalOpen(false); openReplacementDispatchModal(req); }}>Authorize & Dispatch</Button></div></td></tr>))}</tbody></table>) : (<div className="text-center py-12"><span className="text-5xl block mb-4">✅</span><h3 className="text-xl font-bold text-slate-800">No Pending Replacements</h3><p className="text-sm text-slate-500 mt-2">All requests for this school have been cleared and actioned.</p></div>)}</div></Modal>
+      <Modal isOpen={isReplacementsModalOpen} onClose={() => setIsReplacementsModalOpen(false)} title={`Pending Replacements | ${selectedSchool?.name}`} className="max-w-4xl max-h-[85vh] overflow-y-auto"><div className="overflow-x-auto">{schoolRequests.length > 0 ? (<table className="clean-table w-full"><thead><tr><th>Type</th><th>Kit Details</th><th>Reasoning / Context</th><th className="text-right">Action Directives</th></tr></thead><tbody>{schoolRequests.map(req => (<tr key={req._id}><td><Badge type={req.type === 'Damaged' ? 'error' : 'pending'}>{req.type}</Badge></td><td><p className="font-medium text-slate-800 text-[13px]">{req.kit?.name}</p><p className="font-medium text-slate-600 mt-1 bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-200 inline-block normal-case tracking-normal">Qty Request: {req.quantity}</p></td><td className="max-w-[300px] whitespace-normal"><p className="text-xs text-slate-700 leading-relaxed font-medium">{req.reasonDetails}</p>{req.amNotes && <p className="text-xs mt-2 text-slate-600 bg-slate-50 border border-slate-100 shadow-inner-soft p-2 rounded leading-relaxed"><span className="font-medium">AM Validation:</span> {req.amNotes}</p>}</td><td className="text-right align-middle"><div className="flex justify-end gap-2 flex-col sm:flex-row"><Button variant="danger" className="text-xs py-1.5 px-3" onClick={() => handleAction(req._id, 'reject')}>Deny Request</Button><Button variant="gradient" className="text-xs py-1.5 px-3" onClick={() => { setIsReplacementsModalOpen(false); openReplacementDispatchModal(req); }}>Authorize & Dispatch</Button></div></td></tr>))}</tbody></table>) : (<div className="text-center py-12"><span className="text-5xl block mb-4">✅</span><h3 className="text-xl font-medium text-slate-800">No Pending Replacements</h3><p className="text-sm text-slate-500 mt-2">All requests for this school have been cleared and actioned.</p></div>)}</div></Modal>
+      <SchoolMergeWizard
+        isOpen={isMergeWizardOpen}
+        onClose={() => {
+          setIsMergeWizardOpen(false);
+          setMergePrimarySchool(null);
+        }}
+        schools={mergeSchoolOptions}
+        divisions={data.divisions}
+        ams={data.ams}
+        initialPrimary={mergePrimarySchool}
+        onRefresh={afterMutation}
+        onSuccess={() => afterMutation()}
+      />
+      {mergeSchoolsLoading && isMergeWizardOpen && (
+        <p className="sr-only">Loading schools for merge</p>
+      )}
       <DispatchTrackingModal
         dispatch={trackingDispatch}
         isOpen={!!trackingDispatch}

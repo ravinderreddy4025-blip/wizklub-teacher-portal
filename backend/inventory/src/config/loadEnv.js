@@ -47,19 +47,41 @@ function appendDbNameToMongoUri(baseUri, dbName) {
 }
 
 /**
+ * Standalone Mongo (directConnection / localhost) does not support retryable writes.
+ * Append retryWrites=false unless the URI already sets it (Atlas replica sets keep default).
+ */
+function ensureMongoClientOptions(uri) {
+  const trimmed = String(uri || '').trim();
+  if (!trimmed) return trimmed;
+
+  const isStandalone =
+    trimmed.includes('directConnection=true')
+    || /mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i.test(trimmed);
+
+  if (!isStandalone || /[?&]retryWrites=/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const sep = trimmed.includes('?') ? '&' : '?';
+  return `${trimmed}${sep}retryWrites=false`;
+}
+
+/**
  * Inventory DB URI: optional INVENTORY_MONGODB_URI override, else MONGODB_URI,
  * else MONGO_URI + INVENTORY_MONGO_DB_NAME (same pattern as PMO / Testimonials).
  */
 function resolveInventoryMongoUri() {
   const explicit = String(process.env.INVENTORY_MONGODB_URI || '').trim();
-  if (explicit) return resolveMongoUri(explicit);
+  if (explicit) return ensureMongoClientOptions(resolveMongoUri(explicit));
 
   const injected = String(process.env.MONGODB_URI || '').trim();
-  if (injected) return resolveMongoUri(injected);
+  if (injected) return ensureMongoClientOptions(resolveMongoUri(injected));
 
   const base = String(process.env.MONGO_URI || '').trim();
   const dbName = String(process.env.INVENTORY_MONGO_DB_NAME || 'wizklub-inventory').trim();
-  if (base) return resolveMongoUri(appendDbNameToMongoUri(base, dbName));
+  if (base) {
+    return ensureMongoClientOptions(resolveMongoUri(appendDbNameToMongoUri(base, dbName)));
+  }
 
   return undefined;
 }
@@ -69,6 +91,7 @@ module.exports = {
   ROOT_ENV_PATH,
   resolveMongoUri,
   appendDbNameToMongoUri,
+  ensureMongoClientOptions,
   resolveInventoryMongoUri,
   isRunningInDocker,
 };
