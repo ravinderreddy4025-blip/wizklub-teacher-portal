@@ -6,6 +6,7 @@ export const REVIEW_CATEGORIES = [
   'parent_review',
   'teacher_review',
   'student_review',
+  'other',
 ]
 
 export const REVIEW_CATEGORY_LABELS = {
@@ -14,6 +15,7 @@ export const REVIEW_CATEGORY_LABELS = {
   parent_review: 'Parent review',
   teacher_review: 'Teacher review',
   student_review: 'Student review',
+  other: 'Other',
 }
 
 export const CATEGORIES_TOTAL = REVIEW_CATEGORIES.length

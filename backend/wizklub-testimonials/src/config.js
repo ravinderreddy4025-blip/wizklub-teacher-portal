@@ -9,6 +9,12 @@ const mongoUri = String(process.env.MONGO_URI || '').trim() || 'mongodb://localh
 const mongoDbName =
   String(process.env.TESTIMONIALS_MONGO_DB_NAME || process.env.MONGO_DB_NAME || '').trim() || 'wizklub_testimonials'
 
+function boolEnv(name, defaultValue = false) {
+  const raw = process.env[name]
+  if (raw == null || String(raw).trim() === '') return defaultValue
+  return ['1', 'true', 'yes', 'on'].includes(String(raw).trim().toLowerCase())
+}
+
 export const config = {
   port: Number(process.env.TESTIMONIALS_PORT) || 3001,
   mongoUri,
@@ -17,11 +23,25 @@ export const config = {
   healthMongoDbName: String(process.env.HEALTH_MONGO_DB_NAME || '').trim() || 'wizklub_health',
   inventoryApiBaseUrl: String(process.env.INVENTORY_API_BASE_URL || 'http://127.0.0.1:5002/api').replace(/\/$/, ''),
   internalBridgeSecret: String(process.env.INTERNAL_BRIDGE_SECRET || '').trim(),
-  gcs: {
-    bucketName: String(process.env.GCS_BUCKET_NAME || '').trim(),
-    folder: String(process.env.GCS_FOLDER || 'wizklub').trim(),
-    credentials: String(process.env.GCS_CREDENTIALS || '').trim(),
-    credentialsBase64: String(process.env.GCS_CREDENTIALS_BASE64 || '').trim(),
+  s3: {
+    region: String(process.env.AWS_REGION || 'ap-south-1').trim(),
+    bucket: String(
+      process.env.TESTIMONIALS_S3_BUCKET ||
+        process.env.AWS_S3_BUCKET ||
+        process.env.S3_BUCKET_NAME ||
+        'wiz-recordings',
+    ).trim(),
+    prefix: String(
+      process.env.TESTIMONIALS_S3_PREFIX || 'testimonials',
+    )
+      .trim()
+      .replace(/^\/+|\/+$/g, ''),
+    accessKeyId: String(process.env.AWS_ACCESS_KEY_ID || '').trim() || undefined,
+    secretAccessKey: String(process.env.AWS_SECRET_ACCESS_KEY || '').trim() || undefined,
+    publicBaseUrl: String(
+      process.env.TESTIMONIALS_S3_PUBLIC_BASE_URL || process.env.AWS_S3_PUBLIC_BASE_URL || '',
+    ).trim(),
+    objectAcl: boolEnv('TESTIMONIALS_S3_PUBLIC_ACL', true) ? 'public-read' : undefined,
   },
   lms: {
     baseUrl: String(process.env.LMS_BASE_URL || '').trim().replace(/\/$/, ''),

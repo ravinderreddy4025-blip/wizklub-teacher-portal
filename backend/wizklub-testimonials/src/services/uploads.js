@@ -8,7 +8,7 @@ import {
   UPLOAD_STATUS,
 } from '../utils/constants.js'
 import { Upload } from '../db/models.js'
-import { uploadToGCS, deleteFromGCS } from './storage.js'
+import { uploadToS3, deleteFromS3 } from './storage.js'
 import { getUploadById, mapUploadRow } from './access.js'
 
 export function validateUploadFile(file) {
@@ -100,8 +100,8 @@ export async function createUpload({ studentId, teacherId, category, file }) {
 
   const uploadId = uuidv4()
 
-  const gcsResult = await uploadToGCS(file.buffer, {
-    folderParts: [studentId, category],
+  const s3Result = await uploadToS3(file.buffer, {
+    folderParts: ['student', validation.mediaType, studentId, category],
     uploadId,
     mediaType: validation.mediaType,
     mimetype: file.mimetype,
@@ -115,10 +115,10 @@ export async function createUpload({ studentId, teacherId, category, file }) {
     teacher_id: teacherId,
     category,
     media_type: validation.mediaType,
-    blob_url: gcsResult.publicUrl,
-    blob_key: gcsResult.objectPath,
-    file_path: gcsResult.objectPath,
-    file_size_bytes: gcsResult.bytes ?? file.size,
+    blob_url: s3Result.publicUrl,
+    blob_key: s3Result.objectPath,
+    file_path: s3Result.objectPath,
+    file_size_bytes: s3Result.bytes ?? file.size,
     duration_seconds: null,
     upload_source: 'web',
     status: UPLOAD_STATUS.DRAFT,
@@ -141,7 +141,7 @@ export async function deleteUpload(uploadId, teacherId) {
   }
 
   if (upload.blob_key) {
-    await deleteFromGCS(upload.blob_key)
+    await deleteFromS3(upload.blob_key)
   }
 
   await Upload.deleteOne({ _id: uploadId })

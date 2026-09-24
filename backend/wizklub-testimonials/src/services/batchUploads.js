@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
-import { ALLOWED_MIME_TYPES, BATCH_UPLOADS_SEGMENT, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, UPLOAD_STATUS } from '../utils/constants.js'
-import { uploadToGCS, deleteFromGCS } from './storage.js'
+import { ALLOWED_MIME_TYPES, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, UPLOAD_STATUS } from '../utils/constants.js'
+import { uploadToS3, deleteFromS3 } from './storage.js'
 import { teacherOwnsBatch, mapBatchUploadRow } from './access.js'
 import { BatchUpload } from '../db/models.js'
 import { isDatabaseReady } from '../db/state.js'
@@ -39,8 +39,8 @@ export async function addBatchUpload({ batchId, teacherId, file, batchIds, schoo
 
   const uploadId = uuidv4()
 
-  const gcsResult = await uploadToGCS(file.buffer, {
-    folderParts: [batchId, BATCH_UPLOADS_SEGMENT],
+  const s3Result = await uploadToS3(file.buffer, {
+    folderParts: ['batch', validation.mediaType, batchId],
     uploadId,
     mediaType: validation.mediaType,
     mimetype: file.mimetype,
@@ -53,10 +53,10 @@ export async function addBatchUpload({ batchId, teacherId, file, batchIds, schoo
     batch_id: batchId,
     teacher_id: teacherId,
     media_type: validation.mediaType,
-    blob_url: gcsResult.publicUrl,
-    blob_key: gcsResult.objectPath,
-    file_path: gcsResult.objectPath,
-    file_size_bytes: gcsResult.bytes ?? file.size,
+    blob_url: s3Result.publicUrl,
+    blob_key: s3Result.objectPath,
+    file_path: s3Result.objectPath,
+    file_size_bytes: s3Result.bytes ?? file.size,
     upload_source: 'web',
     status: UPLOAD_STATUS.DRAFT,
     created_at: createdAt,
@@ -86,7 +86,7 @@ export async function deleteBatchUpload(uploadId, teacherId) {
   }
 
   if (row.blob_key) {
-    await deleteFromGCS(row.blob_key)
+    await deleteFromS3(row.blob_key)
   }
 
   await BatchUpload.deleteOne({ _id: uploadId })

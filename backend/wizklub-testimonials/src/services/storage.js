@@ -1,4 +1,4 @@
-import { Storage } from '@google-cloud/storage'
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { config } from '../config.js'
 
 const MIME_TO_EXT = {
@@ -18,84 +18,82 @@ const MIME_TO_EXT = {
   'video/x-m4v': 'm4v',
 }
 
-let storage = null
-let bucket = null
+let client = null
 
-function parseGcsCredentials() {
-  if (config.gcs.credentialsBase64) {
-    try {
-      return JSON.parse(Buffer.from(config.gcs.credentialsBase64, 'base64').toString('utf8'))
-    } catch {
-      throw new Error('[GCS] Failed to parse GCS_CREDENTIALS_BASE64. Use base64-encoded service account JSON.')
+function getClient() {
+  if (!client) {
+    const clientConfig = { region: config.s3.region }
+    if (config.s3.accessKeyId && config.s3.secretAccessKey) {
+      clientConfig.credentials = {
+        accessKeyId: config.s3.accessKeyId,
+        secretAccessKey: config.s3.secretAccessKey,
+      }
     }
+    client = new S3Client(clientConfig)
   }
-
-  if (config.gcs.credentials) {
-    try {
-      return JSON.parse(config.gcs.credentials)
-    } catch {
-      throw new Error('[GCS] Failed to parse GCS_CREDENTIALS JSON. Paste minified service account JSON in .env.')
-    }
-  }
-
-  return null
-}
-
-function getBucket() {
-  if (!bucket) {
-    const credentials = parseGcsCredentials()
-    if (!credentials) {
-      throw new Error('[GCS] Missing credentials. Set GCS_CREDENTIALS or GCS_CREDENTIALS_BASE64 in .env.')
-    }
-
-    storage = new Storage({ credentials })
-    bucket = storage.bucket(config.gcs.bucketName)
-  }
-  return bucket
+  return client
 }
 
 export function isStorageConfigured() {
-  return Boolean(config.gcs.bucketName)
+  return Boolean(config.s3.bucket && config.s3.region)
 }
 
-export async function uploadToGCS(fileBuffer, { folderParts, uploadId, mediaType, mimetype }) {
+function buildObjectPath(folderParts, uploadId, ext) {
+  return [config.s3.prefix, ...folderParts, `${uploadId}.${ext}`]
+    .filter(Boolean)
+    .join('/')
+    .replace(/^\/+/, '')
+}
+
+function publicObjectUrl(objectPath) {
+  if (config.s3.publicBaseUrl) {
+    return `${config.s3.publicBaseUrl.replace(/\/+$/, '')}/${objectPath}`
+  }
+  return `https://${config.s3.bucket}.s3.${config.s3.region}.amazonaws.com/${objectPath}`
+}
+
+export async function uploadToS3(fileBuffer, { folderParts, uploadId, mediaType, mimetype }) {
   if (!isStorageConfigured()) {
-    throw new Error('GCS is not configured. Set GCS_BUCKET_NAME environment variable.')
+    throw new Error(
+      'S3 is not configured. Set TESTIMONIALS_S3_BUCKET (or AWS_S3_BUCKET) and AWS_REGION.',
+    )
   }
 
   const ext = MIME_TO_EXT[mimetype] || (mediaType === 'video' ? 'mp4' : 'jpg')
-  const objectPath = [config.gcs.folder, ...folderParts, `${uploadId}.${ext}`]
-    .filter(Boolean)
-    .join('/')
+  const objectPath = buildObjectPath(folderParts, uploadId, ext)
 
-  const b = getBucket()
-  const file = b.file(objectPath)
+  const putInput = {
+    Bucket: config.s3.bucket,
+    Key: objectPath,
+    Body: fileBuffer,
+    ContentType: mimetype || 'application/octet-stream',
+    CacheControl: 'public, max-age=31536000',
+  }
+  if (config.s3.objectAcl) {
+    putInput.ACL = config.s3.objectAcl
+  }
 
-  await file.save(fileBuffer, {
-    contentType: mimetype,
-    resumable: false,
-    metadata: {
-      cacheControl: 'public, max-age=31536000',
-    },
-  })
-
-  const publicUrl = `https://storage.googleapis.com/${config.gcs.bucketName}/${objectPath}`
+  await getClient().send(new PutObjectCommand(putInput))
 
   return {
-    publicUrl,
+    publicUrl: publicObjectUrl(objectPath),
     objectPath,
     bytes: fileBuffer.length,
   }
 }
 
-export async function deleteFromGCS(objectPath) {
+export async function deleteFromS3(objectPath) {
   if (!objectPath || !isStorageConfigured()) return
 
   try {
-    const b = getBucket()
-    await b.file(objectPath).delete()
+    await getClient().send(
+      new DeleteObjectCommand({
+        Bucket: config.s3.bucket,
+        Key: String(objectPath).replace(/^\/+/, ''),
+      }),
+    )
   } catch (err) {
-    if (err.code === 404) return
+    if (err?.$metadata?.httpStatusCode === 404 || err?.name === 'NotFound') return
     throw err
   }
 }

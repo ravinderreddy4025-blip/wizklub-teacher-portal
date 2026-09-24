@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { Batch, Counter, Feedback, School } from '../db/models.js'
 import { isDatabaseReady } from '../db/state.js'
-import { uploadToGCS } from './storage.js'
+import { uploadToS3 } from './storage.js'
 import {
   FEEDBACK_CATEGORIES,
   FEEDBACK_FOLDER,
@@ -81,7 +81,7 @@ async function uploadAttachments(feedbackId, files = []) {
       .replace(/[^\w.\-()+ ]+/g, '_')
       .slice(0, 120)
 
-    const gcs = await uploadToGCS(file.buffer, {
+    const s3 = await uploadToS3(file.buffer, {
       folderParts: [FEEDBACK_FOLDER, feedbackId],
       uploadId,
       mediaType: mediaType === 'video' ? 'video' : 'photo',
@@ -89,7 +89,7 @@ async function uploadAttachments(feedbackId, files = []) {
     })
 
     attachments.push({
-      url: gcs.publicUrl,
+      url: s3.publicUrl,
       type: mediaType,
       filename: safeName,
       uploaded_at: new Date(),

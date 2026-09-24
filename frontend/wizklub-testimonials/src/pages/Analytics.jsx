@@ -26,6 +26,154 @@ const EMPTY_COMPLETION = [
 ]
 const EMPTY_STUDENTS = []
 
+function formatLmsMinutes(totalMinutes) {
+  const minutes = Math.max(0, Math.round(Number(totalMinutes) || 0))
+  const hours = Math.floor(minutes / 60)
+  const rem = minutes % 60
+  if (hours === 0) return `${rem}m`
+  if (rem === 0) return `${hours}h`
+  return `${hours}h ${rem}m`
+}
+
+function LmsMonthChart({ points }) {
+  const [hoverIndex, setHoverIndex] = useState(null)
+  const series = Array.isArray(points) ? points : []
+  if (series.length === 0) {
+    return <p className="analytics-lms__empty">No LMS activity this month</p>
+  }
+
+  const width = 340
+  const height = 128
+  const pad = { top: 12, right: 14, bottom: 26, left: 22 }
+  const plotW = width - pad.left - pad.right
+  const plotH = height - pad.top - pad.bottom
+  const maxMinutes = Math.max(...series.map((p) => Number(p.minutes) || 0), 1)
+  const yMax = Math.ceil(maxMinutes / 30) * 30 || 30
+  const yTicks = [0, yMax / 2, yMax]
+  const n = series.length
+  const xAt = (i) => pad.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW)
+  const yAt = (minutes) => pad.top + plotH - ((Number(minutes) || 0) / yMax) * plotH
+  const bandW = n > 1 ? plotW / (n - 1) : plotW
+
+  /** Week labels with month abbrev; full range also in tooltip. */
+  const axisLabel = (label) => {
+    const text = String(label || '').trim()
+    // Already like "Jul 6–12" or "Jun 29–Jul 5" from backend
+    if (/^[A-Za-z]{3} \d+–/.test(text)) return text
+    return text.length > 14 ? text.slice(0, 14) : text
+  }
+
+  const xAnchor = (index) => {
+    if (index === 0) return 'start'
+    if (index === n - 1) return 'end'
+    return 'middle'
+  }
+
+  const linePoints = series.map((p, i) => `${xAt(i)},${yAt(p.minutes)}`).join(' ')
+  const areaPoints = [
+    `${xAt(0)},${pad.top + plotH}`,
+    ...series.map((p, i) => `${xAt(i)},${yAt(p.minutes)}`),
+    `${xAt(n - 1)},${pad.top + plotH}`,
+  ].join(' ')
+
+  const hovered = hoverIndex != null ? series[hoverIndex] : null
+
+  return (
+    <div className="analytics-lms-chart" onMouseLeave={() => setHoverIndex(null)}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="analytics-lms-chart__svg"
+        role="img"
+        aria-label="LMS time by week this month"
+      >
+        <text
+          x={pad.left}
+          y={10}
+          className="analytics-lms-chart__axis-title"
+          fontSize="5.5"
+        >
+          ↑ Min
+        </text>
+        {yTicks.map((tick) => {
+          const y = yAt(tick)
+          return (
+            <g key={`yt-${tick}`}>
+              <line
+                x1={pad.left}
+                y1={y}
+                x2={width - pad.right}
+                y2={y}
+                className="analytics-lms-chart__grid"
+              />
+              <text
+                x={pad.left - 3}
+                y={y + 2}
+                textAnchor="end"
+                className="analytics-lms-chart__tick"
+                fontSize="5"
+              >
+                {tick}
+              </text>
+            </g>
+          )
+        })}
+        {hoverIndex != null && (
+          <rect
+            x={Math.max(pad.left, xAt(hoverIndex) - bandW / 2)}
+            y={pad.top}
+            width={Math.min(bandW, width - pad.right - Math.max(pad.left, xAt(hoverIndex) - bandW / 2))}
+            height={plotH}
+            className="analytics-lms-chart__band"
+          />
+        )}
+        <polygon points={areaPoints} className="analytics-lms-chart__area" />
+        <polyline points={linePoints} className="analytics-lms-chart__line" fill="none" />
+        {series.map((p, i) => (
+          <g key={`pt-${p.start || p.label}-${i}`}>
+            <circle
+              cx={xAt(i)}
+              cy={yAt(p.minutes)}
+              r={hoverIndex === i ? 3 : 2.25}
+              className={`analytics-lms-chart__dot${hoverIndex === i ? ' is-active' : ''}`}
+            />
+            <circle
+              cx={xAt(i)}
+              cy={yAt(p.minutes)}
+              r={11}
+              className="analytics-lms-chart__hit"
+              onMouseEnter={() => setHoverIndex(i)}
+              onFocus={() => setHoverIndex(i)}
+            />
+            <text
+              x={xAt(i)}
+              y={height - 7}
+              textAnchor={xAnchor(i)}
+              className="analytics-lms-chart__xlabel"
+              fontSize="4"
+            >
+              {axisLabel(p.label)}
+            </text>
+          </g>
+        ))}
+      </svg>
+      {hovered && hoverIndex != null && (
+        <div
+          className="analytics-lms-chart__tooltip"
+          style={{
+            left: `${(xAt(hoverIndex) / width) * 100}%`,
+            top: `${(yAt(hovered.minutes) / height) * 100}%`,
+          }}
+        >
+          <p className="analytics-lms-chart__tooltip-range">{hovered.label}</p>
+          <p className="analytics-lms-chart__tooltip-value">
+            Time spent: <strong>{formatLmsMinutes(hovered.minutes)}</strong>
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const ANALYTICS_BY_BATCH = {
   g8a: {
     sessions: { total: 42, done: 28, missed: 10, cancelled: 4 },
@@ -204,9 +352,10 @@ export default function Analytics() {
   const [batchesReady, setBatchesReady] = useState(false)
   const [sessions, setSessions] = useState(EMPTY_SESSIONS)
   const [sessionsLoading, setSessionsLoading] = useState(true)
-  const [lmsHours, setLmsHours] = useState(0)
-  const [lmsLabel, setLmsLabel] = useState('Your LMS time (14 days)')
-  const [weeklyBars, setWeeklyBars] = useState([0, 0, 0, 0])
+  const [lmsDisplay, setLmsDisplay] = useState('0m')
+  const [lmsLabel, setLmsLabel] = useState(`Active in ${new Date().getFullYear()}`)
+  const [lmsChartHint, setLmsChartHint] = useState('Each point is a week in the current month')
+  const [monthPoints, setMonthPoints] = useState([])
   const [lmsLoading, setLmsLoading] = useState(true)
   const [rating, setRating] = useState(EMPTY_RATING)
   const [ratingLoading, setRatingLoading] = useState(true)
@@ -228,17 +377,16 @@ export default function Analytics() {
   const data = useMemo(
     () => ({
       sessions,
-      lmsHours,
-      weeklyBars,
+      lmsDisplay,
+      monthPoints,
       rating,
       northStar,
       techIssues,
       completion,
       students,
     }),
-    [sessions, lmsHours, weeklyBars, rating, northStar, techIssues, completion, students],
+    [sessions, lmsDisplay, monthPoints, rating, northStar, techIssues, completion, students],
   )
-  const maxBar = Math.max(...data.weeklyBars, 1)
 
   useEffect(() => {
     let cancelled = false
@@ -384,21 +532,20 @@ export default function Analytics() {
         const summary = await api.getLmsTime()
         if (cancelled) return
         if (!summary) {
-          setLmsHours(0)
-          setWeeklyBars([0, 0, 0, 0])
-          setLmsLabel('Your LMS time (14 days)')
+          setLmsDisplay('0m')
+          setMonthPoints([])
+          setLmsLabel(`Active in ${new Date().getFullYear()}`)
           return
         }
-        setLmsHours(Number(summary.hours) || 0)
-        setLmsLabel(summary.label || 'Your LMS time (14 days)')
-        if (Array.isArray(summary.weekly_bars) && summary.weekly_bars.length) {
-          setWeeklyBars(summary.weekly_bars.map((v) => Number(v) || 0))
-        }
+        setLmsDisplay(summary.display || formatLmsMinutes(summary.minutes) || '0m')
+        setLmsLabel(summary.label || `Active in ${summary.year || new Date().getFullYear()}`)
+        setLmsChartHint(summary.chart_hint || 'Each point is a week in the current month')
+        setMonthPoints(Array.isArray(summary.month_points) ? summary.month_points : [])
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to load LMS time', err)
-          setLmsHours(0)
-          setWeeklyBars([0, 0, 0, 0])
+          setLmsDisplay('0m')
+          setMonthPoints([])
           toast.error('Could not load LMS time tracking')
         }
       } finally {
@@ -605,34 +752,6 @@ export default function Analytics() {
             )}
           </section>
 
-          {/* LMS Time Spent — from wizklub_lms tracking */}
-          <section className="analytics-card card">
-            <h2 className="analytics-card__title">LMS Time Spent</h2>
-            <div className="analytics-lms">
-              {lmsLoading ? (
-                <p className="analytics-lms__label">Loading LMS time…</p>
-              ) : (
-                <>
-                  <p className="analytics-lms__value">{data.lmsHours} hrs</p>
-                  <p className="analytics-lms__label">{lmsLabel}</p>
-                </>
-              )}
-            </div>
-            <div className="analytics-bars" aria-hidden="true">
-              {data.weeklyBars.map((value, index) => (
-                <div
-                  key={`week-bar-${index}`}
-                  className={`analytics-bars__item ${index === data.weeklyBars.length - 1 ? 'analytics-bars__item--peak' : ''}`}
-                  style={{ height: `${Math.round((value / maxBar) * 100)}%` }}
-                />
-              ))}
-            </div>
-            <div className="analytics-bars__labels">
-              <span>Week 1</span>
-              <span>Week 4</span>
-            </div>
-          </section>
-
           {/* Tech Issues Raised — from Support (Testimonials feedbacks) */}
           <section className="analytics-card card">
             <div className="analytics-card__head">
@@ -811,6 +930,23 @@ export default function Analytics() {
                 )}
               </>
             )}
+          </section>
+
+          {/* LMS Time Spent — from wizklub_lms tracking */}
+          <section className="analytics-card card">
+            <h2 className="analytics-card__title">LMS Time Spent</h2>
+            <div className="analytics-lms">
+              {lmsLoading ? (
+                <p className="analytics-lms__label">Loading LMS time…</p>
+              ) : (
+                <>
+                  <p className="analytics-lms__value">{data.lmsDisplay}</p>
+                  <p className="analytics-lms__label">{lmsLabel}</p>
+                  <p className="analytics-lms__hint">{lmsChartHint}</p>
+                  <LmsMonthChart points={data.monthPoints} />
+                </>
+              )}
+            </div>
           </section>
         </div>
       </div>

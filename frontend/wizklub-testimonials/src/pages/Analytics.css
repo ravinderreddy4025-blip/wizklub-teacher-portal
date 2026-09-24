@@ -220,9 +220,115 @@
 }
 
 .analytics-lms__label {
-  margin: 6px 0 14px;
-  font-size: 13px;
+  margin: 4px 0 2px;
+  font-size: 12px;
   color: var(--text-secondary);
+}
+
+.analytics-lms__hint {
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.analytics-lms__empty {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.analytics-lms-chart {
+  position: relative;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  padding: 8px 6px 10px;
+  max-width: 100%;
+  border-radius: 10px;
+  background: #fafafa;
+  overflow: visible;
+}
+
+.analytics-lms-chart__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.analytics-lms-chart__grid {
+  stroke: #e8eaee;
+  stroke-width: 1;
+}
+
+.analytics-lms-chart__tick,
+.analytics-lms-chart__axis-title,
+.analytics-lms-chart__xlabel {
+  fill: #6b7280;
+  font-weight: 600;
+}
+
+.analytics-lms-chart__band {
+  fill: rgba(15, 23, 42, 0.05);
+}
+
+.analytics-lms-chart__area {
+  fill: rgba(34, 197, 94, 0.10);
+}
+
+.analytics-lms-chart__line {
+  stroke: #22c55e;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.analytics-lms-chart__dot {
+  fill: #22c55e;
+  stroke: #fff;
+  stroke-width: 1.1;
+  pointer-events: none;
+}
+
+.analytics-lms-chart__dot.is-active {
+  stroke-width: 1.4;
+}
+
+.analytics-lms-chart__hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.analytics-lms-chart__tooltip {
+  position: absolute;
+  z-index: 2;
+  min-width: 124px;
+  max-width: 170px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+}
+
+.analytics-lms-chart__tooltip-range {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.analytics-lms-chart__tooltip-value {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.analytics-lms-chart__tooltip-value strong {
+  color: #16a34a;
+  font-weight: 800;
 }
 
 .analytics-bars {

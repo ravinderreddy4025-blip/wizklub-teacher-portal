@@ -91,7 +91,7 @@ let batchUploads = {
     teacher_id: 'demo.teacher',
     media_type: 'photo',
     blob_url: assetUrl('assets/school-campus.png'),
-    blob_key: 'batch-1/batch_group_uploads/seed',
+    blob_key: 'batch/photo/batch-1/seed',
     file_size_bytes: 1024 * 256,
     upload_source: 'web',
     status: UPLOAD_STATUS.SUBMITTED,
@@ -297,14 +297,22 @@ export const mockStore = {
   },
 
   getLmsTime() {
+    const year = new Date().getFullYear()
     return {
       configured: true,
+      year,
       hours: 48,
       minutes: 2880,
-      period_days: 14,
       display: '48h',
-      weekly_bars: [38, 42, 35, 70],
-      label: 'Your LMS time (14 days)',
+      label: `Active in ${year}`,
+      month_points: [
+        { label: 'Jul 1–7', minutes: 120 },
+        { label: 'Jul 8–14', minutes: 95 },
+        { label: 'Jul 15–21', minutes: 140 },
+        { label: 'Jul 22–28', minutes: 180 },
+        { label: 'Jul 29–31', minutes: 60 },
+      ],
+      chart_hint: 'Each point is a week in the current month',
     }
   },
 
@@ -372,7 +380,7 @@ export const mockStore = {
           )
           .map((upload) => upload.category),
       )
-      return submittedCategories.size < 5
+      return submittedCategories.size < CATEGORIES_TOTAL
     }).length
 
     const videosUploaded = uploads.filter(
@@ -456,7 +464,7 @@ export const mockStore = {
           )
           .map((upload) => upload.category),
       ).size
-      const completionPct = Math.round((categoriesDone / 5) * 100)
+      const completionPct = Math.round((categoriesDone / CATEGORIES_TOTAL) * 100)
       return {
         id: student.id,
         full_name: student.full_name,
@@ -465,7 +473,7 @@ export const mockStore = {
         completion_pct: completionPct,
         status: completionPct === 100 ? 'uploaded' : 'pending',
         categories_done: categoriesDone,
-        categories_total: 5,
+        categories_total: CATEGORIES_TOTAL,
       }
     })
 
@@ -724,7 +732,7 @@ export const mockStore = {
         )
         .map((upload) => upload.category),
     ).size
-    const completionPct = Math.round((categoriesDone / 5) * 100)
+    const completionPct = Math.round((categoriesDone / CATEGORIES_TOTAL) * 100)
 
     const categoryUploads = {}
     for (const upload of uploads) {
@@ -747,7 +755,7 @@ export const mockStore = {
         image: student.image,
         completion_pct: completionPct,
         categories_done: categoriesDone,
-        categories_total: 5,
+        categories_total: CATEGORIES_TOTAL,
       },
       batch: { id: batch.id, name: batch.name },
       school: { id: school.id, name: school.name },
@@ -802,7 +810,7 @@ export const mockStore = {
       teacher_id: teacher.id,
       media_type: 'photo',
       blob_url: previewUrl,
-      blob_key: `${batchId}/batch_group_uploads/${Date.now()}`,
+      blob_key: `batch/photo/${batchId}/${Date.now()}`,
       file_size_bytes: file.size,
       upload_source: 'web',
       status: UPLOAD_STATUS.SUBMITTED,

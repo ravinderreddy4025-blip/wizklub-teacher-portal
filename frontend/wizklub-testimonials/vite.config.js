@@ -157,6 +157,16 @@ export default defineConfig(({ mode }) => {
               },
             },
             {
+              urlPattern: /^https:\/\/wiz-recordings\.s3\.ap-south-1\.amazonaws\.com\/.*/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 's3-testimonials-media',
+                networkTimeoutSeconds: 10,
+                expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              },
+            },
+            {
+              // Legacy GCS media (pre-migration uploads)
               urlPattern: /^https:\/\/storage\.googleapis\.com\/.*/i,
               handler: 'NetworkFirst',
               options: {

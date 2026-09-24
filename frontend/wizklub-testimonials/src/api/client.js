@@ -520,12 +520,19 @@ export const api = {
       const { mockStore } = await loadMockStore()
       return mockStore.getLmsTime?.() ?? {
         configured: true,
+        year: new Date().getFullYear(),
         hours: 48,
         minutes: 2880,
-        period_days: 14,
         display: '48h',
-        weekly_bars: [38, 42, 35, 70],
-        label: 'Your LMS time (14 days)',
+        label: `Active in ${new Date().getFullYear()}`,
+        month_points: [
+          { label: 'Jul 1–7', minutes: 120 },
+          { label: 'Jul 8–14', minutes: 95 },
+          { label: 'Jul 15–21', minutes: 140 },
+          { label: 'Jul 22–28', minutes: 180 },
+          { label: 'Jul 29–31', minutes: 60 },
+        ],
+        chart_hint: 'Each point is a week in the current month',
       }
     }
 

@@ -23,7 +23,7 @@ async function handleCreate(req, res) {
     return res.status(result.status).json({ ok: true, upload: result.upload })
   } catch (err) {
     console.error('Batch upload failed:', err)
-    return res.status(500).json({ ok: false, error: 'Upload failed. Check GCS configuration.' })
+    return res.status(500).json({ ok: false, error: 'Upload failed. Check S3 configuration.' })
   }
 }
 

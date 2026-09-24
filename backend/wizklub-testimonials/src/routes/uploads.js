@@ -45,8 +45,8 @@ export function createUploadsRouter() {
 
       return res.status(result.status).json({ ok: true, upload: result.upload })
     } catch (err) {
-      console.error('GCS upload failed:', err)
-      return res.status(500).json({ ok: false, error: 'Upload failed. Check GCS configuration.' })
+      console.error('S3 upload failed:', err)
+      return res.status(500).json({ ok: false, error: 'Upload failed. Check S3 configuration.' })
     }
   },
   )
@@ -59,7 +59,7 @@ export function createUploadsRouter() {
       }
       return res.status(204).send()
     } catch (err) {
-      console.error('GCS delete failed:', err)
+      console.error('S3 delete failed:', err)
       return res.status(500).json({ ok: false, error: 'Failed to remove upload.' })
     }
   })
