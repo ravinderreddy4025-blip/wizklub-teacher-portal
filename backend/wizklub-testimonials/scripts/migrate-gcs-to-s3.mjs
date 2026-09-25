@@ -12,6 +12,8 @@
  *   node scripts/migrate-gcs-to-s3.mjs --apply --limit=20
  *   node scripts/migrate-gcs-to-s3.mjs --gcs-only   # skip old S3-layout rows
  *
+ * Transfers GCS → S3 via streaming multipart upload (does not load whole files into RAM).
+ *
  * Env:
  *   MONGO_URI, TESTIMONIALS_MONGO_DB_NAME
  *   AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
@@ -26,15 +28,16 @@
  */
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { Readable } from 'stream'
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 import {
   S3Client,
-  PutObjectCommand,
   CopyObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
 } from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
@@ -211,12 +214,34 @@ async function getGcsBucket(bucketName) {
   return bucket
 }
 
-async function downloadFromGcs(blobUrl) {
+function quietStream(stream) {
+  if (stream && typeof stream.setMaxListeners === 'function') {
+    stream.setMaxListeners(0)
+  }
+  return stream
+}
+
+async function openGcsReadStream(blobUrl) {
   const { bucket, objectPath } = parseGcsUrl(blobUrl)
   const gcs = await getGcsBucket(bucket)
   if (gcs) {
-    const [buf] = await gcs.file(objectPath).download()
-    return { buffer: buf, sourceKey: objectPath, sourceBucket: bucket, sourceKind: 'gcs' }
+    const file = gcs.file(objectPath)
+    let contentLength
+    try {
+      const [metadata] = await file.getMetadata()
+      const size = Number(metadata?.size)
+      if (Number.isFinite(size) && size > 0) contentLength = size
+    } catch {
+      // Metadata is optional; multipart upload still works without it.
+    }
+    const stream = quietStream(file.createReadStream())
+    return {
+      stream,
+      contentLength,
+      sourceKey: objectPath,
+      sourceBucket: bucket,
+      sourceKind: 'gcs-stream',
+    }
   }
 
   const response = await fetch(blobUrl)
@@ -225,20 +250,68 @@ async function downloadFromGcs(blobUrl) {
       `Failed to download GCS object (${response.status}). Set GCS_CREDENTIALS for private buckets.`,
     )
   }
-  const buffer = Buffer.from(await response.arrayBuffer())
-  return { buffer, sourceKey: objectPath, sourceBucket: bucket, sourceKind: 'gcs-http' }
+  if (!response.body) {
+    throw new Error(`GCS HTTP response had no body for ${blobUrl}`)
+  }
+  const lenHeader = response.headers.get('content-length')
+  const parsedLen = lenHeader ? Number(lenHeader) : NaN
+  return {
+    stream: quietStream(Readable.fromWeb(response.body)),
+    contentLength: Number.isFinite(parsedLen) && parsedLen > 0 ? parsedLen : undefined,
+    sourceKey: objectPath,
+    sourceBucket: bucket,
+    sourceKind: 'gcs-http-stream',
+  }
 }
 
-async function uploadToS3(s3, { key, buffer, contentType }) {
-  const input = {
+/** Stream GCS → S3 (multipart). Avoids loading whole videos into RAM. */
+async function streamGcsToS3(s3, { blobUrl, key, contentType }) {
+  const opened = await openGcsReadStream(blobUrl)
+  const params = {
     Bucket: S3_BUCKET,
     Key: key,
-    Body: buffer,
+    Body: opened.stream,
     ContentType: contentType,
     CacheControl: 'public, max-age=31536000',
   }
-  if (S3_ACL) input.ACL = S3_ACL
-  await s3.send(new PutObjectCommand(input))
+  if (S3_ACL) params.ACL = S3_ACL
+  if (opened.contentLength) params.ContentLength = opened.contentLength
+
+  const upload = new Upload({
+    client: s3,
+    params,
+    queueSize: 2,
+    partSize: 8 * 1024 * 1024,
+    leavePartsOnError: false,
+  })
+
+  let lastLogAt = 0
+  upload.on('httpUploadProgress', (progress) => {
+    const now = Date.now()
+    if (now - lastLogAt < 5000) return
+    lastLogAt = now
+    const loaded = progress.loaded ?? 0
+    const total = progress.total || opened.contentLength
+    if (total) {
+      const pct = Math.min(100, Math.round((loaded / total) * 100))
+      console.log(`  … ${key} ${pct}% (${loaded}/${total} bytes)`)
+    } else {
+      console.log(`  … ${key} ${loaded} bytes uploaded`)
+    }
+  })
+
+  try {
+    await upload.done()
+  } catch (err) {
+    try {
+      opened.stream.destroy?.(err)
+    } catch {
+      // ignore cleanup errors
+    }
+    throw err
+  }
+
+  return opened
 }
 
 async function copyS3ToS3(s3, fromKey, toKey, contentType) {
@@ -309,13 +382,14 @@ function needsMigration(doc) {
   return false
 }
 
-async function migrateOne(s3, db, doc, meta) {
+async function migrateOne(s3, db, doc, meta, progressLabel = '') {
   const source = needsMigration(doc)
   if (!source) return { status: 'skip' }
 
   const contentType = contentTypeFor(meta.ext, meta.mediaType)
+  const prefix = progressLabel ? `${progressLabel} ` : ''
   console.log(
-    `[${APPLY ? 'APPLY' : 'DRY'}] ${meta.collection} ${doc._id} (${source}) → ${meta.newKey}`,
+    `${prefix}[${APPLY ? 'APPLY' : 'DRY'}] ${meta.collection} ${doc._id} (${source}) → ${meta.newKey}`,
   )
 
   if (!APPLY) return { status: 'dry-run', newKey: meta.newKey, source }
@@ -334,8 +408,11 @@ async function migrateOne(s3, db, doc, meta) {
     if (!doc.blob_url || !isGcsUrl(doc.blob_url)) {
       throw new Error(`Expected GCS blob_url for ${doc._id}`)
     }
-    const downloaded = await downloadFromGcs(doc.blob_url)
-    await uploadToS3(s3, { key: meta.newKey, buffer: downloaded.buffer, contentType })
+    await streamGcsToS3(s3, {
+      blobUrl: doc.blob_url,
+      key: meta.newKey,
+      contentType,
+    })
     if (DELETE_SOURCE) await deleteGcsObject(doc.blob_url)
   }
 
@@ -351,6 +428,7 @@ async function migrateOne(s3, db, doc, meta) {
     },
   )
 
+  console.log(`${prefix}  ok ${doc._id}`)
   return { status: 'migrated', newKey: meta.newKey, newUrl, source }
 }
 
@@ -361,6 +439,7 @@ async function main() {
   console.log(`Mode: ${APPLY ? 'APPLY' : 'DRY-RUN'} | delete-source=${DELETE_SOURCE} | old-s3=${INCLUDE_OLD_S3}`)
   console.log(`Mongo DB: ${MONGO_DB}`)
   console.log(`S3: s3://${S3_BUCKET}/${S3_PREFIX}/ ...`)
+  console.log('Transfer: streaming (multipart) — large videos stay out of RAM')
 
   await mongoose.connect(MONGO_URI, { dbName: MONGO_DB })
   const db = mongoose.connection.db
@@ -387,17 +466,23 @@ async function main() {
 
   let migrated = 0
   let failed = 0
-  for (const job of selected) {
+  let skipped = 0
+  for (let i = 0; i < selected.length; i += 1) {
+    const job = selected[i]
+    const progressLabel = `[${i + 1}/${selected.length}]`
     try {
-      const result = await migrateOne(s3, db, job.doc, job.meta)
+      const result = await migrateOne(s3, db, job.doc, job.meta, progressLabel)
       if (result.status === 'migrated') migrated += 1
+      else skipped += 1
     } catch (err) {
       failed += 1
-      console.error(`  FAILED ${job.doc._id}:`, err.message)
+      console.error(`  FAILED ${job.doc._id}:`, err.message || err)
     }
   }
 
-  console.log(`Done. migrated=${migrated} failed=${failed} considered=${selected.length}`)
+  console.log(
+    `Done. migrated=${migrated} failed=${failed} skipped=${skipped} considered=${selected.length}`,
+  )
   if (!APPLY) {
     console.log('Re-run with --apply to copy files and update Mongo.')
   }
