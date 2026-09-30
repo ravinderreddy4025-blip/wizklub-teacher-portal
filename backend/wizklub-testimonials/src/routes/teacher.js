@@ -20,6 +20,11 @@ import { fetchBatchProgressOverview } from '../services/completionAnalytics.js'
 import { fetchBatchFeedbackSummary } from '../services/feedbackSummary.js'
 import { fetchAllStudentsForBatch } from '../services/studentSync.js'
 import {
+  buildLoginSummary,
+  fetchAllNotLoggedInStudents,
+  buildExecutionCompletion,
+} from '../services/schoolAnalytics.js'
+import {
   getBatchCompletion,
   getStudentCompletion,
 } from '../services/uploads.js'
@@ -159,6 +164,76 @@ export function createTeacherRouter() {
       school: { id: school._id, name: school.name },
       batches,
     })
+  })
+
+  router.get('/schools/:schoolId/login-summary', async (req, res) => {
+    const { schoolId } = req.params
+    const schoolIds = await resolveSchoolIds(req.teacher.user_id, req.schoolIds)
+    if (!schoolIds.includes(schoolId)) {
+      return res.status(403).json({ forbidden: true })
+    }
+
+    try {
+      const { school } = await resolveSchoolWithBatches(schoolId, {
+        accessToken: req.accessToken,
+        instructorUsername: req.teacher.user_id,
+        batchIds: req.batchIds,
+      })
+      const summary = await buildLoginSummary(schoolId, {
+        accessToken: req.accessToken,
+        instructorUsername: req.teacher.user_id,
+        batchIds: req.batchIds,
+        schoolName: school?.name,
+      })
+      return res.json(summary)
+    } catch (err) {
+      console.error(`[LoginSummary] ${schoolId}:`, err.message)
+      return res.status(err.status && err.status >= 400 ? err.status : 502).json({
+        error: err.message || 'Failed to load login summary from WizKlub.',
+      })
+    }
+  })
+
+  router.get('/schools/:schoolId/not-logged-in-students', async (req, res) => {
+    const { schoolId } = req.params
+    const schoolIds = await resolveSchoolIds(req.teacher.user_id, req.schoolIds)
+    if (!schoolIds.includes(schoolId)) {
+      return res.status(403).json({ forbidden: true })
+    }
+
+    try {
+      const result = await fetchAllNotLoggedInStudents(schoolId, req.accessToken)
+      return res.json(result)
+    } catch (err) {
+      console.error(`[NotLoggedInStudents] ${schoolId}:`, err.message)
+      return res.status(err.status && err.status >= 400 ? err.status : 502).json({
+        error: err.message || 'Failed to load not-logged-in students from WizKlub.',
+      })
+    }
+  })
+
+  router.get('/schools/:schoolId/execution-completion', async (req, res) => {
+    const { schoolId } = req.params
+    const periodType = String(req.query.period_type || 'MONTHLY').toUpperCase()
+    const schoolIds = await resolveSchoolIds(req.teacher.user_id, req.schoolIds)
+    if (!schoolIds.includes(schoolId)) {
+      return res.status(403).json({ forbidden: true })
+    }
+
+    try {
+      const result = await buildExecutionCompletion(schoolId, {
+        accessToken: req.accessToken,
+        instructorUsername: req.teacher.user_id,
+        batchIds: req.batchIds,
+        periodType,
+      })
+      return res.json(result)
+    } catch (err) {
+      console.error(`[ExecutionCompletion] ${schoolId}:`, err.message)
+      return res.status(err.status && err.status >= 400 ? err.status : 502).json({
+        error: err.message || 'Failed to load execution/completion from WizKlub.',
+      })
+    }
   })
 
   router.get('/batches/:batchId/progress-overview', async (req, res) => {

@@ -51,6 +51,10 @@ export async function fetchBatchProgressOverview(
             completion: Number(item.completion) || 0,
             planned: Number(item.planned) || 0,
             conducted: Number(item.conducted) || 0,
+            completed:
+              item.completed != null && item.completed !== ''
+                ? Number(item.completed) || 0
+                : null,
           }))
         : [],
     },

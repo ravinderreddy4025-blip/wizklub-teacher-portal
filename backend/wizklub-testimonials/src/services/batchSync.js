@@ -86,6 +86,10 @@ export function extractBatches(payload) {
     id: b.batch_id ?? b.id,
     name: b.batch_name ?? b.name ?? b.batch_id ?? 'Unnamed Batch',
     student_count: b.student_count ?? b.total_students ?? 0,
+    not_logged_in_count: Number(b.not_logged_in_count) || 0,
+    attendance_percentage:
+      b.attendance_percentage == null ? null : Number(b.attendance_percentage),
+    status: b.status ?? null,
     grade: b.grade_id ?? b.grade ?? null,
     grade_name: b.grade_name ?? null,
     schedule: b.schedule_label ?? [],

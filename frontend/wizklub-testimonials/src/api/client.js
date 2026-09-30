@@ -306,6 +306,207 @@ export const api = {
     return result.data
   },
 
+  async getSchoolLoginSummary(schoolId) {
+    if (USE_MOCK) {
+      return {
+        school_id: schoolId,
+        school_name: 'Demo School',
+        region: null,
+        total_batches: 5,
+        total_students: 120,
+        not_logged_in: 8,
+        logged_in: 112,
+        not_login_rate: 6.67,
+        batches: [
+          {
+            batch_id: 'g8a',
+            batch_name: 'Grade 8A',
+            student_count: 28,
+            not_logged_in_count: 2,
+          },
+          {
+            batch_id: 'g7b',
+            batch_name: 'Grade 7B',
+            student_count: 26,
+            not_logged_in_count: 3,
+          },
+        ],
+      }
+    }
+
+    const result = await request(
+      `/api/teacher/schools/${encodeURIComponent(schoolId)}/login-summary`,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (result.status === 401) return { unauthorized: true }
+    if (!result.ok) return null
+    return result.data
+  },
+
+  async getNotLoggedInStudents(schoolId) {
+    if (USE_MOCK) {
+      return {
+        school_id: schoolId,
+        total: 3,
+        students: [
+          {
+            id: 'stu001',
+            full_name: 'Riya Sharma',
+            roll_number: 'R001',
+            batch_id: 'g8a',
+            batch_name: 'Grade 8A',
+            grade: '8',
+            is_logged_in: false,
+          },
+          {
+            id: 'stu002',
+            full_name: 'Arjun Patel',
+            roll_number: 'R014',
+            batch_id: 'g8a',
+            batch_name: 'Grade 8A',
+            grade: '8',
+            is_logged_in: false,
+          },
+          {
+            id: 'stu003',
+            full_name: 'Meera Iyer',
+            roll_number: 'R022',
+            batch_id: 'g7b',
+            batch_name: 'Grade 7B',
+            grade: '7',
+            is_logged_in: false,
+          },
+        ],
+      }
+    }
+
+    const result = await request(
+      `/api/teacher/schools/${encodeURIComponent(schoolId)}/not-logged-in-students`,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (result.status === 401) return { unauthorized: true }
+    if (!result.ok) return null
+    return result.data
+  },
+
+  async getSchoolExecutionCompletion(schoolId, { periodType = 'MONTHLY' } = {}) {
+    if (USE_MOCK) {
+      return {
+        school_id: schoolId,
+        period_type: periodType,
+        session_summary: {
+          total: 42,
+          done: 28,
+          missed: 10,
+          cancelled: 4,
+          period_type: periodType,
+          teacher_execution_pct: 66.67,
+        },
+        completion_tracker: [
+          {
+            key: 'Lab',
+            label: 'Practical Lab Sessions',
+            delivery: 85,
+            completion: 72,
+            planned: 20,
+            conducted: 17,
+          },
+          {
+            key: 'Lecture',
+            label: 'Theory & Lectures',
+            delivery: 78,
+            completion: 64,
+            planned: 18,
+            conducted: 14,
+          },
+          {
+            key: 'Assessment',
+            label: 'Monthly Assessments',
+            delivery: 92,
+            completion: 81,
+            planned: 4,
+            conducted: 4,
+          },
+        ],
+        batches: [
+          {
+            batch_id: 'g8a',
+            batch_name: 'Grade 8A',
+            student_count: 28,
+            completed_sessions: 309,
+            students_completed: 309,
+            completion_pct: 68.5,
+            by_type: {
+              Lab: {
+                delivery: 80,
+                completion: 70,
+                planned: 10,
+                conducted: 8,
+                completed: 157,
+              },
+              Lecture: {
+                delivery: 75,
+                completion: 62,
+                planned: 8,
+                conducted: 6,
+                completed: 104,
+              },
+              Assessment: {
+                delivery: 100,
+                completion: 85,
+                planned: 2,
+                conducted: 2,
+                completed: 48,
+              },
+            },
+            session_summary: { total: 20, done: 12, missed: 6, cancelled: 2 },
+          },
+          {
+            batch_id: 'g7b',
+            batch_name: 'Grade 7B',
+            student_count: 26,
+            completed_sessions: 431,
+            students_completed: 431,
+            completion_pct: 74.2,
+            by_type: {
+              Lab: {
+                delivery: 90,
+                completion: 74,
+                planned: 10,
+                conducted: 9,
+                completed: 173,
+              },
+              Lecture: {
+                delivery: 81,
+                completion: 66,
+                planned: 10,
+                conducted: 8,
+                completed: 137,
+              },
+              Assessment: {
+                delivery: 84,
+                completion: 77,
+                planned: 2,
+                conducted: 2,
+                completed: 40,
+              },
+            },
+            session_summary: { total: 22, done: 16, missed: 4, cancelled: 2 },
+          },
+        ],
+        failed_batches: 0,
+      }
+    }
+
+    const params = new URLSearchParams({ period_type: periodType })
+    const result = await request(
+      `/api/teacher/schools/${encodeURIComponent(schoolId)}/execution-completion?${params}`,
+    )
+    if (result.status === 403) return { forbidden: true }
+    if (!result.ok) return null
+    return result.data
+  },
+
   async getStudents(batchId, filter = 'all', schoolId = '') {
     if (USE_MOCK) {
       const { mockStore } = await loadMockStore()
