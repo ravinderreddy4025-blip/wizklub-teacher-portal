@@ -23,6 +23,7 @@ import {
   buildLoginSummary,
   fetchAllNotLoggedInStudents,
   buildExecutionCompletion,
+  listSchoolBatchesForTeacher,
 } from '../services/schoolAnalytics.js'
 import {
   getBatchCompletion,
@@ -202,8 +203,21 @@ export function createTeacherRouter() {
     }
 
     try {
-      const result = await fetchAllNotLoggedInStudents(schoolId, req.accessToken)
-      return res.json(result)
+      const batches = await listSchoolBatchesForTeacher(schoolId, {
+        accessToken: req.accessToken,
+        instructorUsername: req.teacher.user_id,
+        batchIds: req.batchIds,
+      })
+      const result = await fetchAllNotLoggedInStudents(schoolId, req.accessToken, {
+        allowedBatchIds: new Set(batches.map((b) => String(b.id))),
+      })
+      return res.json({
+        ...result,
+        batch_scope: {
+          min_start_date: '2026-04-01',
+          label: 'Batches with start date on or after 1 April 2026',
+        },
+      })
     } catch (err) {
       console.error(`[NotLoggedInStudents] ${schoolId}:`, err.message)
       return res.status(err.status && err.status >= 400 ? err.status : 502).json({

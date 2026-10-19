@@ -11,13 +11,19 @@ const RouterContext = createContext(null)
 
 const APP_BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
 
+function normalizePath(pathname) {
+  const p = pathname || '/'
+  if (p.length > 1 && p.endsWith('/')) return p.slice(0, -1)
+  return p
+}
+
 function stripAppBase(pathname) {
-  if (!APP_BASE) return pathname || '/'
+  if (!APP_BASE) return normalizePath(pathname || '/')
   if (pathname === APP_BASE) return '/'
   if (pathname.startsWith(`${APP_BASE}/`)) {
-    return pathname.slice(APP_BASE.length) || '/'
+    return normalizePath(pathname.slice(APP_BASE.length) || '/')
   }
-  return pathname || '/'
+  return normalizePath(pathname || '/')
 }
 
 function withAppBase(path) {

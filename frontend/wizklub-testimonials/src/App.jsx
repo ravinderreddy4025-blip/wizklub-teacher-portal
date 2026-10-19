@@ -6,6 +6,7 @@ import PwaInstallBanner from './components/PwaInstallBanner'
 import { RequireAuth } from './context/AuthContext.jsx'
 import AssessmentConduct from './pages/AssessmentConduct'
 import Analytics from './pages/Analytics'
+import AnalyticsReport from './pages/AnalyticsReport'
 import Dashboard from './pages/Dashboard'
 import BatchSelection from './pages/BatchSelection'
 import BatchHealth from './pages/BatchHealth'
@@ -56,6 +57,12 @@ function AppRoutes() {
     path === '/home' ||
     path === '/schools' ||
     path === '/analytics' ||
+    path === '/analytics-report' ||
+    path === '/student-health-report' ||
+    path === '/student-health' ||
+    path.startsWith('/analytics-report/') ||
+    path.startsWith('/student-health-report/') ||
+    path.startsWith('/student-health/') ||
     path === '/feedback' ||
     path === '/feedback/new' ||
     path === '/profile' ||
@@ -79,6 +86,12 @@ function AppRoutes() {
       {(path === '/dashboard' || path === '/home' || path === '/') && <Dashboard />}
       {path === '/schools' && <SchoolsList />}
       {path === '/analytics' && <Analytics />}
+      {(path === '/analytics-report' ||
+        path === '/student-health-report' ||
+        path === '/student-health' ||
+        path.startsWith('/analytics-report/') ||
+        path.startsWith('/student-health-report/') ||
+        path.startsWith('/student-health/')) && <AnalyticsReport />}
       {path === '/feedback' && <FeedbackList />}
       {path === '/feedback/new' && <FeedbackForm />}
       {feedbackDetailRoute && feedbackDetailRoute.feedbackId !== 'new' && (

@@ -1,4 +1,6 @@
 ﻿    const STORE_KEY = 'po_sessions_v8';
+    let _pmoSchoolHealthSectionOpen = false;
+    let _pmoSchoolHealthLastSchoolId = '';
     const ROLE_KEY = 'po_logged_in';
     const USER_KEY = 'po_username';
     const PO_ROLE_HEADER = 'X-PO-Role';
@@ -980,19 +982,37 @@
               month: null,
               editId: null,
               sessionId: decodeURIComponent(parts[2]),
+              schoolId: null,
             },
           };
         }
         if (parts.length >= 4 && parts[1] === 'plan' && parts[2] === 'edit' && parts[3]) {
           const editId = decodeURIComponent(parts.slice(3).join('/'));
-          return { name: 'pmo', params: { section: 'plan', month: null, editId, sessionId: null } };
+          return {
+            name: 'pmo',
+            params: { section: 'plan', month: null, editId, sessionId: null, schoolId: null },
+          };
         }
-        const sec = parts[1] === 'plan' || parts[1] === 'meetings' || parts[1] === 'analytics' ? parts[1] : 'analytics';
+        if (parts[1] === 'school-health' || parts[1] === 'health') {
+          let schoolId = null;
+          if (parts[2] === 'school' && parts[3]) schoolId = decodeURIComponent(parts.slice(3).join('/'));
+          return {
+            name: 'pmo',
+            params: { section: 'school-health', month: null, editId: null, sessionId: null, schoolId },
+          };
+        }
+        const sec =
+          parts[1] === 'plan' || parts[1] === 'meetings' || parts[1] === 'analytics' || parts[1] === 'school-health'
+            ? parts[1]
+            : 'analytics';
         const month =
           (sec === 'analytics' || sec === 'meetings') && parts[2] && /^\d{4}-\d{2}$/.test(parts[2])
             ? parts[2]
             : null;
-        return { name: 'pmo', params: { section: sec, month, editId: null, sessionId: null } };
+        return {
+          name: 'pmo',
+          params: { section: sec, month, editId: null, sessionId: null, schoolId: null },
+        };
       }
       return { name: 'unknown', params: {} };
     }
@@ -1559,6 +1579,8 @@
         else if (sec === 'meetings') {
           const m = document.getElementById('f-meetings-month')?.value || '';
           setPmoHash('meetings', m || null);
+        } else if (sec === 'school-health') {
+          setPmoHash('school-health', null, null, null);
         }
       });
       window.addEventListener('hashchange', () => syncRouteFromHash());
@@ -2165,9 +2187,10 @@
           month: r.params.month,
           editId: r.params.editId != null ? r.params.editId : null,
           sessionId: r.params.sessionId != null ? r.params.sessionId : null,
+          schoolId: r.params.schoolId != null ? r.params.schoolId : null,
         };
       }
-      return { section: 'analytics', month: null, editId: null, sessionId: null };
+      return { section: 'analytics', month: null, editId: null, sessionId: null, schoolId: null };
     }
 
     function buildStudentsHash(sessionId) {
@@ -2264,17 +2287,21 @@
         <div class="session-students-list">${renderStudentIdsChipsHtml(s)}</div>`;
     }
 
-    function buildPmoHash(section, monthKey, editSessionId) {
+    function buildPmoHash(section, monthKey, editSessionId, schoolId) {
       if (section === 'plan' && editSessionId) {
         return `#/pmo/plan/edit/${encodeURIComponent(editSessionId)}`;
+      }
+      if (section === 'school-health') {
+        if (schoolId) return `#/pmo/school-health/school/${encodeURIComponent(String(schoolId))}`;
+        return '#/pmo/school-health';
       }
       let path = `/pmo/${section}`;
       if ((section === 'analytics' || section === 'meetings') && monthKey) path += `/${monthKey}`;
       return `#${path}`;
     }
 
-    function setPmoHash(section, monthKey, editSessionId) {
-      const next = buildPmoHash(section, monthKey, editSessionId);
+    function setPmoHash(section, monthKey, editSessionId, schoolId) {
+      const next = buildPmoHash(section, monthKey, editSessionId, schoolId);
       if (location.hash !== next) location.hash = next;
       else applyPmoRoute();
     }
@@ -2329,6 +2356,24 @@
       if (section === 'session-students') {
         renderSessionStudentsPage();
       }
+      const schoolHealthOpen = section === 'school-health';
+      const schoolId = parsePmoHash().schoolId || null;
+      const schoolKey = schoolId ? String(schoolId) : '';
+      if (schoolHealthOpen) {
+        if (!_pmoSchoolHealthSectionOpen && window.PmoSchoolHealth?.onSectionActive) {
+          window.PmoSchoolHealth.onSectionActive({ schoolId });
+        } else if (
+          _pmoSchoolHealthSectionOpen &&
+          schoolKey !== _pmoSchoolHealthLastSchoolId &&
+          window.PmoSchoolHealth?.applyRouteSchoolId
+        ) {
+          window.PmoSchoolHealth.applyRouteSchoolId(schoolId);
+        }
+        _pmoSchoolHealthLastSchoolId = schoolKey;
+      } else if (_pmoSchoolHealthSectionOpen) {
+        _pmoSchoolHealthLastSchoolId = '';
+      }
+      _pmoSchoolHealthSectionOpen = schoolHealthOpen;
     }
 
     function salesMonthDisplayLabel(monthKey) {
@@ -6754,6 +6799,17 @@
     }
 
 
+
+    window.__poSchoolHealthHooks = {
+      getSchoolFromRoute() {
+        const r = parseAppRoute();
+        if (r.name === 'pmo' && r.params.section === 'school-health') return r.params.schoolId;
+        return null;
+      },
+      setSchoolHash(schoolId) {
+        setPmoHash('school-health', null, null, schoolId || null);
+      },
+    };
 
     initLogin();
 

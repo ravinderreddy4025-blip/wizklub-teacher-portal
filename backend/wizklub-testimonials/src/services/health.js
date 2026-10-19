@@ -27,6 +27,77 @@ function idVariants(value) {
   return out
 }
 
+function schoolIdVariants(schoolId) {
+  const id = String(schoolId || '').trim()
+  if (!id) return []
+  const out = [id]
+  if (/^beng/i.test(id)) out.push(id.replace(/^beng/i, 'bang'))
+  if (/^bang/i.test(id)) out.push(id.replace(/^bang/i, 'beng'))
+  return [...new Set(out)]
+}
+
+const ACTIVE_HEALTH_BATCH_STATES = new Set(['ACTIVE', 'LIVE', 'RUNNING', 'ONGOING', 'IN_PROGRESS', 'OPEN'])
+
+function healthBatchRowIsActive(row) {
+  const state = String(row?.batch_state ?? '').trim().toUpperCase()
+  if (!state) return true
+  if (state.includes('INACTIVE') || state.includes('CLOSED') || state.includes('COMPLET')) return false
+  if (state.includes('CANCEL') || state.includes('ARCHIV') || state.includes('DEACTIV')) return false
+  return ACTIVE_HEALTH_BATCH_STATES.has(state) || state.includes('ACTIVE') || state.includes('LIVE')
+}
+
+/**
+ * Batch ids in the nightly health snapshot for a school (snapshot SQL already uses start_date >= AY window).
+ * Returns null when health DB or snapshot is unavailable.
+ */
+export async function getHealthBatchIdsForSchool(schoolId) {
+  const run = await getLatestRun()
+  if (!run) return null
+  const db = healthDb()
+  if (!db) return null
+  const variants = schoolIdVariants(schoolId)
+  if (!variants.length) return null
+  const rows = await col(db, 'health_batches')
+    .find(
+      { run_id: run.id, school_id: { $in: variants.flatMap(idVariants) } },
+      { projection: { batch_id: 1, start_date: 1, batch_state: 1 } },
+    )
+    .toArray()
+  if (!rows.length) return null
+  const ids = new Set()
+  for (const r of rows) {
+    if (!healthBatchRowIsActive(r)) continue
+    ids.add(String(r.batch_id))
+  }
+  return ids.size ? ids : null
+}
+
+/** batch_id → start_date for academic-year scoping (snapshot batches are already AY-filtered). */
+export async function getHealthBatchMapForSchool(schoolId) {
+  const run = await getLatestRun()
+  if (!run) return null
+  const db = healthDb()
+  if (!db) return null
+  const variants = schoolIdVariants(schoolId)
+  if (!variants.length) return null
+  const rows = await col(db, 'health_batches')
+    .find(
+      { run_id: run.id, school_id: { $in: variants.flatMap(idVariants) } },
+      { projection: { batch_id: 1, start_date: 1, batch_state: 1 } },
+    )
+    .toArray()
+  if (!rows.length) return null
+  const map = new Map()
+  for (const r of rows) {
+    if (!healthBatchRowIsActive(r)) continue
+    map.set(String(r.batch_id), {
+      start_date: r.start_date ?? null,
+      batch_state: r.batch_state ?? null,
+    })
+  }
+  return map.size ? map : null
+}
+
 export async function getLatestRun() {
   const db = healthDb()
   if (!db) return null
@@ -63,6 +134,49 @@ export function isPendingAssessment(student, heldIds) {
   const taken = new Set((student?.outcomes?.assessments ?? []).map((a) => String(a?.session_id)))
   for (const id of heldIds) if (!taken.has(id)) return true
   return false
+}
+
+function aggregateStudentParticipation(agg, participation) {
+  const p = participation || {}
+  if (p.not_started) {
+    agg.not_started += Number(p.due) || 0
+    return
+  }
+  const done = Number(p.done) || 0
+  const due = Number(p.due) || 0
+  agg.completed += done
+  agg.in_progress += Math.max(due - done, 0)
+}
+
+/**
+ * Workout submission totals per batch from the health snapshot (participation pillar).
+ * Used by school analytics so teachers don't need N per-batch health API calls.
+ */
+export async function getWorkoutTotalsForBatchIds(batchIds) {
+  const run = await getLatestRun()
+  const map = new Map()
+  if (!run) return map
+  const db = healthDb()
+  if (!db) return map
+
+  const ids = [...new Set((batchIds ?? []).map((id) => String(id).trim()).filter(Boolean))]
+  if (!ids.length) return map
+
+  const students = await col(db, 'health_students')
+    .find(
+      { run_id: run.id, batch_id: { $in: ids.flatMap(idVariants) } },
+      { projection: { batch_id: 1, participation: 1 } },
+    )
+    .toArray()
+
+  for (const s of students) {
+    const key = String(s.batch_id)
+    if (!map.has(key)) {
+      map.set(key, { completed: 0, in_progress: 0, not_started: 0 })
+    }
+    aggregateStudentParticipation(map.get(key), s.participation)
+  }
+  return map
 }
 
 export async function getBatchHealth(batchId) {

@@ -4,6 +4,12 @@ import {
   filterByInstructorBatchIds,
 } from './batchSync.js'
 import { fetchBatchProgressOverview } from './completionAnalytics.js'
+import {
+  ACADEMIC_YEAR_BATCH_SCOPE,
+  filterActiveBatches,
+  filterBatchesForAcademicYear,
+} from '../utils/academicYearBatches.js'
+import { getHealthBatchMapForSchool, getWorkoutTotalsForBatchIds } from './health.js'
 
 const STUDENT_PAGE_SIZE = '100'
 const MAX_STUDENT_PAGES = 50
@@ -170,19 +176,44 @@ export async function listSchoolBatchesForTeacher(
     instructorUsername,
     accessToken,
   )
-  return filterByInstructorBatchIds(instructorBatches, batchIds)
+  const scoped = filterByInstructorBatchIds(instructorBatches, batchIds)
+  const healthMap = await getHealthBatchMapForSchool(schoolId)
+  const healthIds = healthMap ? new Set(healthMap.keys()) : null
+  const ayFiltered = filterBatchesForAcademicYear(scoped, { healthBatchIds: healthIds ?? healthMap })
+  const filtered = filterActiveBatches(ayFiltered, { healthBatchMap: healthMap })
+  if (filtered.length < scoped.length) {
+    console.info(
+      `[SchoolAnalytics] AY2026 active batch filter school=${schoolId}: ${filtered.length}/${scoped.length} batches`,
+    )
+  }
+  return filtered
 }
 
-export async function fetchAllNotLoggedInStudents(schoolId, accessToken) {
+export async function fetchAllNotLoggedInStudents(
+  schoolId,
+  accessToken,
+  { allowedBatchIds = null } = {},
+) {
   const merged = []
   const seen = new Set()
   let cursor = null
   let pages = 0
+  const batchFilterActive = allowedBatchIds != null
+  const batchFilter =
+    allowedBatchIds instanceof Set
+      ? allowedBatchIds
+      : Array.isArray(allowedBatchIds)
+        ? new Set(allowedBatchIds.map(String))
+        : new Set()
 
   do {
     const payload = await fetchNotLoggedInStudentsPage(schoolId, accessToken, { cursor })
     if (!payload) break
     for (const student of extractNotLoggedInStudents(payload)) {
+      if (batchFilterActive) {
+        const bid = student.batch_id != null ? String(student.batch_id) : ''
+        if (!bid || !batchFilter.has(bid)) continue
+      }
       const key = String(student.id || '').toLowerCase()
       if (!key || seen.has(key)) continue
       seen.add(key)
@@ -214,6 +245,7 @@ export async function buildLoginSummary(
     batchIds,
   })
 
+  const allowedBatchIds = new Set(batches.map((b) => String(b.id)))
   let totalBatches = batches.length
   let totalStudents = batches.reduce((sum, b) => sum + (Number(b.student_count) || 0), 0)
   let notLoggedIn = batches.reduce((sum, b) => sum + (Number(b.not_logged_in_count) || 0), 0)
@@ -224,13 +256,6 @@ export async function buildLoginSummary(
   try {
     const best = await fetchBestSchoolSummary(schoolId, accessToken)
     const summary = best.summary
-    const kpis = summary?.kpis || {}
-    if (Number.isFinite(Number(kpis.total_batches))) {
-      totalBatches = Number(kpis.total_batches)
-    }
-    if (Number.isFinite(Number(kpis.total_students))) {
-      totalStudents = Number(kpis.total_students)
-    }
     resolvedName = summary?.school?.name || resolvedName
     region = summary?.school?.city || null
   } catch (err) {
@@ -238,7 +263,7 @@ export async function buildLoginSummary(
   }
 
   try {
-    const roster = await fetchAllNotLoggedInStudents(schoolId, accessToken)
+    const roster = await fetchAllNotLoggedInStudents(schoolId, accessToken, { allowedBatchIds })
     notLoggedIn = Number(roster.total) || 0
     source = 'not_logged_in_students'
   } catch (err) {
@@ -269,7 +294,9 @@ export async function buildLoginSummary(
       not_logged_in_count: Number(b.not_logged_in_count) || 0,
       attendance_percentage: b.attendance_percentage,
       status: b.status,
+      start_date: b.start_date ?? null,
     })),
+    batch_scope: ACADEMIC_YEAR_BATCH_SCOPE,
   }
 }
 
@@ -385,9 +412,16 @@ export async function buildExecutionCompletion(
     completion: b.n > 0 ? Math.round((b.completionSum / b.n) * 100) / 100 : 0,
   }))
 
+  const workoutTotals = await getWorkoutTotalsForBatchIds(batchRows.map((b) => b.batch_id))
+  for (const row of batchRows) {
+    const w = workoutTotals.get(String(row.batch_id))
+    row.workouts = w ?? { completed: 0, in_progress: 0, not_started: 0 }
+  }
+
   return {
     school_id: schoolId,
     period_type: periodType,
+    batch_scope: ACADEMIC_YEAR_BATCH_SCOPE,
     session_summary: {
       ...sessionTotals,
       period_type: periodType,

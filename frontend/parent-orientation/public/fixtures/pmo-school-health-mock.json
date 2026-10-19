@@ -1,0 +1,916 @@
+{
+  "meta": {
+    "schemaVersion": 2,
+    "sampleLabel": "SAMPLE DATA · NOT LIVE METRICS",
+    "asOfDate": "2026-10-13",
+    "defaultMonth": "2026-09"
+  },
+  "todaySnapshot": {
+    "actualLogins": 1842,
+    "expectedLogins": 2100,
+    "yesterdayLogins": 1920,
+    "activeSchools": 16,
+    "totalSchools": 20
+  },
+  "dailyLogins": [
+    {
+      "date": "2026-09-01",
+      "actual": 1650,
+      "expected": 2000
+    },
+    {
+      "date": "2026-09-02",
+      "actual": 1720,
+      "expected": 2000
+    },
+    {
+      "date": "2026-09-03",
+      "actual": 1580,
+      "expected": 1950
+    },
+    {
+      "date": "2026-09-04",
+      "actual": 1810,
+      "expected": 2000
+    },
+    {
+      "date": "2026-09-05",
+      "actual": 1690,
+      "expected": 1980
+    },
+    {
+      "date": "2026-09-06",
+      "actual": 920,
+      "expected": 1200
+    },
+    {
+      "date": "2026-09-07",
+      "actual": 880,
+      "expected": 1150
+    },
+    {
+      "date": "2026-09-08",
+      "actual": 1755,
+      "expected": 2050
+    },
+    {
+      "date": "2026-09-09",
+      "actual": 1880,
+      "expected": 2080
+    },
+    {
+      "date": "2026-09-10",
+      "actual": 1905,
+      "expected": 2100
+    },
+    {
+      "date": "2026-09-11",
+      "actual": 1822,
+      "expected": 2100
+    },
+    {
+      "date": "2026-09-12",
+      "actual": 1710,
+      "expected": 2050
+    },
+    {
+      "date": "2026-09-13",
+      "actual": 950,
+      "expected": 1250
+    },
+    {
+      "date": "2026-09-14",
+      "actual": 910,
+      "expected": 1200
+    },
+    {
+      "date": "2026-09-15",
+      "actual": 1798,
+      "expected": 2100
+    },
+    {
+      "date": "2026-09-16",
+      "actual": 1866,
+      "expected": 2120
+    },
+    {
+      "date": "2026-09-17",
+      "actual": 1920,
+      "expected": 2150
+    },
+    {
+      "date": "2026-09-18",
+      "actual": 1888,
+      "expected": 2140
+    },
+    {
+      "date": "2026-09-19",
+      "actual": 1760,
+      "expected": 2080
+    },
+    {
+      "date": "2026-09-20",
+      "actual": 1020,
+      "expected": 1300
+    },
+    {
+      "date": "2026-09-21",
+      "actual": 990,
+      "expected": 1280
+    },
+    {
+      "date": "2026-09-22",
+      "actual": 1810,
+      "expected": 2100
+    },
+    {
+      "date": "2026-09-23",
+      "actual": 1842,
+      "expected": 2100
+    },
+    {
+      "date": "2026-09-24",
+      "actual": 1875,
+      "expected": 2110
+    },
+    {
+      "date": "2026-09-25",
+      "actual": 1901,
+      "expected": 2120
+    },
+    {
+      "date": "2026-09-26",
+      "actual": 1788,
+      "expected": 2090
+    },
+    {
+      "date": "2026-09-27",
+      "actual": 1080,
+      "expected": 1350
+    },
+    {
+      "date": "2026-09-28",
+      "actual": 1055,
+      "expected": 1320
+    },
+    {
+      "date": "2026-09-29",
+      "actual": 1830,
+      "expected": 2100
+    },
+    {
+      "date": "2026-09-30",
+      "actual": 1860,
+      "expected": 2100
+    }
+  ],
+  "schools": [
+    {
+      "id": "sch-001",
+      "name": "Green Valley Public School",
+      "region": "North",
+      "enrolledStudents": 420,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 72,
+      "today": {
+        "activeStudents": 198,
+        "activeStudentRatio": 0.47
+      },
+      "month": {
+        "activeStudents": 312,
+        "activeStudentRatio": 0.74
+      },
+      "batchWide": {
+        "labCompletionPct": 68,
+        "assessmentCompletionPct": 71
+      },
+      "gradeBatch": "G3–G5",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 68,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 6,
+          "totalDue": 11
+        },
+        "month": {
+          "completedDue": 143,
+          "totalDue": 210
+        }
+      }
+    },
+    {
+      "id": "sch-002",
+      "name": "Sunrise Academy",
+      "region": "North",
+      "enrolledStudents": 380,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 55,
+      "today": {
+        "activeStudents": 0,
+        "activeStudentRatio": 0
+      },
+      "month": {
+        "activeStudents": 95,
+        "activeStudentRatio": 0.25
+      },
+      "batchWide": {
+        "labCompletionPct": 22,
+        "assessmentCompletionPct": 28
+      },
+      "gradeBatch": "G4–G6",
+      "loggedInToday": false,
+      "batch": {
+        "completionPct": 22,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 0,
+          "totalDue": 10
+        },
+        "month": {
+          "completedDue": 42,
+          "totalDue": 190
+        }
+      }
+    },
+    {
+      "id": "sch-003",
+      "name": "Heritage International",
+      "region": "South",
+      "enrolledStudents": 510,
+      "hasHardwareTelemetry": false,
+      "today": {
+        "activeStudents": 255,
+        "activeStudentRatio": 0.5
+      },
+      "month": {
+        "activeStudents": 398,
+        "activeStudentRatio": 0.78
+      },
+      "batchWide": {
+        "labCompletionPct": 82,
+        "assessmentCompletionPct": 79
+      },
+      "gradeBatch": "G5–G7",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 82,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 8,
+          "totalDue": 13
+        },
+        "month": {
+          "completedDue": 209,
+          "totalDue": 255
+        }
+      }
+    },
+    {
+      "id": "sch-004",
+      "name": "Lotus Matriculation",
+      "region": "South",
+      "enrolledStudents": 290,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 48,
+      "today": {
+        "activeStudents": 88,
+        "activeStudentRatio": 0.3
+      },
+      "month": {
+        "activeStudents": 145,
+        "activeStudentRatio": 0.5
+      },
+      "batchWide": {
+        "labCompletionPct": 45,
+        "assessmentCompletionPct": 52
+      },
+      "gradeBatch": "G6–G8",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 45,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 3,
+          "totalDue": 8
+        },
+        "month": {
+          "completedDue": 65,
+          "totalDue": 145
+        }
+      }
+    },
+    {
+      "id": "sch-005",
+      "name": "Riverdale High",
+      "region": "East",
+      "enrolledStudents": 440,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 81,
+      "today": {
+        "activeStudents": 220,
+        "activeStudentRatio": 0.5
+      },
+      "month": {
+        "activeStudents": 352,
+        "activeStudentRatio": 0.8
+      },
+      "batchWide": {
+        "labCompletionPct": 88,
+        "assessmentCompletionPct": 85
+      },
+      "gradeBatch": "G7–G9",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 88,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 7,
+          "totalDue": 11
+        },
+        "month": {
+          "completedDue": 194,
+          "totalDue": 220
+        }
+      }
+    },
+    {
+      "id": "sch-006",
+      "name": "Oakwood School",
+      "region": "East",
+      "enrolledStudents": 360,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 38,
+      "today": {
+        "activeStudents": 0,
+        "activeStudentRatio": 0
+      },
+      "month": {
+        "activeStudents": 108,
+        "activeStudentRatio": 0.3
+      },
+      "batchWide": {
+        "labCompletionPct": 35,
+        "assessmentCompletionPct": 40
+      },
+      "gradeBatch": "G3–G5",
+      "loggedInToday": false,
+      "batch": {
+        "completionPct": 35,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 0,
+          "totalDue": 9
+        },
+        "month": {
+          "completedDue": 63,
+          "totalDue": 180
+        }
+      }
+    },
+    {
+      "id": "sch-007",
+      "name": "Silver Oak CBSE",
+      "region": "West",
+      "enrolledStudents": 475,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 64,
+      "today": {
+        "activeStudents": 190,
+        "activeStudentRatio": 0.4
+      },
+      "month": {
+        "activeStudents": 285,
+        "activeStudentRatio": 0.6
+      },
+      "batchWide": {
+        "labCompletionPct": 58,
+        "assessmentCompletionPct": 61
+      },
+      "gradeBatch": "G4–G6",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 58,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 6,
+          "totalDue": 12
+        },
+        "month": {
+          "completedDue": 138,
+          "totalDue": 238
+        }
+      }
+    },
+    {
+      "id": "sch-008",
+      "name": "Bluebells Academy",
+      "region": "West",
+      "enrolledStudents": 320,
+      "hasHardwareTelemetry": false,
+      "today": {
+        "activeStudents": 128,
+        "activeStudentRatio": 0.4
+      },
+      "month": {
+        "activeStudents": 224,
+        "activeStudentRatio": 0.7
+      },
+      "batchWide": {
+        "labCompletionPct": null,
+        "assessmentCompletionPct": 65
+      },
+      "gradeBatch": "G5–G7",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 50,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 4,
+          "totalDue": 8
+        },
+        "month": {
+          "completedDue": 80,
+          "totalDue": 160
+        }
+      }
+    },
+    {
+      "id": "sch-009",
+      "name": "Maple Leaf School",
+      "region": "North",
+      "enrolledStudents": 410,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 70,
+      "today": {
+        "activeStudents": 205,
+        "activeStudentRatio": 0.5
+      },
+      "month": {
+        "activeStudents": 328,
+        "activeStudentRatio": 0.8
+      },
+      "batchWide": {
+        "labCompletionPct": 76,
+        "assessmentCompletionPct": 74
+      },
+      "gradeBatch": "G6–G8",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 76,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 6,
+          "totalDue": 10
+        },
+        "month": {
+          "completedDue": 156,
+          "totalDue": 205
+        }
+      }
+    },
+    {
+      "id": "sch-010",
+      "name": "Crescent Public School",
+      "region": "South",
+      "enrolledStudents": 390,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 42,
+      "today": {
+        "activeStudents": 78,
+        "activeStudentRatio": 0.2
+      },
+      "month": {
+        "activeStudents": 156,
+        "activeStudentRatio": 0.4
+      },
+      "batchWide": {
+        "labCompletionPct": 48,
+        "assessmentCompletionPct": 50
+      },
+      "gradeBatch": "G7–G9",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 48,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 2,
+          "totalDue": 10
+        },
+        "month": {
+          "completedDue": 94,
+          "totalDue": 195
+        }
+      }
+    },
+    {
+      "id": "sch-011",
+      "name": "Zenith Global School",
+      "region": "East",
+      "enrolledStudents": 520,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 77,
+      "today": {
+        "activeStudents": 260,
+        "activeStudentRatio": 0.5
+      },
+      "month": {
+        "activeStudents": 416,
+        "activeStudentRatio": 0.8
+      },
+      "batchWide": {
+        "labCompletionPct": 91,
+        "assessmentCompletionPct": 89
+      },
+      "gradeBatch": "G3–G5",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 91,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 8,
+          "totalDue": 13
+        },
+        "month": {
+          "completedDue": 237,
+          "totalDue": 260
+        }
+      }
+    },
+    {
+      "id": "sch-012",
+      "name": "Pine Ridge Academy",
+      "region": "West",
+      "enrolledStudents": 280,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 33,
+      "today": {
+        "activeStudents": 0,
+        "activeStudentRatio": 0
+      },
+      "month": {
+        "activeStudents": 56,
+        "activeStudentRatio": 0.2
+      },
+      "batchWide": {
+        "labCompletionPct": 18,
+        "assessmentCompletionPct": 22
+      },
+      "gradeBatch": "G4–G6",
+      "loggedInToday": false,
+      "batch": {
+        "completionPct": 18,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 0,
+          "totalDue": 8
+        },
+        "month": {
+          "completedDue": 25,
+          "totalDue": 140
+        }
+      }
+    },
+    {
+      "id": "sch-013",
+      "name": "Harmony School",
+      "region": "North",
+      "enrolledStudents": 350,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 59,
+      "today": {
+        "activeStudents": 140,
+        "activeStudentRatio": 0.4
+      },
+      "month": {
+        "activeStudents": 210,
+        "activeStudentRatio": 0.6
+      },
+      "batchWide": {
+        "labCompletionPct": 62,
+        "assessmentCompletionPct": 58
+      },
+      "gradeBatch": "G5–G7",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 62,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 4,
+          "totalDue": 9
+        },
+        "month": {
+          "completedDue": 109,
+          "totalDue": 175
+        }
+      }
+    },
+    {
+      "id": "sch-014",
+      "name": "Starlight International",
+      "region": "South",
+      "enrolledStudents": 460,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 68,
+      "today": {
+        "activeStudents": 184,
+        "activeStudentRatio": 0.4
+      },
+      "month": {
+        "activeStudents": 322,
+        "activeStudentRatio": 0.7
+      },
+      "batchWide": {
+        "labCompletionPct": 72,
+        "assessmentCompletionPct": 70
+      },
+      "gradeBatch": "G6–G8",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 72,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 6,
+          "totalDue": 12
+        },
+        "month": {
+          "completedDue": 166,
+          "totalDue": 230
+        }
+      }
+    },
+    {
+      "id": "sch-015",
+      "name": "Valley View School",
+      "region": "East",
+      "enrolledStudents": 300,
+      "hasHardwareTelemetry": false,
+      "today": {
+        "activeStudents": 90,
+        "activeStudentRatio": 0.3
+      },
+      "month": {
+        "activeStudents": 150,
+        "activeStudentRatio": 0.5
+      },
+      "batchWide": {
+        "labCompletionPct": 55,
+        "assessmentCompletionPct": null
+      },
+      "gradeBatch": "G7–G9",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 55,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 3,
+          "totalDue": 8
+        },
+        "month": {
+          "completedDue": 83,
+          "totalDue": 150
+        }
+      }
+    },
+    {
+      "id": "sch-016",
+      "name": "Apex Learning Center",
+      "region": "West",
+      "enrolledStudents": 400,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 75,
+      "today": {
+        "activeStudents": 200,
+        "activeStudentRatio": 0.5
+      },
+      "month": {
+        "activeStudents": 320,
+        "activeStudentRatio": 0.8
+      },
+      "batchWide": {
+        "labCompletionPct": 84,
+        "assessmentCompletionPct": 81
+      },
+      "gradeBatch": "G3–G5",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 84,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 6,
+          "totalDue": 10
+        },
+        "month": {
+          "completedDue": 168,
+          "totalDue": 200
+        }
+      }
+    },
+    {
+      "id": "sch-017",
+      "name": "Bright Future School",
+      "region": "North",
+      "enrolledStudents": 330,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 51,
+      "today": {
+        "activeStudents": 0,
+        "activeStudentRatio": 0
+      },
+      "month": {
+        "activeStudents": 132,
+        "activeStudentRatio": 0.4
+      },
+      "batchWide": {
+        "labCompletionPct": 52,
+        "assessmentCompletionPct": 55
+      },
+      "gradeBatch": "G4–G6",
+      "loggedInToday": false,
+      "batch": {
+        "completionPct": 52,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 0,
+          "totalDue": 8
+        },
+        "month": {
+          "completedDue": 86,
+          "totalDue": 165
+        }
+      }
+    },
+    {
+      "id": "sch-018",
+      "name": "Emerald Heights",
+      "region": "South",
+      "enrolledStudents": 490,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 73,
+      "today": {
+        "activeStudents": 245,
+        "activeStudentRatio": 0.5
+      },
+      "month": {
+        "activeStudents": 392,
+        "activeStudentRatio": 0.8
+      },
+      "batchWide": {
+        "labCompletionPct": 86,
+        "assessmentCompletionPct": 83
+      },
+      "gradeBatch": "G5–G7",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 86,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 7,
+          "totalDue": 12
+        },
+        "month": {
+          "completedDue": 211,
+          "totalDue": 245
+        }
+      }
+    },
+    {
+      "id": "sch-019",
+      "name": "Northgate Public School",
+      "region": "East",
+      "enrolledStudents": 370,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 46,
+      "today": {
+        "activeStudents": 74,
+        "activeStudentRatio": 0.2
+      },
+      "month": {
+        "activeStudents": 111,
+        "activeStudentRatio": 0.3
+      },
+      "batchWide": {
+        "labCompletionPct": 42,
+        "assessmentCompletionPct": 44
+      },
+      "gradeBatch": "G6–G8",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 42,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 2,
+          "totalDue": 9
+        },
+        "month": {
+          "completedDue": 78,
+          "totalDue": 185
+        }
+      }
+    },
+    {
+      "id": "sch-020",
+      "name": "Westwind Academy",
+      "region": "West",
+      "enrolledStudents": 340,
+      "hasHardwareTelemetry": true,
+      "hardwareUtilPct": 61,
+      "today": {
+        "activeStudents": 102,
+        "activeStudentRatio": 0.3
+      },
+      "month": {
+        "activeStudents": 204,
+        "activeStudentRatio": 0.6
+      },
+      "batchWide": {
+        "labCompletionPct": 64,
+        "assessmentCompletionPct": 62
+      },
+      "gradeBatch": "G7–G9",
+      "loggedInToday": true,
+      "batch": {
+        "completionPct": 64,
+        "startDate": "2025-06-01",
+        "endDate": "2026-05-31"
+      },
+      "periodLab": {
+        "today": {
+          "completedDue": 3,
+          "totalDue": 9
+        },
+        "month": {
+          "completedDue": 109,
+          "totalDue": 170
+        }
+      }
+    }
+  ],
+  "portfolioLab": {
+    "today": {
+      "completedDue": 81,
+      "totalDue": 200
+    },
+    "month": {
+      "completedDue": 2456,
+      "totalDue": 3918
+    }
+  }
+}

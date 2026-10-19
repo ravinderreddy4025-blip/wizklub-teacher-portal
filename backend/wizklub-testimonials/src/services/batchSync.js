@@ -89,10 +89,25 @@ export function extractBatches(payload) {
     not_logged_in_count: Number(b.not_logged_in_count) || 0,
     attendance_percentage:
       b.attendance_percentage == null ? null : Number(b.attendance_percentage),
-    status: b.status ?? null,
+    status: b.status ?? b.batch_state ?? b.batchState ?? null,
+    batch_state: b.batch_state ?? b.batchState ?? b.status ?? null,
     grade: b.grade_id ?? b.grade ?? null,
     grade_name: b.grade_name ?? null,
     schedule: b.schedule_label ?? [],
+    start_date:
+      b.start_date ??
+      b.batch_start_date ??
+      b.startDate ??
+      b.batch_start ??
+      b.start_time ??
+      null,
+    created_at:
+      b.created_at ??
+      b.createdAt ??
+      b.batch_created_at ??
+      b.created_date ??
+      b.batch_created_on ??
+      null,
   }))
 }
 

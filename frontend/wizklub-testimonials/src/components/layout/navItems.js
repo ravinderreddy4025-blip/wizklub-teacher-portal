@@ -1,4 +1,12 @@
-import { IconAnalytics, IconFeedback, IconHome, IconInventory, IconProfile, IconSchools } from '../icons/Icons'
+import {
+  IconAnalytics,
+  IconFeedback,
+  IconHome,
+  IconInventory,
+  IconProfile,
+  IconSchools,
+  IconUsers,
+} from '../icons/Icons'
 
 export const NAV_ITEMS = [
   { id: 'home', label: 'Dashboard', path: '/dashboard', Icon: IconHome },
@@ -16,6 +24,12 @@ export const NAV_GROUPS = [
       { id: 'home', label: 'Dashboard', path: '/dashboard', Icon: IconHome },
       { id: 'schools', label: 'Schools', path: '/schools', Icon: IconSchools },
       { id: 'analytics', label: 'Analytics', path: '/analytics', Icon: IconAnalytics },
+      {
+        id: 'analytics-report',
+        label: 'Analytics Report',
+        path: '/analytics-report',
+        Icon: IconUsers,
+      },
     ],
   },
   {
@@ -36,6 +50,9 @@ export function resolveActiveTab(path, active) {
   if (path.startsWith('/dashboard') || path === '/home') return 'home'
   if (path.startsWith('/schools') || path.startsWith('/batches') || path.startsWith('/students')) {
     return 'schools'
+  }
+  if (path.startsWith('/analytics-report') || path.startsWith('/student-health-report')) {
+    return 'analytics-report'
   }
   if (path.startsWith('/analytics')) return 'analytics'
   if (path.startsWith('/feedback')) return 'feedback'
