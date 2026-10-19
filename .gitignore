@@ -14,6 +14,9 @@ dev-dist/
 
 # ── Environment — NEVER commit secrets ───────────────────
 .env
+.env.*
+!.env.example
+!**/.env.example
 .env.local
 .env.production
 .env.staging
@@ -24,6 +27,11 @@ dev-dist/
 gcs-credentials.json
 *-credentials.json
 *-sa.json
+*.pem
+*.p12
+*.pfx
+**/secrets/
+**/*_secrets.json
 *(2).gitignore
 env-example/
 *.local
